@@ -1,9 +1,8 @@
-import configparser
 import datetime as dt
 import os
 from io import StringIO
 from pathlib import Path
-from xml.dom.minidom import parse
+from xml.dom.minidom import parse, parseString
 
 import lovely_logger as logging
 import matplotlib.cm as cm
@@ -134,6 +133,12 @@ if __name__ == "__main__":
         help="Load trajectory file",
     )
     st.sidebar.markdown("-------")
+    geometry_file = st.sidebar.file_uploader(
+        "🏠 Geometry file ",
+        type=["xml"],
+        help="Load geometry file",
+    )
+    st.sidebar.markdown("-------")
     choose_trajectories = st.sidebar.checkbox(
         "Trajectories", help="Plot trajectories", key="Traj"
     )
@@ -144,8 +149,9 @@ if __name__ == "__main__":
     choose_NT = st.sidebar.checkbox("N-T diagram", help="Plot N-t curve", key="NT")
     st.sidebar.markdown("-------")
     msg_status = st.sidebar.empty()
-    if trajectory_file:
+    if trajectory_file and geometry_file:
         logging.info(f">> {trajectory_file.name}")
+        logging.info(f">> {geometry_file.name}")
         try:
             data = read_trajectory(trajectory_file)
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
@@ -157,15 +163,20 @@ if __name__ == "__main__":
             )
             st.stop()
 
-        geometry_file = get_geometry_file(string_data)
-        logging.info(f"Geometry: <{geometry_file}>")
-        # Read Geometry file
-        if not os.path.exists(geometry_file):
-            st.error("{} does not exist".format(geometry_file))
-            st.stop()
+        try:
+            parse_geometry_file = get_geometry_file(string_data)
+            logging.info(f"Geometry: <{geometry_file}>")
+            # Read Geometry file
+            if parse_geometry_file != geometry_file.name:
+                st.error(f"Mismatched geometry files. Parsed {parse_geometry_file}. Uploaded {geometry_file.name}")
+                st.stop()
 
-        with open(geometry_file, "r") as xml_date:
-            geo_xml = parse(xml_date)
+            print(geometry_file.name)
+            stringio = StringIO(geometry_file.getvalue().decode("utf-8"))
+            string_data = stringio.read()
+            file_data = geometry_file.read()
+    
+            geo_xml = parseString(geometry_file.getvalue())
             geometry_wall = Utilities.read_subroom_walls(geo_xml)
             geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml)
 
@@ -174,6 +185,15 @@ if __name__ == "__main__":
                     geominX, geomaxX, geominY, geomaxY
                 )
             )
+
+            
+        except Exception as e:
+            msg_status.error(
+                f"""Can't parse geometry file.
+                Error: {e}"""
+            )
+            st.stop()
+
 
         if choose_trajectories:
             logging.info("plotting trajectories")
