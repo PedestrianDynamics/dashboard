@@ -1,3 +1,6 @@
 streamlit
 lovely-logger
 pandas
+matplotlib
+numpy
+scipy
