@@ -3,7 +3,7 @@ import os
 from io import StringIO
 from pathlib import Path
 from xml.dom.minidom import parse, parseString
-
+from collections import defaultdict
 import lovely_logger as logging
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -14,7 +14,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pandas import read_csv
 from plotly.subplots import make_subplots
 from scipy import stats
-
+from shapely.geometry import LineString
 import Utilities
 
 path = Path(__file__)
@@ -68,7 +68,7 @@ def weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
 
 
 # https://plotly.com/python/heatmaps/
-def plot_trajectories(data, geo_walls, min_x, max_x, min_y, max_y):
+def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
     fig = make_subplots(rows=1, cols=1)
     peds = np.unique(data[:, 0])
     for ped in peds:
@@ -81,7 +81,7 @@ def plot_trajectories(data, geo_walls, min_x, max_x, min_y, max_y):
             showlegend=False,
             name=f"{ped:0.0f}",
             marker=dict(size=1, color=c),
-            line=dict(color="gray", width=1),            
+            line=dict(color="gray", width=1),
         )
         fig.append_trace(trace, row=1, col=1)
 
@@ -95,9 +95,58 @@ def plot_trajectories(data, geo_walls, min_x, max_x, min_y, max_y):
         )
         fig.append_trace(trace, row=1, col=1)
 
-    eps = 0.5
+    
+    for i, t in transitions.items():
+        trace = go.Scatter(
+            x=t[:, 0],
+            y=t[:, 1],
+            showlegend=False,
+            mode="lines+markers",
+            line=dict(color="red", width=3),
+            marker=dict(color="red", size=8),
+        )
+        trace_text = go.Scatter(
+            x=[np.sum(t[:, 0])/2],
+            y=[np.sum(t[:, 1])/2],
+            text=f"ID: {i}",
+            textposition='middle right',
+            showlegend=False,
+            mode="markers+text",
+            line=dict(color="red", width=3),
+            marker=dict(color="red", size=2),
+            textfont=dict(color="red", size=18),
+        )
+        fig.append_trace(trace, row=1, col=1)
+        fig.append_trace(trace_text, row=1, col=1)
+
+    eps = 1
     fig.update_xaxes(range=[min_x - eps, max_x + eps])
     fig.update_yaxes(range=[min_y - eps, max_y + eps], autorange=False)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_NT(Frames, Nums, fps):
+    fig = make_subplots(rows=1, cols=1, x_title="time / s", y_title="N")
+    for i, frames in Frames.items():
+        nums = Nums[i]
+        if not frames:
+            continue
+
+        trace = go.Scatter(
+            x=np.array(frames)/fps,
+            y=nums,
+            mode="lines",
+            showlegend=True,
+            name=f"ID: {i}",
+            marker=dict(size=1),
+            line=dict(width=1),
+        )
+        fig.append_trace(trace, row=1, col=1)
+
+    # eps = 0.5
+    # fig.update_xaxes(range=[xmin/fps - eps, xmax/fps + eps])
+    # fig.update_yaxes(range=[ymin - eps, ymax + eps], autorange=False)
 
     st.plotly_chart(fig, use_container_width=True)
 
@@ -127,25 +176,34 @@ if __name__ == "__main__":
     repo = "https://github.com/chraibi/jupedsim-dashboard"
     repo_name = f"[![Repo]({gh})]({repo})"
     st.sidebar.markdown(repo_name, unsafe_allow_html=True)
-    trajectory_file = st.sidebar.file_uploader(
+    c1, c2 = st.sidebar.columns((1, 1))
+    trajectory_file = c1.file_uploader(
         "📙 Trajectory file ",
         type=["txt"],
         help="Load trajectory file",
     )
-    st.sidebar.markdown("-------")
-    geometry_file = st.sidebar.file_uploader(
+    #st.sidebar.markdown("-------")
+    geometry_file = c2.file_uploader(
         "🏠 Geometry file ",
         type=["xml"],
         help="Load geometry file",
     )
     st.sidebar.markdown("-------")
-    choose_trajectories = st.sidebar.checkbox(
+    c1, c2 = st.sidebar.columns((1, 1))
+    choose_trajectories = c1.checkbox(
         "Trajectories", help="Plot trajectories", key="Traj"
     )
-    choose_profile = st.sidebar.checkbox(
-        "Density profiles", help="Plot density profiles", key="Profile"
+    choose_transitions = c2.checkbox(
+        "Transitions", help="Show transittions", key="Tran"
     )
-    dx = st.sidebar.slider("dx", 0.01, 0.5, 0.2, help="Space discretisation")
+    c1, c2 = st.sidebar.columns((1, 1))
+    choose_dprofile = c1.checkbox(
+        "Density profiles", help="Plot density profiles", key="dProfile"
+    )
+    choose_vprofile = c2.checkbox(
+        "Velocity profiles", help="Plot velocity profiles", key="vProfile"
+    )
+    dx = st.sidebar.slider("Step", 0.01, 0.5, 0.2, help="Space discretization")
     choose_NT = st.sidebar.checkbox("N-T diagram", help="Plot N-t curve", key="NT")
     st.sidebar.markdown("-------")
     msg_status = st.sidebar.empty()
@@ -156,6 +214,16 @@ if __name__ == "__main__":
             data = read_trajectory(trajectory_file)
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
+            fps = Utilities.get_fps(string_data)
+            peds = np.unique(data[:, 0])
+            st.markdown(":bar_chart: Statistics")
+            msg = f"""
+            Frames per second: {fps}\n
+            Agents: {len(peds)}\n
+            Evac-time: {np.max(data[:, 1])/fps} seconds
+            """
+            st.info(msg)
+            logging.info(f"fps = {fps}")
         except Exception as e:
             msg_status.error(
                 f"""Can't parse trajectory file.
@@ -170,14 +238,20 @@ if __name__ == "__main__":
             if parse_geometry_file != geometry_file.name:
                 st.error(f"Mismatched geometry files. Parsed {parse_geometry_file}. Uploaded {geometry_file.name}")
                 st.stop()
-
-            print(geometry_file.name)
+            
             stringio = StringIO(geometry_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
             file_data = geometry_file.read()
     
             geo_xml = parseString(geometry_file.getvalue())
             geometry_wall = Utilities.read_subroom_walls(geo_xml)
+            transitions = Utilities.get_transitions(geo_xml)
+            selected_transitions = st.sidebar.multiselect(
+                'Select transition',
+                transitions.keys(),
+                help="Transition to calculate N-T. Can select multiple transitions",
+                )
+            logging.info(transitions)
             geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml)
 
             print(
@@ -186,7 +260,6 @@ if __name__ == "__main__":
                 )
             )
 
-            
         except Exception as e:
             msg_status.error(
                 f"""Can't parse geometry file.
@@ -197,16 +270,16 @@ if __name__ == "__main__":
 
         if choose_trajectories:
             logging.info("plotting trajectories")
-            plot_trajectories(data, geometry_wall, geominX, geomaxX, geominY, geomaxY)
+            if choose_transitions:
+                plot_trajectories(data, geometry_wall, transitions, geominX, geomaxX, geominY, geomaxY)
+            else:
+                plot_trajectories(data, geometry_wall, {}, geominX, geomaxX, geominY, geomaxY)
 
-        if choose_profile:
-            logging.info("plotting velocity profile")
+        if choose_dprofile:
+            logging.info("plotting density profile")
             xbins = np.arange(geominX, geomaxX + dx, dx)
             ybins = np.arange(geominY, geomaxY + dx, dx)
 
-            ret = stats.binned_statistic_2d(
-                data[:, 2], data[:, 3], data[:, 9], "mean", bins=[xbins, ybins]
-            )
             ret2 = stats.binned_statistic_2d(
                 data[:, 2],
                 data[:, 3],
@@ -214,11 +287,41 @@ if __name__ == "__main__":
                 "mean",
                 bins=[xbins, ybins],
             )
-            prof = np.nan_to_num(ret.statistic.T)
             prof2 = np.nan_to_num(ret2.statistic.T)
 
-            fig, ax = plt.subplots(2, 1)
-            im = ax[0].imshow(
+            fig, ax = plt.subplots(1, 1)
+            im = ax.imshow(
+                prof2,
+                cmap=cm.jet,
+                interpolation="bicubic",
+                origin="lower",
+                vmin=0,
+                vmax=5,  # np.max(data[:, 9]),
+                extent=[geominX, geomaxX, geominY, geomaxY],
+            )
+            plot_geometry(ax, geometry_wall)
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="3.5%", pad=0.3)
+            cb = plt.colorbar(im, cax=cax)
+            cb.set_label(r"$\rho\; / 1/m^2$", rotation=90, labelpad=15, fontsize=15)
+
+            st.pyplot(fig)
+
+        if choose_vprofile:
+            logging.info("plotting velocity profile")
+            xbins = np.arange(geominX, geomaxX + dx, dx)
+            ybins = np.arange(geominY, geomaxY + dx, dx)
+
+            ret = stats.binned_statistic_2d(
+                data[:, 2],
+                data[:, 3],
+                data[:, 9],
+                "mean",
+                bins=[xbins, ybins]
+            )
+            prof = np.nan_to_num(ret.statistic.T)
+            fig, ax = plt.subplots(1, 1)
+            im = ax.imshow(
                 prof,
                 cmap=cm.jet.reversed(),
                 interpolation="bicubic",
@@ -228,29 +331,35 @@ if __name__ == "__main__":
                 extent=[geominX, geomaxX, geominY, geomaxY],
             )
 
-            plot_geometry(ax[0], geometry_wall)
-            divider = make_axes_locatable(ax[0])
+            plot_geometry(ax, geometry_wall)
+            divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="3.5%", pad=0.3)
             cb = plt.colorbar(im, cax=cax)
             cb.set_label(r"$v\; / m/s$", rotation=90, labelpad=15, fontsize=15)
 
-            im = ax[1].imshow(
-                prof2,
-                cmap=cm.jet,
-                interpolation="bicubic",
-                origin="lower",
-                vmin=0,
-                vmax=5,
-                extent=[geominX, geomaxX, geominY, geomaxY],
-            )
-
-            plot_geometry(ax[1], geometry_wall)
-            divider = make_axes_locatable(ax[1])
-            cax = divider.append_axes("right", size="3.5%", pad=0.3)
-            cb = plt.colorbar(im, cax=cax)
-            cb.set_label(r"$\rho\; / 1/m^2$", rotation=90, labelpad=15, fontsize=15)
-
             st.pyplot(fig)
 
         if choose_NT:
-            st.warning("Not implemented yet!")
+            peds = np.unique(data)
+            stats = defaultdict(list)
+            cum_num = {}
+            for i, t in transitions.items():
+                if i in selected_transitions:
+                    line = LineString(t)
+                    for ped in peds:
+                        ped_data = data[data[:, 0] == ped]
+                        frame = Utilities.passing_frame(ped_data, line, fps)
+                        if frame >= 0:
+                            stats[i].append(frame)
+
+                stats[i].sort()
+                cum_num[i] = np.cumsum(np.ones(len(stats[i])))
+                
+            plot_NT(stats, cum_num, fps)
+            logging.info(stats)
+            logging.info(cum_num)
+
+
+
+
+                    

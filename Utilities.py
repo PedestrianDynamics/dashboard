@@ -10,6 +10,73 @@ import plotly.graph_objs as go
 from plotly.graph_objs.scatter import Line
 from plotly.subplots import make_subplots
 
+from shapely.geometry import LineString, Point
+import lovely_logger as logging
+
+
+# def where_it_is(line, point):
+#     aX = line.p1.x
+#     aY = line.p1.y
+#     bX = line.p2.x
+#     bY = line.p2.y
+#     cX = point.x
+#     cY = point.y
+
+#     val = ((bX - aX)*(cY - aY) - (bY - aY)*(cX - aX))
+#     thresh = 1e-9
+#     if val >= thresh:
+#         return "left"
+#     elif val <= -thresh:
+#         return "right"
+#     else:
+#         return "point is on the line"
+
+def get_fps(traj_file):
+    fps = traj_file.split("#framerate:")[-1].split("\n")[0]
+    try:
+        fps = int(float(fps))
+    except ValueError:
+        logging.error(f"{fps} in header can not be converted to int")
+        st.stop()
+
+    return fps
+
+
+def get_transitions(xml_doc):
+    transitions = {}
+    for _, t_elem in enumerate(xml_doc.getElementsByTagName('transition')):
+        Id = t_elem.getAttribute('id')
+        n_vertex = len(t_elem.getElementsByTagName('vertex'))
+        vertex_array = np.zeros((n_vertex, 2))
+        for v_num, _ in enumerate(t_elem.getElementsByTagName('vertex')):
+            vertex_array[v_num, 0] = t_elem.getElementsByTagName('vertex')[v_num].attributes['px'].value
+            vertex_array[v_num, 1] = t_elem.getElementsByTagName('vertex')[v_num].attributes['py'].value
+
+        transitions[Id] = vertex_array
+
+    return transitions
+
+
+def passing_frame(ped_data: np.array, line: LineString, fps: int) -> int:
+    """Return frame of first time ped enters the line buffer
+
+    Enlarge the line by eps, a constant that is dependent on fps
+    eps = 1/fps * v0, v0 = 1.3 m/s
+
+    :param ped_data: trajectories of ped
+    :param line: transition
+    :param fps: fps
+
+    :returns: frame of entrance. Return negative number if ped did not pass trans
+
+    """
+    eps = 1/fps * 1.3
+    line_buffer = line.buffer(eps)
+    for (frame, x, y) in ped_data[:, 1:4]:
+        if Point(x, y).within(line_buffer):
+            return frame
+
+    return -1
 
 def read_trajectory(input_file):
     data = read_csv(
@@ -51,13 +118,14 @@ def read_obstacle(xml_doc):
 
 
 def read_subroom_walls(xml_doc):
-    
     dict_polynom_wall = {}
     n_wall = 0
     for _, s_elem in enumerate(xml_doc.getElementsByTagName('subroom')):
+        logging.info(f"Get subroom: {s_elem.getAttribute('id')}")
         for _, p_elem in enumerate(s_elem.getElementsByTagName('polygon')):
             if p_elem.getAttribute('caption') == "wall":
-                n_wall = n_wall + 1
+                
+                n_wall = n_wall + 1                
                 n_vertex = len(p_elem.getElementsByTagName('vertex'))
                 vertex_array = np.zeros((n_vertex, 2))
 
