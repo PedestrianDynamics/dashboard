@@ -249,6 +249,7 @@ if __name__ == "__main__":
             selected_transitions = st.sidebar.multiselect(
                 'Select transition',
                 transitions.keys(),
+                list(transitions.keys())[0],
                 help="Transition to calculate N-T. Can select multiple transitions",
                 )
             logging.info(transitions)
@@ -283,7 +284,8 @@ if __name__ == "__main__":
                 """)
                 st.code("https://www.jupedsim.org/jpscore_inifile.html#header")
                 st.code("https://www.jupedsim.org/jpscore_trajectory.html#addtional-outputhttps://www.jupedsim.org/jpscore_inifile.html#header")
-            st.stop()
+                st.stop()
+
             logging.info("plotting density profile")
             xbins = np.arange(geominX, geomaxX + dx, dx)
             ybins = np.arange(geominY, geomaxY + dx, dx)
@@ -323,7 +325,8 @@ if __name__ == "__main__":
                 """)
                 st.code("https://www.jupedsim.org/jpscore_inifile.html#header")
                 st.code("https://www.jupedsim.org/jpscore_trajectory.html#addtional-outputhttps://www.jupedsim.org/jpscore_inifile.html#header")
-            st.stop()
+                st.stop()
+
             logging.info("plotting velocity profile")
             xbins = np.arange(geominX, geomaxX + dx, dx)
             ybins = np.arange(geominY, geomaxY + dx, dx)
