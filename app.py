@@ -198,10 +198,10 @@ if __name__ == "__main__":
     )
     c1, c2 = st.sidebar.columns((1, 1))
     choose_dprofile = c1.checkbox(
-        "Density profiles", help="Plot density profiles", key="dProfile"
+        "Density profile", help="Plot density profile", key="dProfile"
     )
     choose_vprofile = c2.checkbox(
-        "Velocity profiles", help="Plot velocity profiles", key="vProfile"
+        "Velocity profile", help="Plot velocity profile", key="vProfile"
     )
     dx = st.sidebar.slider("Step", 0.01, 0.5, 0.2, help="Space discretization")
     st.sidebar.markdown("-------")
@@ -276,6 +276,14 @@ if __name__ == "__main__":
                 plot_trajectories(data, geometry_wall, {}, geominX, geomaxX, geominY, geomaxY)
 
         if choose_dprofile:
+            if data.shape[1] < 10:
+                st.warning(f"""trajectory file does not have enough columns ({data.shape[1]} < 10).
+                \n Use <optional_output   speed=\"TRUE\">
+                \n For more information refer to these links:
+                """)
+                st.code("https://www.jupedsim.org/jpscore_inifile.html#header")
+                st.code("https://www.jupedsim.org/jpscore_trajectory.html#addtional-outputhttps://www.jupedsim.org/jpscore_inifile.html#header")
+            st.stop()
             logging.info("plotting density profile")
             xbins = np.arange(geominX, geomaxX + dx, dx)
             ybins = np.arange(geominY, geomaxY + dx, dx)
@@ -308,6 +316,14 @@ if __name__ == "__main__":
             st.pyplot(fig)
 
         if choose_vprofile:
+            if data.shape[1] < 10:
+                st.warning(f"""trajectory file does not have enough columns ({data.shape[1]} < 10).
+                \n Use <optional_output   speed=\"TRUE\">
+                \n For more information refer to these links:
+                """)
+                st.code("https://www.jupedsim.org/jpscore_inifile.html#header")
+                st.code("https://www.jupedsim.org/jpscore_trajectory.html#addtional-outputhttps://www.jupedsim.org/jpscore_inifile.html#header")
+            st.stop()
             logging.info("plotting velocity profile")
             xbins = np.arange(geominX, geomaxX + dx, dx)
             ybins = np.arange(geominY, geomaxY + dx, dx)
