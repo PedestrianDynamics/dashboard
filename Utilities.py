@@ -1,35 +1,11 @@
-import os
-import glob
-import re
+import lovely_logger as logging
 import numpy as np
-import pandas as pd
-from pandas import read_csv
 import streamlit as st
-import plotly.express as px
-import plotly.graph_objs as go
+from pandas import read_csv
 from plotly.graph_objs.scatter import Line
 from plotly.subplots import make_subplots
-
 from shapely.geometry import LineString, Point
-import lovely_logger as logging
 
-
-# def where_it_is(line, point):
-#     aX = line.p1.x
-#     aY = line.p1.y
-#     bX = line.p2.x
-#     bY = line.p2.y
-#     cX = point.x
-#     cY = point.y
-
-#     val = ((bX - aX)*(cY - aY) - (bY - aY)*(cX - aX))
-#     thresh = 1e-9
-#     if val >= thresh:
-#         return "left"
-#     elif val <= -thresh:
-#         return "right"
-#     else:
-#         return "point is on the line"
 
 def get_fps(traj_file):
     fps = traj_file.split("#framerate:")[-1].split("\n")[0]

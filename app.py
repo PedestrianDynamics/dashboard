@@ -204,8 +204,8 @@ if __name__ == "__main__":
         "Velocity profiles", help="Plot velocity profiles", key="vProfile"
     )
     dx = st.sidebar.slider("Step", 0.01, 0.5, 0.2, help="Space discretization")
-    choose_NT = st.sidebar.checkbox("N-T diagram", help="Plot N-t curve", key="NT")
     st.sidebar.markdown("-------")
+    choose_NT = st.sidebar.checkbox("N-T diagram", help="Plot N-t curve", key="NT")
     msg_status = st.sidebar.empty()
     if trajectory_file and geometry_file:
         logging.info(f">> {trajectory_file.name}")
