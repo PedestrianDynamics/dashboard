@@ -79,19 +79,24 @@ if __name__ == "__main__":
          v_i(f) = \frac{x_i(f+df) - x_i(f))}{df},
          \end{equation}
          ''')
-         st.text("""with""")
-         st.latex(r"""df\; {\rm a\; constant\; and}\; v_i(f)\; {\rm the\; speed\; of\; pedestrian}\; i\; {\rm at}\; f.""")
+         st.write(r"""with $df$ a constant and $v_i(f)$ the speed of pedestrian $i$ at frame $f$.""")
          st.write("""
          #### Density
          The density is calculated based on the speed (1) using the Weidmann-formula **[Weidmann1992 Eq. (15)]**:
          """)
          st.latex(r'''
+         \begin{equation}
+         v_i = v^0 \Big(1 - \exp\big(\gamma (\frac{1}{\rho_i} - \frac{1}{\rho_{\max}}) \big)  \Big).
+         \end{equation}
+         ''')
+         st.text("Eq. (2) can be transformed in ")
+         st.latex(r'''
          \begin{equation*}
-         \frac{1}{\rho} = \frac{-1}{\gamma} \log(1 - \frac{v_i}{v^0})+ \frac{1}{\rho_{\max}},
+         \rho_i = \Big(-\frac{1}{\gamma} \log(1 - \frac{v_i}{v^0})+ \frac{1}{\rho_{\max}}\Big)^{-1},
          \end{equation*}
          ''')
          st.write("""where""")
-         st.latex(r"""\gamma = 1.913\, m^{-2},\; \rho_{\max} = 5.4\, m^{-2}\; \;{\rm and}\; v^0 = 1.34 m/s.""")
+         st.latex(r"""\gamma = 1.913\, m^{-2},\; \rho_{\max} = 5.4\, m^{-2}\; \;{\rm and}\; v^0 = 1.34\, m/s.""")
          st.markdown("--------")
          st.write("#### References:")
          st.code("Weidmann1992: U. Weidmann, Transporttechnik der Fussgänger: Transporttechnische Eigenschaften des Fussgängerverkehrs, Literaturauswertung, 1992")
@@ -140,8 +145,10 @@ if __name__ == "__main__":
     methods = ['nearest', 'bilinear', 'sinc']
     interpolation = st.sidebar.radio("Method", methods)
     st.sidebar.markdown("-------")
-    st.sidebar.header("N-T diagram")
-    choose_NT = st.sidebar.checkbox("Plot", help="Plot N-t curve", key="NT")
+    st.sidebar.header("Plot curves")
+    c1, c2 = st.sidebar.columns((1, 1))
+    choose_NT = c1.checkbox("N-T", help="Plot N-t curve", key="NT")
+    choose_flow = c2.checkbox("Flow", help="Plot flow curve", key="Flow")
     st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
     msg_status = st.sidebar.empty()
     
@@ -150,8 +157,10 @@ if __name__ == "__main__":
         logging.info(f">> {geometry_file.name}")
         try:
             data = read_trajectory(trajectory_file)
-            st.markdown("### Head of trajectories")
-            st.table(data[:10, :])# will display the table
+            h = st.expander("Head of trajectory")
+            with h:
+                st.markdown("### Head of trajectories")
+                st.table(data[:10, :])# will display the table
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
             fps = Utilities.get_fps(string_data)
@@ -161,7 +170,7 @@ if __name__ == "__main__":
             msg = f"""
             Frames per second: {fps}\n
             Agents: {len(peds)}\n
-            Evac-time: {np.max(data[:, 1])/fps} seconds
+            Evac-time: {np.max(data[:, 1])/fps} [s]
             """
             pl.info(msg)
             logging.info(f"fps = {fps}")
@@ -201,11 +210,7 @@ if __name__ == "__main__":
             # logging.info(transitions)
             geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml)
 
-            print(
-                "GeometrySize: X: ({:.2f},{:.2f}), Y: ({:.2f},{:.2f})".format(
-                    geominX, geomaxX, geominY, geomaxY
-                )
-            )
+            logging.info(f"GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geominY:.2f})")
 
         except Exception as e:
             msg_status.error(
@@ -245,10 +250,7 @@ if __name__ == "__main__":
                 logging.info("speed by trajectory")
                 speed = Utilities.compute_speed(data, fps, df)
  
-            density = Utilities.weidmann(speed)
-            pl.info(f"""
-            Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m/m]\n
-            Speed in range [{np.min(speed):.2} : {np.max(speed):.2}] [m/s]""")
+            density = Utilities.weidmann(speed)            
             logging.info("plotting density profile")
             xbins = np.arange(geominX, geomaxX + dx, dx)
             ybins = np.arange(geominY, geomaxY + dx, dx)
@@ -300,9 +302,6 @@ if __name__ == "__main__":
                 speed = Utilities.compute_speed(data, fps, df)
 
             density = Utilities.weidmann(speed)
-            pl.info(f"""
-            Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]\n
-            Speed in range [{np.min(speed):.2} : {np.max(speed):.2}] [m/s]""")
             
             xbins = np.arange(geominX, geomaxX + dx, dx)
             ybins = np.arange(geominY, geomaxY + dx, dx)            
@@ -329,10 +328,22 @@ if __name__ == "__main__":
 
             st.pyplot(fig)
 
-        if choose_NT:
+        if choose_dprofile and choose_vprofile:
+            st.info(f"""
+            Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]\n
+            Speed in range [{np.min(speed):.2} : {np.max(speed):.2}] [m/s]""")
+        elif choose_vprofile:
+            st.info(f"""            
+            Speed in range [{np.min(speed):.2} : {np.max(speed):.2}] [m/s]""")
+        elif choose_dprofile:
+            st.info(f"""
+            Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]""")
+
+        if choose_NT or choose_flow:
             peds = np.unique(data)
             stats = defaultdict(list)
             cum_num = {}
+            msg = ""
             for i, t in transitions.items():
                 if i in selected_transitions:
                     line = LineString(t)
@@ -344,34 +355,48 @@ if __name__ == "__main__":
 
                 stats[i].sort()
                 cum_num[i] = np.cumsum(np.ones(len(stats[i])))
+                if stats[i]:
+                    flow  = cum_num[i][-1]/stats[i][-1]*fps
+                    msg += f"Transition {i},  flow: {flow:.2f} [1/s] \n \n"
+                                
+        c1, _, c2 = st.columns((1, 0.05, 1))
+        with c1:
+            if choose_NT:
+                Utilities.plot_NT(stats, cum_num, fps)
 
-            Utilities.plot_NT(stats, cum_num, fps)
-            # --
+        with c2:
+            if choose_flow:
+                Utilities.plot_flow(stats, cum_num, fps)
+            
+            # -- download stats
+        if choose_NT:
             T = dt.datetime.now()
             n = trajectory_file.name.split(".txt")[0]
             file_download = f"{n}_{T.year}-{T.month:02}-{T.day:02}_{T.hour:02}-{T.minute:02}-{T.second:02}.txt"
             once = 1
             for i in selected_transitions:
                 if once:
-                    a = np.vstack((stats[i], cum_num[i]))
+                    all_stats = np.vstack((stats[i], cum_num[i]))
                     once = 0
                 else:
-                    a = np.vstack((a, stats[i], cum_num[i]))
+                    all_stats = np.vstack((all_stats, stats[i], cum_num[i]))
 
-            fmt = len(selected_transitions)*["%d", "%d"]
-            a = a.T
-            np.savetxt(
-                file_download,
-                a,
-                fmt=fmt,
-                header=np.array2string(np.array(selected_transitions, dtype=int),
-                                       precision=2,
-                                       separator='\t',
-                                       suppress_small=True),
-                comments="#",
-                delimiter="\t",
-            )
-            with open(file_download, encoding='utf-8') as f:
-                download = st.sidebar.download_button('Download statistics',
-                                                      f,
-                                                      file_name=file_download)
+            if selected_transitions:
+                st.info(msg)
+                fmt = len(selected_transitions)*["%d", "%d"]
+                all_stats = all_stats.T
+                np.savetxt(
+                    file_download,
+                    all_stats,
+                    fmt=fmt,
+                    header=np.array2string(np.array(selected_transitions, dtype=int),
+                                           precision=2,
+                                           separator='\t',
+                                           suppress_small=True),
+                    comments="#",
+                    delimiter="\t",
+                )
+                with open(file_download, encoding='utf-8') as f:
+                    download = st.sidebar.download_button('Download statistics',
+                                                          f,
+                                                          file_name=file_download)

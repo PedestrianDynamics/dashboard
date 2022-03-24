@@ -10,8 +10,8 @@ import plotly.graph_objs as go
 
 
 def plot_NT(Frames, Nums, fps):
-    logging.info("plott NT-curve")
-    fig = make_subplots(rows=1, cols=1, x_title="time / s", y_title="N")
+    logging.info("plot NT-curve")
+    fig = make_subplots(rows=1, cols=1,subplot_titles =["N-T"], x_title="time / s", y_title="N")
     for i, frames in Frames.items():
         nums = Nums[i]
         if not frames:
@@ -31,7 +31,52 @@ def plot_NT(Frames, Nums, fps):
     # eps = 0.5
     # fig.update_xaxes(range=[xmin/fps - eps, xmax/fps + eps])
     # fig.update_yaxes(range=[ymin - eps, ymax + eps], autorange=False)
+    fig.update_layout(
+        width=500,
+        height=500,
+    )
+    fig.update_yaxes(
+        scaleanchor="x",
+        scaleratio=1,
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
+
+def plot_flow(Frames, Nums, fps):
+    logging.info("plot flow-curve")
+    fig = make_subplots(rows=1, cols=1, subplot_titles =["Flow"],  x_title="time / s", y_title="J / 1/s")
+    for i, frames in Frames.items():
+        nums = Nums[i]
+        if not frames:
+            continue
+
+        times = np.array(frames) / fps
+        trace = go.Scatter(
+            x=times,
+            y=nums/times,
+            mode="lines",
+            showlegend=True,
+            name=f"ID: {i}",
+            marker=dict(size=1),
+            line=dict(width=1),
+        )
+        fig.append_trace(trace, row=1, col=1)
+
+    #eps = 0
+    #ymin = 0
+    #ymax = 2
+    # fig.update_xaxes(range=[xmin/fps - eps, xmax/fps + eps])
+   # fig.update_yaxes(range=[ymin - eps, ymax + eps], autorange=False)
+    fig.update_layout(
+        width=500,
+        height=500,
+    )
+    fig.update_yaxes(
+        scaleanchor="x",
+        scaleratio=1,
+        #range=[ymin - eps, ymax + eps],
+        autorange=True,
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 
