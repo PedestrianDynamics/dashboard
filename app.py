@@ -282,3 +282,32 @@ if __name__ == "__main__":
                 cum_num[i] = np.cumsum(np.ones(len(stats[i])))
 
             Utilities.plot_NT(stats, cum_num, fps)
+            # --
+            T = dt.datetime.now()
+            n = trajectory_file.name.split(".txt")[0]
+            file_download = f"{n}_{T.year}-{T.month:02}-{T.day:02}_{T.hour:02}-{T.minute:02}-{T.second:02}.txt"
+            once = 1
+            for i in selected_transitions:
+                if once:
+                    a = np.vstack((stats[i], cum_num[i]))
+                    once = 0
+                else:
+                    a = np.vstack((a, stats[i], cum_num[i]))
+
+            fmt = len(selected_transitions)*["%d", "%d"]
+            a = a.T
+            np.savetxt(
+                file_download,
+                a,
+                fmt=fmt,
+                header=np.array2string(np.array(selected_transitions, dtype=int),
+                                       precision=2,
+                                       separator='\t',
+                                       suppress_small=True),
+                comments="#",
+                delimiter="\t",
+            )
+            with open(file_download, encoding='utf-8') as f:
+                download = st.sidebar.download_button('Download statistics',
+                                                      f,
+                                                      file_name=file_download)
