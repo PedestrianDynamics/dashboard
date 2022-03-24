@@ -80,6 +80,7 @@ if __name__ == "__main__":
         help="Load geometry file",
     )
     st.sidebar.markdown("-------")
+    st.sidebar.header("Plot")
     c1, c2 = st.sidebar.columns((1, 1))
     choose_trajectories = c1.checkbox(
         "Trajectories", help="Plot trajectories", key="Traj"
@@ -87,18 +88,21 @@ if __name__ == "__main__":
     choose_transitions = c2.checkbox(
         "Transitions", help="Show transittions", key="Tran"
     )
+    st.sidebar.markdown("-------")
+    st.sidebar.header("Profile")
     c1, c2 = st.sidebar.columns((1, 1))
     choose_dprofile = c1.checkbox(
-        "Density profile", help="Plot density profile", key="dProfile"
+        "Density", help="Plot density profile", key="dProfile"
     )
     choose_vprofile = c2.checkbox(
-        "Velocity profile", help="Plot velocity profile", key="vProfile"
+        "Velocity", help="Plot velocity profile", key="vProfile"
     )
     dx = st.sidebar.slider("Step", 0.01, 1.0, 0.5, help="Space discretization")
     methods = ['nearest', 'bilinear', 'sinc']
     interpolation = st.sidebar.radio("Method", methods)
     st.sidebar.markdown("-------")
-    choose_NT = st.sidebar.checkbox("N-T diagram", help="Plot N-t curve", key="NT")
+    st.sidebar.header("N-T diagram")
+    choose_NT = st.sidebar.checkbox("Plot", help="Plot N-t curve", key="NT")
     st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
     msg_status = st.sidebar.empty()
     if trajectory_file and geometry_file:
