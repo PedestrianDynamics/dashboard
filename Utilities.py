@@ -258,3 +258,60 @@ def geo_limits(geo_xml):
 
 def get_geometry_file(traj_file):
     return traj_file.split("geometry:")[-1].split("\n")[0].strip()
+
+
+def compute_speed(data, fps, df=10):
+    """Calculates the speed and the angle from the trajectory points.
+
+    Using the forward formula
+    speed(f) = (X(f+df) - X(f))/df [1]
+    note: The last df frames are not calculated using [1].
+    It is assumes that the speed in the last frames
+    does not change
+    :param traj: trajectory of ped (x, y). 2D array
+    :param df: number of frames forwards
+    :param fps: frames per seconds
+
+    :returns: speed, angle
+
+    example:
+    df=4, S=10
+         0 1 2 3 4 5 6 7 8 9
+       X * * * * * * * * * *
+       V + + + + + +
+         *       *
+           *       *      X[df:]
+    X[:S-df] *       *       │
+    │          *       *   ◄─┘
+    └────────►   *       *
+                   *       *
+    """
+    agents = np.unique(data[:, 0]).astype(int)
+    once = 1
+    speeds = np.array([])
+    for agent in agents:
+        ped = data[data[:, 0] == agent]
+        traj = ped[:, 2:4]
+        size = traj.shape[0]
+        speed = np.ones(size)
+        if size < df:
+            logging.warning(
+                f"""The number of frames used to calculate the speed {df}
+                exceeds the total amount of frames ({size}) in this trajectory."""
+            )
+            st.stop()
+
+        delta = traj[df:, :] - traj[: size - df, :]
+        delta_square = np.square(delta)
+        delta_x_square = delta_square[:, 0]
+        delta_y_square = delta_square[:, 1]
+        s = np.sqrt(delta_x_square + delta_y_square)
+        speed[: size - df] = s / df * fps
+        speed[size - df:] = speed[size - df - 1]
+        if once:
+            speeds = speed
+            once = 0
+        else:
+            speeds = np.hstack((speeds, speed))
+
+    return speeds

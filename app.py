@@ -61,6 +61,40 @@ def read_trajectory(input_file):
 
 
 if __name__ == "__main__":
+    st.header(":information_source: Dashboard")
+    info = st.expander("click to expand")
+    with info:
+         st.write("""
+         This app performs some basic measurements on data simulated by jpscore.
+
+         #### Speed
+         The speed can be calculated *from simulation*: in this case
+         use in the inifile the option: `<optional_output   speed=\"TRUE\">`.
+
+         Alternatively, the speed can be calculated *from trajectory*
+         according to the forward-formula:
+         """)
+         st.latex(r'''
+         \begin{equation}
+         v_i(f) = \frac{x_i(f+df) - x_i(f))}{df},
+         \end{equation}
+         ''')
+         st.text("""with""")
+         st.latex(r"""df\; {\rm a\; constant\; and}\; v_i(f)\; {\rm the\; speed\; of\; pedestrian}\; i\; {\rm at}\; f.""")
+         st.write("""
+         #### Density
+         The density is calculated based on the speed (1) using the Weidmann-formula **[Weidmann1992 Eq. (15)]**:
+         """)
+         st.latex(r'''
+         \begin{equation*}
+         \frac{1}{\rho} = \frac{-1}{\gamma} \log(1 - \frac{v_i}{v^0})+ \frac{1}{\rho_{\max}},
+         \end{equation*}
+         ''')
+         st.write("""where""")
+         st.latex(r"""\gamma = 1.913\, m^{-2},\; \rho_{\max} = 5.4\, m^{-2}\; \;{\rm and}\; v^0 = 1.34 m/s.""")
+         st.markdown("--------")
+         st.write("#### References:")
+         st.code("Weidmann1992: U. Weidmann, Transporttechnik der Fussgänger: Transporttechnische Eigenschaften des Fussgängerverkehrs, Literaturauswertung, 1992")
     set_state_variables()
     st.sidebar.image("jupedsim.png", use_column_width=True)
     gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
@@ -97,6 +131,11 @@ if __name__ == "__main__":
     choose_vprofile = c2.checkbox(
         "Velocity", help="Plot velocity profile", key="vProfile"
     )
+    how_speed = st.sidebar.radio("Speed", ['from simulation', 'from trajectory'])
+    st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
+    if how_speed == "from trajectory":
+        df = st.sidebar.slider("df", 2, 50, 10, help="how many frames to consider for calculating the speed")
+
     dx = st.sidebar.slider("Step", 0.01, 1.0, 0.5, help="Space discretization")
     methods = ['nearest', 'bilinear', 'sinc']
     interpolation = st.sidebar.radio("Method", methods)
@@ -105,22 +144,26 @@ if __name__ == "__main__":
     choose_NT = st.sidebar.checkbox("Plot", help="Plot N-t curve", key="NT")
     st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
     msg_status = st.sidebar.empty()
+    
     if trajectory_file and geometry_file:
         logging.info(f">> {trajectory_file.name}")
         logging.info(f">> {geometry_file.name}")
         try:
             data = read_trajectory(trajectory_file)
+            st.markdown("### Head of trajectories")
+            st.table(data[:10, :])# will display the table
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
             fps = Utilities.get_fps(string_data)
             peds = np.unique(data[:, 0])
-            st.markdown(":bar_chart: Statistics")
+            st.markdown("### :bar_chart: Statistics")
+            pl = st.empty()
             msg = f"""
             Frames per second: {fps}\n
             Agents: {len(peds)}\n
             Evac-time: {np.max(data[:, 1])/fps} seconds
             """
-            st.info(msg)
+            pl.info(msg)
             logging.info(f"fps = {fps}")
         except Exception as e:
             msg_status.error(
@@ -183,7 +226,7 @@ if __name__ == "__main__":
                 )
 
         if choose_dprofile:
-            if data.shape[1] < 10:
+            if data.shape[1] < 10 and how_speed == "from simulation":
                 st.warning(
                     f"""trajectory file does not have enough columns ({data.shape[1]} < 10).
                 \n Use <optional_output   speed=\"TRUE\">
@@ -194,12 +237,21 @@ if __name__ == "__main__":
                 st.code(
                     "https://www.jupedsim.org/jpscore_trajectory.html#addtional-outputhttps://www.jupedsim.org/jpscore_inifile.html#header"
                 )
-                st.stop()
-
+                
+            if how_speed == "from simulation":
+                logging.info("speed by simulation")
+                speed = data[:, 9]
+            else:
+                logging.info("speed by trajectory")
+                speed = Utilities.compute_speed(data, fps, df)
+ 
+            density = Utilities.weidmann(speed)
+            pl.info(f"""
+            Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m/m]\n
+            Speed in range [{np.min(speed):.2} : {np.max(speed):.2}] [m/s]""")
             logging.info("plotting density profile")
             xbins = np.arange(geominX, geomaxX + dx, dx)
             ybins = np.arange(geominY, geomaxY + dx, dx)
-            density = Utilities.weidmann(data[:, 9])
             ret2 = stats.binned_statistic_2d(
                 data[:, 2],
                 data[:, 3],
@@ -208,8 +260,6 @@ if __name__ == "__main__":
                 bins=[xbins, ybins],
             )
             prof2 = np.nan_to_num(ret2.statistic.T)
-            print(np.min(data[:, 9]), np.max(data[:, 9]))
-            print(np.min(density), np.max(density))
             fig, ax = plt.subplots(1, 1)
             im = ax.imshow(
                 prof2,
@@ -217,7 +267,7 @@ if __name__ == "__main__":
                 interpolation=interpolation,
                 origin="lower",
                 vmin=0,
-                vmax=np.max(density),  # np.max(data[:, 9]),
+                vmax=6, # np.max(density),
                 extent=[geominX, geomaxX, geominY, geomaxY],
             )
             Utilities.plot_geometry(ax, geometry_wall)
@@ -225,11 +275,10 @@ if __name__ == "__main__":
             cax = divider.append_axes("right", size="3.5%", pad=0.3)
             cb = plt.colorbar(im, cax=cax)
             cb.set_label(r"$\rho\; / 1/m^2$", rotation=90, labelpad=15, fontsize=15)
-
             st.pyplot(fig)
 
         if choose_vprofile:
-            if data.shape[1] < 10:
+            if data.shape[1] < 10 and how_speed == "from simulation":
                 st.warning(
                     f"""trajectory file does not have enough columns ({data.shape[1]} < 10).
                 \n Use <optional_output   speed=\"TRUE\">
@@ -243,11 +292,22 @@ if __name__ == "__main__":
                 st.stop()
 
             logging.info("plotting velocity profile")
-            xbins = np.arange(geominX, geomaxX + dx, dx)
-            ybins = np.arange(geominY, geomaxY + dx, dx)
+            if how_speed == "from simulation":
+                logging.info("speed by simulation")
+                speed = data[:, 9]
+            else:
+                logging.info("speed by trajectory")
+                speed = Utilities.compute_speed(data, fps, df)
 
+            density = Utilities.weidmann(speed)
+            pl.info(f"""
+            Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]\n
+            Speed in range [{np.min(speed):.2} : {np.max(speed):.2}] [m/s]""")
+            
+            xbins = np.arange(geominX, geomaxX + dx, dx)
+            ybins = np.arange(geominY, geomaxY + dx, dx)            
             ret = stats.binned_statistic_2d(
-                data[:, 2], data[:, 3], data[:, 9], "mean", bins=[xbins, ybins]
+                data[:, 2], data[:, 3], speed, "mean", bins=[xbins, ybins]
             )
             prof = np.nan_to_num(ret.statistic.T)
             fig, ax = plt.subplots(1, 1)
@@ -257,7 +317,7 @@ if __name__ == "__main__":
                 interpolation=interpolation,
                 origin="lower",
                 vmin=0,
-                vmax=np.max(data[:, 9]),
+                vmax=1.3, #np.max(speed),
                 extent=[geominX, geomaxX, geominY, geomaxY],
             )
 
