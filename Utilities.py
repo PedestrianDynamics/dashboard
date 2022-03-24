@@ -38,6 +38,7 @@ def plot_NT(Frames, Nums, fps):
 def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
     fig = make_subplots(rows=1, cols=1)
     peds = np.unique(data[:, 0])
+    offset = 0.2
     for ped in peds:
         d = data[data[:, 0] == ped]
         c = d[:, -1]
@@ -72,8 +73,8 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
             marker=dict(color="red", size=8),
         )
         trace_text = go.Scatter(
-            x=[np.sum(t[:, 0]) / 2],
-            y=[np.sum(t[:, 1]) / 2],
+            x=[np.sum(t[:, 0]) / 2 + offset],
+            y=[np.sum(t[:, 1]) / 2 + offset],
             text=f"ID: {i}",
             textposition="middle right",
             showlegend=False,

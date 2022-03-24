@@ -94,11 +94,12 @@ if __name__ == "__main__":
     choose_vprofile = c2.checkbox(
         "Velocity profile", help="Plot velocity profile", key="vProfile"
     )
-    dx = st.sidebar.slider("Step", 0.01, 0.5, 0.2, help="Space discretization")
-    methods = ['nearest', 'bilinear', 'bicubic', 'quadric', 'sinc']
-    interpolation = st.sidebar.radio("interpolation", methods)
+    dx = st.sidebar.slider("Step", 0.01, 1.0, 0.5, help="Space discretization")
+    methods = ['nearest', 'bilinear', 'sinc']
+    interpolation = st.sidebar.radio("Method", methods)
     st.sidebar.markdown("-------")
     choose_NT = st.sidebar.checkbox("N-T diagram", help="Plot N-t curve", key="NT")
+    st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
     msg_status = st.sidebar.empty()
     if trajectory_file and geometry_file:
         logging.info(f">> {trajectory_file.name}")
