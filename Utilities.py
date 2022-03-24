@@ -104,7 +104,8 @@ def plot_geometry(ax, _geometry_wall):
 
 
 def weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
-    x = -1 / gamma * (np.log(1 - v / v0) + 1 / rho_max)
+    v[v > v0] = v0
+    x = -1 / gamma * (np.log(1 - v / v0)) + 1 / rho_max
     return 1 / x
 
 
