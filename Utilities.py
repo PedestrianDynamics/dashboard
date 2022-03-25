@@ -43,6 +43,7 @@ def plot_NT(Frames, Nums, fps):
     fig.update_yaxes(
         scaleanchor="x",
         scaleratio=1,
+        autorange=True,
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -167,7 +168,8 @@ def plot_geometry(ax, _geometry_wall):
 
 def weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
     v[v > v0] = v0
-    x = -1 / gamma * (np.log(1 - v / v0)) + 1 / rho_max
+    s = 1 - v/v0
+    x = -1 / gamma * np.log(s, out=np.zeros_like(s), where=(s != 0)) + 1 / rho_max
     return 1 / x
 
 
