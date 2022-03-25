@@ -303,30 +303,31 @@ if __name__ == "__main__":
 
         if choose_dprofile or choose_vprofile:
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
-            c1, _, c2 = st.columns((1, 0.05, 1))
             msg = ""
-            with c1:
+            with st.spinner('Processing ...'):
+                c1, _, c2 = st.columns((1, 0.05, 1))
                 if choose_dprofile:
                     if choose_method == "Binned statistic":
                         density = Utilities.weidmann(speed)
-                        density = Utilities.plot_profile(
-                            geominX,
-                            geomaxX,
-                            geominY,
-                            geomaxY,
-                            geometry_wall,
-                            dx,
-                            data[:, 2],
-                            data[:, 3],
-                            density,
-                            len(frames),
-                            interpolation=interpolation,
-                            cmap=cm.jet,
-                            label=r"$\rho\; / 1/m^2$",
-                            title="Density",
-                        )
+                        with c1:
+                            density = Utilities.plot_profile(
+                                geominX,
+                                geomaxX,
+                                geominY,
+                                geomaxY,
+                                geometry_wall,
+                                dx,
+                                data[:, 2],
+                                data[:, 3],
+                                density,
+                                len(frames),
+                                interpolation=interpolation,
+                                cmap=cm.jet,
+                                label=r"$\rho\; / 1/m^2$",
+                                title="Density",
+                            )
                     else:
-                        with st.spinner('Processing ...'):
+                        with c1:
                             density = Utilities.orderFieldPlot(
                                 geominX,
                                 geomaxX,
@@ -344,27 +345,28 @@ if __name__ == "__main__":
                             )
                             st.session_state.density = density
                     msg += f"Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]. "
-            with c2:
+
                 if choose_vprofile:
                     if choose_method == "Binned statistic":
-                        speed = Utilities.plot_profile(
-                            geominX,
-                            geomaxX,
-                            geominY,
-                            geomaxY,
-                            geometry_wall,
-                            dx,
-                            data[:, 2],
-                            data[:, 3],
-                            speed,
-                            len(frames),
-                            interpolation=interpolation,
-                            cmap=cm.jet.reversed(),
-                            label=r"$v\; / m/s$",
-                            title="Speed",
-                        )
+                        with c2:
+                            speed = Utilities.plot_profile(
+                                geominX,
+                                geomaxX,
+                                geominY,
+                                geomaxY,
+                                geometry_wall,
+                                dx,
+                                data[:, 2],
+                                data[:, 3],
+                                speed,
+                                len(frames),
+                                interpolation=interpolation,
+                                cmap=cm.jet.reversed(),
+                                label=r"$v\; / m/s$",
+                                title="Speed",
+                            )
                     else:
-                        with st.spinner('Processing ...'):
+                        with c2:
                             speed = Utilities.plot_profile_velocity(geominX,
                                                                     geomaxX,
                                                                     geominY,
@@ -378,8 +380,8 @@ if __name__ == "__main__":
                        
                        
                     msg += f"Speed in range [{np.min(speed):.2f} : {np.max(speed):.2f}] [m/s]. "
-            st.info(msg)
 
+            st.info(msg)
         if choose_NT or choose_flow:
             peds = np.unique(data)
             tstats = defaultdict(list)

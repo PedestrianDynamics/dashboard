@@ -468,23 +468,24 @@ def check_shape_and_stop(shape, how_speed):
 
 
 def widthOfGaußian(fwhm):
-    return fwhm * 0.6005612 # np.sqrt(2) / (2 * np.sqrt(2 * np.log(2)))
+    return fwhm * 0.6005612  # np.sqrt(2) / (2 * np.sqrt(2 * np.log(2)))
 
 
 def densty1d(delta_x, a):
-    return np.array(list(map(lambda x: 1 / (np.sqrt(np.pi) * a) * np.e ** (-x ** 2 / a ** 2), delta_x)))
+#    return np.array(list(map(lambda x: 1 / (np.sqrt(np.pi) * a) * np.e ** (-x ** 2 / a ** 2), delta_x)))
+    return np.array(list(map(lambda x: 1 / (1.7724538 * a) * np.e ** (-x ** 2 / a ** 2), delta_x)))
 
 
 def densityField(x_dens, y_dens, a):
-    rho_matrix_x = np.array([densty1d(delta_x, a) for delta_x in x_dens])  # density matrix is calculated
+    rho_matrix_x = np.array([densty1d(delta_x, a) for delta_x in x_dens])
     rho_matrix_y = np.array([densty1d(delta_y, a) for delta_y in y_dens])
-    
+
     rho_matrix = np.matmul(rho_matrix_x, np.transpose(rho_matrix_y))
     return rho_matrix.T
 
 
 def xdensYdens(lattice_x, lattice_y, x_array, y_array):
-    x_dens = np.array([lattice_x - x for x in x_array])  # calculate the distant of lattice pedestrians to the measuring lattice
+    x_dens = np.array([lattice_x - x for x in x_array])
     y_dens = np.array([lattice_y - y for y in y_array])
     return x_dens, y_dens
 
@@ -504,15 +505,13 @@ def orderFieldPlot(
         label,
         title,):
 
-    # z_min = Z.min()
-    # z_max = Z.max()
     fig, ax = plt.subplots(1, 1)
     xbins = np.arange(geominX, geomaxX + dx, dx)
     ybins = np.arange(geominY, geomaxY + dx, dx)
     x_dens, y_dens = xdensYdens(X, Y, xbins, ybins)
     a = widthOfGaußian(0.3)
-    rho_matrix = densityField(x_dens, y_dens, a)/nframes    
-    z_min, z_max = rho_matrix.min(), rho_matrix.max()    
+    rho_matrix = densityField(x_dens, y_dens, a)/nframes
+    z_min, z_max = rho_matrix.min(), rho_matrix.max()
     im = ax.imshow(
         rho_matrix,
         cmap=cmap,
