@@ -5,13 +5,13 @@
 # JuPedSim-Dashboard
 
 Show statistics and make plots extracted from [jpscore](https://github.com/jupedsim/jpscore)-simulations.
-<img width="1159" alt="Screen Shot 2022-03-25 at 15 00 23" src="https://user-images.githubusercontent.com/5772973/160135275-35830dd6-c7c8-4522-be65-8ba5befad06d.png">
 
+
+<img width="1043" alt="Screen Shot 2022-03-25 at 20 47 58" src="https://user-images.githubusercontent.com/5772973/160191551-4e030612-e034-4c4c-af9c-38be83036e33.png">
 
 
 ## Profiles 
-The density profile uses the speed of the pedestrians the the Weidmann diagram.
-
+The density profile uses the speed of the pedestrians calculated by the Weidmann diagram.
 Therefore, use the `optional_output`-option in the inifile:
 
 ```xml
