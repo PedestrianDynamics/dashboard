@@ -5,9 +5,8 @@
 # JuPedSim-Dashboard
 
 Show statistics and make plots extracted from [jpscore](https://github.com/jupedsim/jpscore)-simulations.
+<img width="1159" alt="Screen Shot 2022-03-25 at 15 00 23" src="https://user-images.githubusercontent.com/5772973/160135275-35830dd6-c7c8-4522-be65-8ba5befad06d.png">
 
-
-<img width="1792" alt="Screen Shot 2022-03-23 at 21 10 32" src="https://user-images.githubusercontent.com/5772973/159787011-f9d9a676-3995-430c-bc8b-fb30b250f0cd.png">
 
 
 ## Profiles 
@@ -20,3 +19,7 @@ Therefore, use the `optional_output`-option in the inifile:
     <optional_output speed="TRUE"/>
 </trajectories>
 ```
+
+## NT-curve 
+
+Define in the geometry transitions, such that the pedestrian fully pass them. 
