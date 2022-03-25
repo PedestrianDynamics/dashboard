@@ -9,6 +9,7 @@ import lovely_logger as logging
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
+
 # import matplotlib.cm as cm
 from matplotlib import cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -64,7 +65,8 @@ if __name__ == "__main__":
     st.header(":information_source: Dashboard")
     info = st.expander("click to expand")
     with info:
-         st.write("""
+        st.write(
+            """
          This app performs some basic measurements on data simulated by jpscore.
 
          #### Speed
@@ -73,33 +75,48 @@ if __name__ == "__main__":
 
          Alternatively, the speed can be calculated *from trajectory*
          according to the forward-formula:
-         """)
-         st.latex(r'''
+         """
+        )
+        st.latex(
+            r"""
          \begin{equation}
          v_i(f) = \frac{x_i(f+df) - x_i(f))}{df},
          \end{equation}
-         ''')
-         st.write(r"""with $df$ a constant and $v_i(f)$ the speed of pedestrian $i$ at frame $f$.""")
-         st.write("""
+         """
+        )
+        st.write(
+            r"""with $df$ a constant and $v_i(f)$ the speed of pedestrian $i$ at frame $f$."""
+        )
+        st.write(
+            """
          #### Density
          The density is calculated based on the speed (1) using the Weidmann-formula **[Weidmann1992 Eq. (15)]**:
-         """)
-         st.latex(r'''
+         """
+        )
+        st.latex(
+            r"""
          \begin{equation}
          v_i = v^0 \Big(1 - \exp\big(\gamma (\frac{1}{\rho_i} - \frac{1}{\rho_{\max}}) \big)  \Big).
          \end{equation}
-         ''')
-         st.text("Eq. (2) can be transformed in ")
-         st.latex(r'''
+         """
+        )
+        st.text("Eq. (2) can be transformed in ")
+        st.latex(
+            r"""
          \begin{equation*}
          \rho_i = \Big(-\frac{1}{\gamma} \log(1 - \frac{v_i}{v^0})+ \frac{1}{\rho_{\max}}\Big)^{-1},
          \end{equation*}
-         ''')
-         st.write("""where""")
-         st.latex(r"""\gamma = 1.913\, m^{-2},\; \rho_{\max} = 5.4\, m^{-2}\; \;{\rm and}\; v^0 = 1.34\, m/s.""")
-         st.markdown("--------")
-         st.write("#### References:")
-         st.code("Weidmann1992: U. Weidmann, Transporttechnik der Fussgänger: Transporttechnische Eigenschaften des Fussgängerverkehrs, Literaturauswertung, 1992")
+         """
+        )
+        st.write("""where""")
+        st.latex(
+            r"""\gamma = 1.913\, m^{-2},\; \rho_{\max} = 5.4\, m^{-2}\; \;{\rm and}\; v^0 = 1.34\, m/s."""
+        )
+        st.markdown("--------")
+        st.write("#### References:")
+        st.code(
+            "Weidmann1992: U. Weidmann, Transporttechnik der Fussgänger: Transporttechnische Eigenschaften des Fussgängerverkehrs, Literaturauswertung, 1992"
+        )
     set_state_variables()
     st.sidebar.image("jupedsim.png", use_column_width=True)
     gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
@@ -134,24 +151,38 @@ if __name__ == "__main__":
         "Density", help="Plot density profile", key="dProfile"
     )
     choose_vprofile = c2.checkbox(
-        "Velocity", help="Plot velocity profile", key="vProfile"
+        "Speed", help="Plot speed profile", key="vProfile"
     )
-    how_speed = st.sidebar.radio("Speed", ['from simulation', 'from trajectory'])
-    st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
+    how_speed = st.sidebar.radio("Speed", ["from simulation", "from trajectory"])
+    st.write(
+        "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+        unsafe_allow_html=True,
+    )
     if how_speed == "from trajectory":
-        df = st.sidebar.slider("df", 2, 50, 10, help="how many frames to consider for calculating the speed")
+        df = st.sidebar.slider(
+            "df",
+            2,
+            50,
+            10,
+            help="how many frames to consider for calculating the speed",
+        )
 
     dx = st.sidebar.slider("Step", 0.01, 1.0, 0.5, help="Space discretization")
-    methods = ['nearest', 'bilinear', 'sinc']
-    interpolation = st.sidebar.radio("Method", methods)
+    methods = ["nearest", "gaussian", "sinc", "bicubic", "mitchell", "bilinear"]
+    interpolation = st.sidebar.radio(
+        "Method", methods, help="Interpolation methods for imshow()"
+    )
     st.sidebar.markdown("-------")
     st.sidebar.header("Plot curves")
     c1, c2 = st.sidebar.columns((1, 1))
     choose_NT = c1.checkbox("N-T", help="Plot N-t curve", key="NT")
     choose_flow = c2.checkbox("Flow", help="Plot flow curve", key="Flow")
-    st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
+    st.write(
+        "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+        unsafe_allow_html=True,
+    )
     msg_status = st.sidebar.empty()
-    
+
     if trajectory_file and geometry_file:
         logging.info(f">> {trajectory_file.name}")
         logging.info(f">> {geometry_file.name}")
@@ -160,7 +191,7 @@ if __name__ == "__main__":
             h = st.expander("Head of trajectory")
             with h:
                 st.markdown("### Head of trajectories")
-                st.table(data[:10, :])# will display the table
+                st.table(data[:10, :])  # will display the table
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
             fps = Utilities.get_fps(string_data)
@@ -210,7 +241,9 @@ if __name__ == "__main__":
             # logging.info(transitions)
             geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml)
 
-            logging.info(f"GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geominY:.2f})")
+            logging.info(
+                f"GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geominY:.2f})"
+            )
 
         except Exception as e:
             msg_status.error(
@@ -230,173 +263,145 @@ if __name__ == "__main__":
                     data, geometry_wall, {}, geominX, geomaxX, geominY, geomaxY
                 )
 
-        if choose_dprofile:
-            if data.shape[1] < 10 and how_speed == "from simulation":
-                st.warning(
-                    f"""trajectory file does not have enough columns ({data.shape[1]} < 10).
-                \n Use <optional_output   speed=\"TRUE\">
-                \n For more information refer to these links:
-                """
-                )
-                st.code("https://www.jupedsim.org/jpscore_inifile.html#header")
-                st.code(
-                    "https://www.jupedsim.org/jpscore_trajectory.html#addtional-outputhttps://www.jupedsim.org/jpscore_inifile.html#header"
-                )
-                
-            if how_speed == "from simulation":
-                logging.info("speed by simulation")
-                speed = data[:, 9]
-            else:
-                logging.info("speed by trajectory")
-                speed = Utilities.compute_speed(data, fps, df)
- 
-            density = Utilities.weidmann(speed)            
-            logging.info("plotting density profile")
-            xbins = np.arange(geominX, geomaxX + dx, dx)
-            ybins = np.arange(geominY, geomaxY + dx, dx)
-            ret2 = stats.binned_statistic_2d(
-                data[:, 2],
-                data[:, 3],
-                density,
-                "mean",
-                bins=[xbins, ybins],
-            )
-            prof2 = np.nan_to_num(ret2.statistic.T)
-            fig, ax = plt.subplots(1, 1)
-            im = ax.imshow(
-                prof2,
-                cmap=cm.jet,
-                interpolation=interpolation,
-                origin="lower",
-                vmin=0,
-                vmax=6, # np.max(density),
-                extent=[geominX, geomaxX, geominY, geomaxY],
-            )
-            Utilities.plot_geometry(ax, geometry_wall)
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="3.5%", pad=0.3)
-            cb = plt.colorbar(im, cax=cax)
-            cb.set_label(r"$\rho\; / 1/m^2$", rotation=90, labelpad=15, fontsize=15)
-            st.pyplot(fig)
+        if how_speed == "from simulation":
+            logging.info("speed by simulation")
+            Utilities.check_shape_and_stop(data.shape[1], how_speed)
+            speed = data[:, 9]
+        else:
+            logging.info("speed by trajectory")
+            speed = Utilities.compute_speed(data, fps, df)
 
-        if choose_vprofile:
-            if data.shape[1] < 10 and how_speed == "from simulation":
-                st.warning(
-                    f"""trajectory file does not have enough columns ({data.shape[1]} < 10).
-                \n Use <optional_output   speed=\"TRUE\">
-                \n For more information refer to these links:
-                """
-                )
-                st.code("https://www.jupedsim.org/jpscore_inifile.html#header")
-                st.code(
-                    "https://www.jupedsim.org/jpscore_trajectory.html#addtional-outputhttps://www.jupedsim.org/jpscore_inifile.html#header"
-                )
-                st.stop()
-
-            logging.info("plotting velocity profile")
-            if how_speed == "from simulation":
-                logging.info("speed by simulation")
-                speed = data[:, 9]
-            else:
-                logging.info("speed by trajectory")
-                speed = Utilities.compute_speed(data, fps, df)
-
-            density = Utilities.weidmann(speed)
-            
-            xbins = np.arange(geominX, geomaxX + dx, dx)
-            ybins = np.arange(geominY, geomaxY + dx, dx)            
-            ret = stats.binned_statistic_2d(
-                data[:, 2], data[:, 3], speed, "mean", bins=[xbins, ybins]
-            )
-            prof = np.nan_to_num(ret.statistic.T)
-            fig, ax = plt.subplots(1, 1)
-            im = ax.imshow(
-                prof,
-                cmap=cm.jet.reversed(),
-                interpolation=interpolation,
-                origin="lower",
-                vmin=0,
-                vmax=1.3, #np.max(speed),
-                extent=[geominX, geomaxX, geominY, geomaxY],
-            )
-
-            Utilities.plot_geometry(ax, geometry_wall)
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="3.5%", pad=0.3)
-            cb = plt.colorbar(im, cax=cax)
-            cb.set_label(r"$v\; / m/s$", rotation=90, labelpad=15, fontsize=15)
-
-            st.pyplot(fig)
-
-        if choose_dprofile and choose_vprofile:
-            st.info(f"""
-            Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]\n
-            Speed in range [{np.min(speed):.2} : {np.max(speed):.2}] [m/s]""")
-        elif choose_vprofile:
-            st.info(f"""            
-            Speed in range [{np.min(speed):.2} : {np.max(speed):.2}] [m/s]""")
-        elif choose_dprofile:
-            st.info(f"""
-            Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]""")
+        if choose_dprofile or choose_vprofile:
+            Utilities.check_shape_and_stop(data.shape[1], how_speed)
+            c1, _, c2 = st.columns((1, 0.05, 1))
+            msg = ""
+            with c1:
+                if choose_dprofile:
+                    density = Utilities.weidmann(speed)
+                    Utilities.plot_profile(
+                        geominX,
+                        geomaxX,
+                        geominY,
+                        geomaxY,
+                        geometry_wall,
+                        dx,
+                        data[:, 2],
+                        data[:, 3],
+                        density,
+                        vmin=0,
+                        vmax=6,
+                        interpolation=interpolation,
+                        cmap=cm.jet,
+                        label=r"$\rho\; / 1/m^2$",
+                        title="Density",
+                    )
+                    msg  += f"Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]. "
+            with c2:
+                if choose_vprofile:
+                    Utilities.plot_profile(
+                        geominX,
+                        geomaxX,
+                        geominY,
+                        geomaxY,
+                        geometry_wall,
+                        dx,
+                        data[:, 2],
+                        data[:, 3],
+                        speed,
+                        vmin=0,
+                        vmax=1.3,
+                        interpolation=interpolation,
+                        cmap=cm.jet.reversed(),
+                        label=r"$v\; / m/s$",
+                        title="Speed",
+                    )
+                    msg += f"Speed in range [{np.min(speed):.2f} : {np.max(speed):.2f}] [m/s]. "
+            st.info(msg)
 
         if choose_NT or choose_flow:
             peds = np.unique(data)
-            stats = defaultdict(list)
+            tstats = defaultdict(list)
             cum_num = {}
             msg = ""
-            for i, t in transitions.items():
-                if i in selected_transitions:
-                    line = LineString(t)
-                    for ped in peds:
-                        ped_data = data[data[:, 0] == ped]
-                        frame = Utilities.passing_frame(ped_data, line, fps)
-                        if frame >= 0:
-                            stats[i].append(frame)
+            trans_used = {}
+            with st.spinner('Processing ...'):
+                max_len = -1  # longest array. Needed to stack arrays and save them in file
+                for i, t in transitions.items():
+                    trans_used[i] = False
+                    if i in selected_transitions:
+                        line = LineString(t)
+                        for ped in peds:
+                            ped_data = data[data[:, 0] == ped]
+                            frame = Utilities.passing_frame(ped_data, line, fps)
+                            if frame >= 0:
+                                tstats[i].append(frame)
+                                trans_used[i] = True
 
-                stats[i].sort()
-                cum_num[i] = np.cumsum(np.ones(len(stats[i])))
-                if stats[i]:
-                    flow  = cum_num[i][-1]/stats[i][-1]*fps
-                    msg += f"Transition {i},  flow: {flow:.2f} [1/s] \n \n"
-                                
+                        if trans_used[i]:
+                            tstats[i].sort()
+                            cum_num[i] = np.cumsum(np.ones(len(tstats[i])))
+                            flow = cum_num[i][-1] / tstats[i][-1] * fps                            
+                            max_len = max(max_len, cum_num[i].size)
+                            msg += f"Transition {i},  flow: {flow:.2f} [1/s] \n \n"
+                        else:
+                            msg += f"Transition {i},  flow: 0 [1/s] \n \n"
+
         c1, _, c2 = st.columns((1, 0.05, 1))
+
         with c1:
-            if choose_NT:
-                Utilities.plot_NT(stats, cum_num, fps)
+            if choose_NT and tstats:
+                Utilities.plot_NT(tstats, cum_num, fps)
 
         with c2:
-            if choose_flow:
-                Utilities.plot_flow(stats, cum_num, fps)
-            
+            if choose_flow and tstats:
+                Utilities.plot_flow(tstats, cum_num, fps)
+
             # -- download stats
         if choose_NT:
             T = dt.datetime.now()
             n = trajectory_file.name.split(".txt")[0]
             file_download = f"{n}_{T.year}-{T.month:02}-{T.day:02}_{T.hour:02}-{T.minute:02}-{T.second:02}.txt"
-            once = 1
+            once = 0  # don't download if file is empty            
             for i in selected_transitions:
-                if once:
-                    all_stats = np.vstack((stats[i], cum_num[i]))
-                    once = 0
+                if not trans_used[i]:
+                    continue
+                
+                if len(tstats[i]) < max_len:
+                    tmp_stats = np.full(max_len, -1)
+                    tmp_stats[:len(tstats[i])] = tstats[i]
+                    tmp_cum_num = np.full(max_len, -1)
+                    tmp_cum_num[:len(cum_num[i])] = cum_num[i]
                 else:
-                    all_stats = np.vstack((all_stats, stats[i], cum_num[i]))
+                    tmp_stats = tstats[i]
+                    tmp_cum_num = cum_num[i]
 
+                if not once:
+                    all_stats = np.vstack((tmp_stats, tmp_cum_num))
+                    once = 1
+                else:
+                    all_stats = np.vstack((all_stats, tmp_stats, tmp_cum_num))
+                    
             if selected_transitions:
                 st.info(msg)
-                fmt = len(selected_transitions)*["%d", "%d"]
+
+            if selected_transitions and once:
+                passed_lines = [i for i in selected_transitions if trans_used[i]]
+                fmt = len(passed_lines) * ["%d", "%d"]
                 all_stats = all_stats.T
                 np.savetxt(
                     file_download,
                     all_stats,
                     fmt=fmt,
-                    header=np.array2string(np.array(selected_transitions, dtype=int),
-                                           precision=2,
-                                           separator='\t',
-                                           suppress_small=True),
+                    header=np.array2string(
+                        np.array(passed_lines, dtype=int),
+                        precision=2,
+                        separator="\t",
+                        suppress_small=True,
+                    ),
                     comments="#",
                     delimiter="\t",
                 )
-                with open(file_download, encoding='utf-8') as f:
-                    download = st.sidebar.download_button('Download statistics',
-                                                          f,
-                                                          file_name=file_download)
+                with open(file_download, encoding="utf-8") as f:
+                    download = st.sidebar.download_button(
+                        "Download statistics", f, file_name=file_download
+                    )

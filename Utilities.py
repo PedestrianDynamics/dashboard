@@ -2,6 +2,9 @@ import lovely_logger as logging
 import numpy as np
 import streamlit as st
 from pandas import read_csv
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy import stats
+import matplotlib.pyplot as plt
 
 # from plotly.graph_objs.scatter import Line
 from plotly.subplots import make_subplots
@@ -11,7 +14,9 @@ import plotly.graph_objs as go
 
 def plot_NT(Frames, Nums, fps):
     logging.info("plot NT-curve")
-    fig = make_subplots(rows=1, cols=1,subplot_titles =["N-T"], x_title="time / s", y_title="N")
+    fig = make_subplots(
+        rows=1, cols=1, subplot_titles=["N-T"], x_title="time / s", y_title="N"
+    )
     for i, frames in Frames.items():
         nums = Nums[i]
         if not frames:
@@ -44,7 +49,9 @@ def plot_NT(Frames, Nums, fps):
 
 def plot_flow(Frames, Nums, fps):
     logging.info("plot flow-curve")
-    fig = make_subplots(rows=1, cols=1, subplot_titles =["Flow"],  x_title="time / s", y_title="J / 1/s")
+    fig = make_subplots(
+        rows=1, cols=1, subplot_titles=["Flow"], x_title="time / s", y_title="J / 1/s"
+    )
     for i, frames in Frames.items():
         nums = Nums[i]
         if not frames:
@@ -53,7 +60,7 @@ def plot_flow(Frames, Nums, fps):
         times = np.array(frames) / fps
         trace = go.Scatter(
             x=times,
-            y=nums/times,
+            y=nums / times,
             mode="lines",
             showlegend=True,
             name=f"ID: {i}",
@@ -62,11 +69,6 @@ def plot_flow(Frames, Nums, fps):
         )
         fig.append_trace(trace, row=1, col=1)
 
-    #eps = 0
-    #ymin = 0
-    #ymax = 2
-    # fig.update_xaxes(range=[xmin/fps - eps, xmax/fps + eps])
-   # fig.update_yaxes(range=[ymin - eps, ymax + eps], autorange=False)
     fig.update_layout(
         width=500,
         height=500,
@@ -74,7 +76,6 @@ def plot_flow(Frames, Nums, fps):
     fig.update_yaxes(
         scaleanchor="x",
         scaleratio=1,
-        #range=[ymin - eps, ymax + eps],
         autorange=True,
     )
     st.plotly_chart(fig, use_container_width=True)
@@ -83,7 +84,7 @@ def plot_flow(Frames, Nums, fps):
 def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
     fig = make_subplots(rows=1, cols=1)
     peds = np.unique(data[:, 0])
-    offset = 0.2
+    offset = 0.5
     for ped in peds:
         d = data[data[:, 0] == ped]
         c = d[:, -1]
@@ -104,7 +105,7 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
             y=geo_walls[gw][:, 1],
             showlegend=False,
             mode="lines",
-            line=dict(color="black", width=1),
+            line=dict(color="black", width=2),
         )
         fig.append_trace(trace, row=1, col=1)
 
@@ -115,26 +116,41 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
             showlegend=False,
             mode="lines+markers",
             line=dict(color="red", width=3),
-            marker=dict(color="red", size=8),
+            marker=dict(color="black", size=5),
         )
         trace_text = go.Scatter(
             x=[np.sum(t[:, 0]) / 2 + offset],
             y=[np.sum(t[:, 1]) / 2 + offset],
-            text=f"ID: {i}",
-            textposition="middle right",
+            text=f"{i}",
+            textposition="middle center",
             showlegend=False,
             mode="markers+text",
-            line=dict(color="red", width=3),
-            marker=dict(color="red", size=2),
+            marker=dict(color="red", size=0.1),
             textfont=dict(color="red", size=18),
         )
         fig.append_trace(trace, row=1, col=1)
         fig.append_trace(trace_text, row=1, col=1)
 
     eps = 1
-    fig.update_xaxes(range=[min_x - eps, max_x + eps])
-    fig.update_yaxes(range=[min_y - eps, max_y + eps], autorange=False)
-
+    fig.update_layout(
+        width=800,
+        height=800,
+        autosize=True,
+    )
+    fig.update_yaxes(
+        scaleanchor="x",
+        scaleratio=1,
+        range=[min_y - eps, max_y + eps],
+        # autorange=True,
+    )
+    print(min_x, max_x)
+    print(min_y, max_y)
+    fig.update_xaxes(
+        #      #scaleanchor="y",
+        #     # scaleratio=1,
+        range=[min_x - eps, max_x + eps],
+        #     autorange=False,
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -352,7 +368,7 @@ def compute_speed(data, fps, df=10):
         delta_y_square = delta_square[:, 1]
         s = np.sqrt(delta_x_square + delta_y_square)
         speed[: size - df] = s / df * fps
-        speed[size - df:] = speed[size - df - 1]
+        speed[size - df :] = speed[size - df - 1]
         if once:
             speeds = speed
             once = 0
@@ -360,3 +376,63 @@ def compute_speed(data, fps, df=10):
             speeds = np.hstack((speeds, speed))
 
     return speeds
+
+
+def plot_profile(
+    geominX,
+    geomaxX,
+    geominY,
+    geomaxY,
+    geometry_wall,
+    dx,
+    X,
+    Y,
+    Z,
+    vmin,
+    vmax,
+    interpolation,
+    cmap,
+    label,
+    title,
+):
+    """Plot profile + geometry for 3D data"""
+    xbins = np.arange(geominX, geomaxX + dx, dx)
+    ybins = np.arange(geominY, geomaxY + dx, dx)
+    ret = stats.binned_statistic_2d(
+        X,
+        Y,
+        Z,
+        "mean",
+        bins=[xbins, ybins],
+    )
+    prof = np.nan_to_num(ret.statistic.T)
+    fig, ax = plt.subplots(1, 1)
+    im = ax.imshow(
+        prof,
+        cmap=cmap,
+        interpolation=interpolation,
+        origin="lower",
+        vmin=vmin,
+        vmax=vmax,  # np.max(density),
+        extent=[geominX, geomaxX, geominY, geomaxY],
+    )
+    plot_geometry(ax, geometry_wall)
+    ax.set_title(title)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="3.5%", pad=0.3)
+    cb = plt.colorbar(im, cax=cax)
+    cb.set_label(label, rotation=90, labelpad=15, fontsize=15)
+    st.pyplot(fig)
+
+
+def check_shape_and_stop(shape, how_speed):
+    """Write an error message if shape < 10 and stop"""
+    if shape < 10 and how_speed == "from simulation":
+        st.error(
+            f"""Trajectory file does not have enough columns ({shape} < 10).
+            \n Use <optional_output   speed=\"TRUE\">\n
+            https://www.jupedsim.org/jpscore_inifile.html#header
+            \n or choose option `"from trajectory"`
+            """
+        )
+        st.stop()
