@@ -54,6 +54,9 @@ def set_state_variables():
     if "old_configs" not in st.session_state:
         st.session_state.old_configs = ""
 
+    if "density" not in st.session_state:
+        st.session_state.density = []
+
 
 def read_trajectory(input_file):
     data = read_csv(input_file, sep=r"\s+", dtype=np.float64, comment="#").values
@@ -152,6 +155,11 @@ if __name__ == "__main__":
     )
     st.sidebar.markdown("-------")
     st.sidebar.header("Profile")
+    how_speed = st.sidebar.radio("Speed", ["from trajectory", "from simulation"])
+    st.write(
+        "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+        unsafe_allow_html=True,
+    )
     c1, c2 = st.sidebar.columns((1, 1))
     choose_dprofile = c1.checkbox(
         "Density", help="Plot density profile", key="dProfile"
@@ -159,7 +167,12 @@ if __name__ == "__main__":
     choose_vprofile = c2.checkbox(
         "Speed", help="Plot speed profile", key="vProfile"
     )
-    how_speed = st.sidebar.radio("Speed", ["from simulation", "from trajectory"])
+    choose_method = st.sidebar.radio("Method",
+                                     ["Binned statistic", "Gaussian kernel"],
+                                     help="""
+                                     Mean of binned statistic.
+                                     This is a generalization of a histogram2d function.
+                                     Gaussian kernel takes advantage of the KDE-Kernel""")
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
         unsafe_allow_html=True,
@@ -202,10 +215,12 @@ if __name__ == "__main__":
             string_data = stringio.read()
             fps = Utilities.get_fps(string_data)
             peds = np.unique(data[:, 0])
+            frames = np.unique(data[:, 1])            
             st.markdown("### :bar_chart: Statistics")
             pl = st.empty()
             msg = f"""
             Frames per second: {fps}\n
+            Frames: {len(frames)}\n
             Agents: {len(peds)}\n
             Evac-time: {np.max(data[:, 1])/fps} [s]
             """
@@ -256,7 +271,6 @@ if __name__ == "__main__":
             logging.info(
                 f"GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geominY:.2f})"
             )
-            
         except Exception as e:
             msg_status.error(
                 f"""Can't parse geometry file.
@@ -293,44 +307,76 @@ if __name__ == "__main__":
             msg = ""
             with c1:
                 if choose_dprofile:
-                    density = Utilities.weidmann(speed)
-                    Utilities.plot_profile(
-                        geominX,
-                        geomaxX,
-                        geominY,
-                        geomaxY,
-                        geometry_wall,
-                        dx,
-                        data[:, 2],
-                        data[:, 3],
-                        density,
-                        vmin=0,
-                        vmax=np.max(density),
-                        interpolation=interpolation,
-                        cmap=cm.jet,
-                        label=r"$\rho\; / 1/m^2$",
-                        title="Density",
-                    )
+                    if choose_method == "Binned statistic":
+                        density = Utilities.weidmann(speed)
+                        density = Utilities.plot_profile(
+                            geominX,
+                            geomaxX,
+                            geominY,
+                            geomaxY,
+                            geometry_wall,
+                            dx,
+                            data[:, 2],
+                            data[:, 3],
+                            density,
+                            len(frames),
+                            interpolation=interpolation,
+                            cmap=cm.jet,
+                            label=r"$\rho\; / 1/m^2$",
+                            title="Density",
+                        )
+                    else:
+                        with st.spinner('Processing ...'):
+                            density = Utilities.orderFieldPlot(
+                                geominX,
+                                geomaxX,
+                                geominY,
+                                geomaxY,
+                                geometry_wall,
+                                dx,
+                                len(frames),
+                                data[:, 2],
+                                data[:, 3],
+                                interpolation=interpolation,
+                                cmap=cm.jet,
+                                label=r"$\rho\; / 1/m^2$",
+                                title="Density",
+                            )
+                            st.session_state.density = density
                     msg += f"Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]. "
             with c2:
                 if choose_vprofile:
-                    Utilities.plot_profile(
-                        geominX,
-                        geomaxX,
-                        geominY,
-                        geomaxY,
-                        geometry_wall,
-                        dx,
-                        data[:, 2],
-                        data[:, 3],
-                        speed,
-                        vmin=0,
-                        vmax=np.max(speed),
-                        interpolation=interpolation,
-                        cmap=cm.jet.reversed(),
-                        label=r"$v\; / m/s$",
-                        title="Speed",
-                    )
+                    if choose_method == "Binned statistic":
+                        speed = Utilities.plot_profile(
+                            geominX,
+                            geomaxX,
+                            geominY,
+                            geomaxY,
+                            geometry_wall,
+                            dx,
+                            data[:, 2],
+                            data[:, 3],
+                            speed,
+                            len(frames),
+                            interpolation=interpolation,
+                            cmap=cm.jet.reversed(),
+                            label=r"$v\; / m/s$",
+                            title="Speed",
+                        )
+                    else:
+                        with st.spinner('Processing ...'):
+                            speed = Utilities.plot_profile_velocity(geominX,
+                                                                    geomaxX,
+                                                                    geominY,
+                                                                    geomaxY,
+                                                                    geometry_wall,
+                                                                    st.session_state.density,
+                                                                    interpolation=interpolation,
+                                                                    cmap=cm.jet.reversed(),
+                                                                    label=r"$v\; / m/s$",
+                                                                    title="Speed",)
+                       
+                       
                     msg += f"Speed in range [{np.min(speed):.2f} : {np.max(speed):.2f}] [m/s]. "
             st.info(msg)
 

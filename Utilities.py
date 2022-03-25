@@ -138,9 +138,8 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
 
     eps = 1
     fig.update_layout(
-        width=800,
-        height=800,
-        autosize=True,
+        width=500,
+        height=500,
     )
     fig.update_yaxes(
         scaleanchor="x",
@@ -168,8 +167,16 @@ def plot_geometry(ax, _geometry_wall):
         ax.plot(_geometry_wall[gw][:, 0], _geometry_wall[gw][:, 1], color="white", lw=2)
 
 
+def inv_weidmann(rho, v0=1.34, rho_max=5.4, gamma=1.913):
+    inv_rho = np.empty_like(rho)
+    mask = (rho == 0)
+    inv_rho[mask] = v0
+    inv_rho[~mask] = 1/rho[~mask]
+    return v0*(1-np.exp(-gamma*(inv_rho - 1 / rho_max)))  # Eq. 6
+
+
 def weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
-    v0 = np.max(v) # todo: check!
+    v0 = np.max(v)
     v[v > v0] = v0
     s = 1 - v/v0
     x = -1 / gamma * np.log(s, out=np.zeros_like(s), where=(s != 0)) + 1 / rho_max
@@ -408,32 +415,33 @@ def plot_profile(
     X,
     Y,
     Z,
-    vmin,
-    vmax,
+    nframes,
     interpolation,
     cmap,
     label,
     title,
 ):
     """Plot profile + geometry for 3D data"""
+
     xbins = np.arange(geominX, geomaxX + dx, dx)
     ybins = np.arange(geominY, geomaxY + dx, dx)
     ret = stats.binned_statistic_2d(
         X,
         Y,
         Z,
-        "mean",
+        "sum",
         bins=[xbins, ybins],
     )
-    prof = np.nan_to_num(ret.statistic.T)
+    prof = np.nan_to_num(ret.statistic.T)/nframes
+    print(prof)
     fig, ax = plt.subplots(1, 1)
     im = ax.imshow(
         prof,
         cmap=cmap,
         interpolation=interpolation,
         origin="lower",
-        vmin=vmin,
-        vmax=vmax,  # np.max(density),
+        vmin=np.min(prof),
+        vmax=np.max(prof),
         extent=[geominX, geomaxX, geominY, geomaxY],
     )
     plot_geometry(ax, geometry_wall)
@@ -443,6 +451,7 @@ def plot_profile(
     cb = plt.colorbar(im, cax=cax)
     cb.set_label(label, rotation=90, labelpad=15, fontsize=15)
     st.pyplot(fig)
+    return prof
 
 
 def check_shape_and_stop(shape, how_speed):
@@ -456,3 +465,102 @@ def check_shape_and_stop(shape, how_speed):
             """
         )
         st.stop()
+
+
+def widthOfGaußian(fwhm):
+    return fwhm * 0.6005612 # np.sqrt(2) / (2 * np.sqrt(2 * np.log(2)))
+
+
+def densty1d(delta_x, a):
+    return np.array(list(map(lambda x: 1 / (np.sqrt(np.pi) * a) * np.e ** (-x ** 2 / a ** 2), delta_x)))
+
+
+def densityField(x_dens, y_dens, a):
+    rho_matrix_x = np.array([densty1d(delta_x, a) for delta_x in x_dens])  # density matrix is calculated
+    rho_matrix_y = np.array([densty1d(delta_y, a) for delta_y in y_dens])
+    
+    rho_matrix = np.matmul(rho_matrix_x, np.transpose(rho_matrix_y))
+    return rho_matrix.T
+
+
+def xdensYdens(lattice_x, lattice_y, x_array, y_array):
+    x_dens = np.array([lattice_x - x for x in x_array])  # calculate the distant of lattice pedestrians to the measuring lattice
+    y_dens = np.array([lattice_y - y for y in y_array])
+    return x_dens, y_dens
+
+
+def orderFieldPlot(
+        geominX,
+        geomaxX,
+        geominY,
+        geomaxY,
+        geometry_wall,
+        dx,
+        nframes,
+        X,
+        Y,
+        interpolation,
+        cmap,
+        label,
+        title,):
+
+    # z_min = Z.min()
+    # z_max = Z.max()
+    fig, ax = plt.subplots(1, 1)
+    xbins = np.arange(geominX, geomaxX + dx, dx)
+    ybins = np.arange(geominY, geomaxY + dx, dx)
+    x_dens, y_dens = xdensYdens(X, Y, xbins, ybins)
+    a = widthOfGaußian(0.3)
+    rho_matrix = densityField(x_dens, y_dens, a)/nframes    
+    z_min, z_max = rho_matrix.min(), rho_matrix.max()    
+    im = ax.imshow(
+        rho_matrix,
+        cmap=cmap,
+        interpolation=interpolation,
+        origin="lower",
+        vmin=z_min,
+        vmax=z_max,
+        extent=[geominX, geomaxX, geominY, geomaxY],
+    )
+    plot_geometry(ax, geometry_wall)
+    ax.set_title(title)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="3.5%", pad=0.3)
+    cb = plt.colorbar(im, cax=cax)
+    cb.set_label(label, rotation=90, labelpad=15, fontsize=15)
+    st.pyplot(fig)
+    return rho_matrix
+
+
+def plot_profile_velocity(
+        geominX,
+        geomaxX,
+        geominY,
+        geomaxY,
+        geometry_wall,
+        density,
+        interpolation,
+        cmap,
+        label,
+        title,):
+
+    fig, ax = plt.subplots(1, 1)
+    speed = inv_weidmann(density)
+    z_min, z_max = speed.min(), speed.max()
+    im = ax.imshow(
+        speed,
+        cmap=cmap,
+        interpolation=interpolation,
+        origin="lower",
+        vmin=z_min,
+        vmax=z_max,
+        extent=[geominX, geomaxX, geominY, geomaxY],
+    )
+    plot_geometry(ax, geometry_wall)
+    ax.set_title(title)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="3.5%", pad=0.3)
+    cb = plt.colorbar(im, cax=cax)
+    cb.set_label(label, rotation=90, labelpad=15, fontsize=15)
+    st.pyplot(fig)
+    return speed
