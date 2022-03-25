@@ -85,7 +85,6 @@ def plot_flow(Frames, Nums, fps):
 def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
     fig = make_subplots(rows=1, cols=1)
     peds = np.unique(data[:, 0])
-    offset = 0.5
     for ped in peds:
         d = data[data[:, 0] == ped]
         c = d[:, -1]
@@ -111,6 +110,9 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
         fig.append_trace(trace, row=1, col=1)
 
     for i, t in transitions.items():
+        xm = np.sum(t[:, 0]) / 2
+        ym = np.sum(t[:, 1]) / 2
+        offset = 0.1 * xm
         trace = go.Scatter(
             x=t[:, 0],
             y=t[:, 1],
@@ -120,8 +122,8 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
             marker=dict(color="black", size=5),
         )
         trace_text = go.Scatter(
-            x=[np.sum(t[:, 0]) / 2 + offset],
-            y=[np.sum(t[:, 1]) / 2 + offset],
+            x=[xm + offset],
+            y=[ym + offset],
             text=f"{i}",
             textposition="middle center",
             showlegend=False,
@@ -184,7 +186,12 @@ def get_fps(traj_file):
     return fps
 
 
-def get_transitions(xml_doc):
+def get_transitions(xml_doc, unit):
+    if unit == "cm":
+        cm2m = 100
+    else:
+        cm2m = 1
+
     transitions = {}
     for _, t_elem in enumerate(xml_doc.getElementsByTagName("transition")):
         Id = t_elem.getAttribute("id")
@@ -198,7 +205,7 @@ def get_transitions(xml_doc):
                 t_elem.getElementsByTagName("vertex")[v_num].attributes["py"].value
             )
 
-        transitions[Id] = vertex_array
+        transitions[Id] = vertex_array / cm2m
 
     return transitions
 
@@ -231,7 +238,12 @@ def read_trajectory(input_file):
     return data
 
 
-def read_obstacle(xml_doc):
+def read_obstacle(xml_doc, unit):
+    if unit == "cm":
+        cm2m = 100
+    else:
+        cm2m = 1
+
     # Initialization of a dictionary with obstacles
     return_dict = {}
     # read in obstacles and combine
@@ -253,7 +265,7 @@ def read_obstacle(xml_doc):
                     # p_elem.getElementsByTagName("vertex")[v_num].attributes["py"].value
                     v_elem.attributes["py"].value
                 )
-                points = np.vstack([points, [vertex_x, vertex_y]])
+                points = np.vstack([points, [vertex_x/cm2m, vertex_y/cm2m]])
 
         points = np.unique(points, axis=0)
         x = points[:, 0]
@@ -270,9 +282,14 @@ def read_obstacle(xml_doc):
     return return_dict
 
 
-def read_subroom_walls(xml_doc):
+def read_subroom_walls(xml_doc, unit):
     dict_polynom_wall = {}
     n_wall = 0
+    if unit == "cm":
+        cm2m = 100
+    else:
+        cm2m = 1
+
     for _, s_elem in enumerate(xml_doc.getElementsByTagName("subroom")):
         for _, p_elem in enumerate(s_elem.getElementsByTagName("polygon")):
             if p_elem.getAttribute("caption") == "wall":
@@ -291,13 +308,13 @@ def read_subroom_walls(xml_doc):
                         .value
                     )
 
-                dict_polynom_wall[n_wall] = vertex_array
+                dict_polynom_wall[n_wall] = vertex_array / cm2m
 
     return dict_polynom_wall
 
 
-def geo_limits(geo_xml):
-    geometry_wall = read_subroom_walls(geo_xml)
+def geo_limits(geo_xml, unit):
+    geometry_wall = read_subroom_walls(geo_xml, unit)
     geominX = 1000
     geomaxX = -1000
     geominY = 1000

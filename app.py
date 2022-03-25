@@ -136,6 +136,12 @@ if __name__ == "__main__":
         help="Load geometry file",
     )
     st.sidebar.markdown("-------")
+    unit = st.sidebar.radio("Unit of trajectories", ["m", "cm"])
+    st.write(
+        "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+        unsafe_allow_html=True,
+    )
+    st.sidebar.markdown("-------")
     st.sidebar.header("Plot")
     c1, c2 = st.sidebar.columns((1, 1))
     choose_trajectories = c1.checkbox(
@@ -175,19 +181,20 @@ if __name__ == "__main__":
     st.sidebar.markdown("-------")
     st.sidebar.header("Plot curves")
     c1, c2 = st.sidebar.columns((1, 1))
-    choose_NT = c1.checkbox("N-T", help="Plot N-t curve", key="NT")
-    choose_flow = c2.checkbox("Flow", help="Plot flow curve", key="Flow")
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
         unsafe_allow_html=True,
     )
     msg_status = st.sidebar.empty()
-
+    disable_NT_flow = False
     if trajectory_file and geometry_file:
         logging.info(f">> {trajectory_file.name}")
         logging.info(f">> {geometry_file.name}")
         try:
             data = read_trajectory(trajectory_file)
+            if unit == "cm":
+                data[:, 2:] /= 100
+
             h = st.expander("Head of trajectory")
             with h:
                 st.markdown("### Head of trajectories")
@@ -228,18 +235,25 @@ if __name__ == "__main__":
 
             geo_xml = parseString(geometry_file.getvalue())
             logging.info("Geometry parsed successfully")
-            geometry_wall = Utilities.read_subroom_walls(geo_xml)
+            geometry_wall = Utilities.read_subroom_walls(geo_xml, unit)
             logging.info("Got geometry walls successfully")
-            transitions = Utilities.get_transitions(geo_xml)
+            transitions = Utilities.get_transitions(geo_xml, unit)
             logging.info("Got geometry transitions successfully")
+            logging.info(transitions)
+            if transitions:
+                default = list(transitions.keys())[0]
+            else:
+                default = []
+                disable_NT_flow = True
+
             selected_transitions = st.sidebar.multiselect(
                 "Select transition",
                 transitions.keys(),
-                list(transitions.keys())[0],
+                default,
                 help="Transition to calculate N-T. Can select multiple transitions",
             )
-            # logging.info(transitions)
-            geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml)
+            logging.info("get geo_limits")
+            geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml, unit)
 
             logging.info(
                 f"GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geominY:.2f})"
@@ -252,6 +266,10 @@ if __name__ == "__main__":
             )
             st.stop()
 
+        choose_NT = c1.checkbox("N-T", help="Plot N-t curve", key="NT", disabled=disable_NT_flow)
+        choose_flow = c2.checkbox("Flow", help="Plot flow curve", key="Flow", disabled=disable_NT_flow)
+        if disable_NT_flow:
+            st.sidebar.info("N-T and Flow plots are disabled, because no transitions!")
         if choose_trajectories:
             logging.info("plotting trajectories")
             if choose_transitions:
