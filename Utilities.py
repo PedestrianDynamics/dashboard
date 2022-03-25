@@ -5,7 +5,7 @@ from pandas import read_csv
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import stats
 import matplotlib.pyplot as plt
-
+import timeit
 # from plotly.graph_objs.scatter import Line
 from plotly.subplots import make_subplots
 from shapely.geometry import LineString, Point
@@ -433,7 +433,6 @@ def plot_profile(
         bins=[xbins, ybins],
     )
     prof = np.nan_to_num(ret.statistic.T)/nframes
-    print(prof)
     fig, ax = plt.subplots(1, 1)
     im = ax.imshow(
         prof,
@@ -471,22 +470,24 @@ def widthOfGaußian(fwhm):
     return fwhm * 0.6005612  # np.sqrt(2) / (2 * np.sqrt(2 * np.log(2)))
 
 
-def densty1d(delta_x, a):
-#    return np.array(list(map(lambda x: 1 / (np.sqrt(np.pi) * a) * np.e ** (-x ** 2 / a ** 2), delta_x)))
-    return np.array(list(map(lambda x: 1 / (1.7724538 * a) * np.e ** (-x ** 2 / a ** 2), delta_x)))
+def Gauss(x, a):
+    """
+    1 / (np.sqrt(np.pi) * a) * np.e ** (-x ** 2 / a ** 2)
+    """
+
+    return 1 / (1.7724538 * a) * np.e ** (-x ** 2 / a ** 2)
 
 
 def densityField(x_dens, y_dens, a):
-    rho_matrix_x = np.array([densty1d(delta_x, a) for delta_x in x_dens])
-    rho_matrix_y = np.array([densty1d(delta_y, a) for delta_y in y_dens])
-
+    rho_matrix_x = Gauss(x_dens, a)
+    rho_matrix_y = Gauss(y_dens, a)
     rho_matrix = np.matmul(rho_matrix_x, np.transpose(rho_matrix_y))
     return rho_matrix.T
 
 
 def xdensYdens(lattice_x, lattice_y, x_array, y_array):
-    x_dens = np.array([lattice_x - x for x in x_array])
-    y_dens = np.array([lattice_y - y for y in y_array])
+    x_dens = np.add.outer(-x_array, lattice_x)
+    y_dens = np.add.outer(-y_array, lattice_y)
     return x_dens, y_dens
 
 
