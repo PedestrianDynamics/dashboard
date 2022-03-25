@@ -79,7 +79,7 @@ def plot_flow(Frames, Nums, fps):
         scaleratio=1,
         autorange=True,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=False)
 
 
 def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
@@ -112,7 +112,9 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
     for i, t in transitions.items():
         xm = np.sum(t[:, 0]) / 2
         ym = np.sum(t[:, 1]) / 2
-        offset = 0.1 * xm
+        length = np.sqrt(np.diff(t[:, 0])**2 + np.diff(t[:, 1])**2)
+        offset = 0.1 * length[0]
+        logging.info(f"offsset transition {offset}")
         trace = go.Scatter(
             x=t[:, 0],
             y=t[:, 1],
@@ -146,8 +148,6 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
         range=[min_y - eps, max_y + eps],
         # autorange=True,
     )
-    print(min_x, max_x)
-    print(min_y, max_y)
     fig.update_xaxes(
         #      #scaleanchor="y",
         #     # scaleratio=1,
@@ -169,6 +169,7 @@ def plot_geometry(ax, _geometry_wall):
 
 
 def weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
+    v0 = np.max(v) # todo: check!
     v[v > v0] = v0
     s = 1 - v/v0
     x = -1 / gamma * np.log(s, out=np.zeros_like(s), where=(s != 0)) + 1 / rho_max
@@ -292,7 +293,7 @@ def read_subroom_walls(xml_doc, unit):
 
     for _, s_elem in enumerate(xml_doc.getElementsByTagName("subroom")):
         for _, p_elem in enumerate(s_elem.getElementsByTagName("polygon")):
-            if p_elem.getAttribute("caption") == "wall":
+            if True or p_elem.getAttribute("caption") == "wall":
                 n_wall = n_wall + 1
                 n_vertex = len(p_elem.getElementsByTagName("vertex"))
                 vertex_array = np.zeros((n_vertex, 2))
@@ -307,7 +308,7 @@ def read_subroom_walls(xml_doc, unit):
                         .attributes["py"]
                         .value
                     )
-
+            
                 dict_polynom_wall[n_wall] = vertex_array / cm2m
 
     return dict_polynom_wall

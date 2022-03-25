@@ -136,7 +136,7 @@ if __name__ == "__main__":
         help="Load geometry file",
     )
     st.sidebar.markdown("-------")
-    unit = st.sidebar.radio("Unit of trajectories", ["m", "cm"])
+    unit = st.sidebar.radio("Unit", ["m", "cm"], help="Choose the unit of the trajectories")
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
         unsafe_allow_html=True,
@@ -197,7 +197,6 @@ if __name__ == "__main__":
 
             h = st.expander("Head of trajectory")
             with h:
-                st.markdown("### Head of trajectories")
                 st.table(data[:10, :])  # will display the table
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
@@ -238,8 +237,7 @@ if __name__ == "__main__":
             geometry_wall = Utilities.read_subroom_walls(geo_xml, unit)
             logging.info("Got geometry walls successfully")
             transitions = Utilities.get_transitions(geo_xml, unit)
-            logging.info("Got geometry transitions successfully")
-            logging.info(transitions)
+            logging.info("Got geometry transitions successfully")            
             if transitions:
                 default = list(transitions.keys())[0]
             else:
@@ -252,13 +250,13 @@ if __name__ == "__main__":
                 default,
                 help="Transition to calculate N-T. Can select multiple transitions",
             )
-            logging.info("get geo_limits")
+            logging.info("Get geo_limits")
             geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml, unit)
 
             logging.info(
                 f"GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geominY:.2f})"
             )
-
+            
         except Exception as e:
             msg_status.error(
                 f"""Can't parse geometry file.
@@ -307,13 +305,13 @@ if __name__ == "__main__":
                         data[:, 3],
                         density,
                         vmin=0,
-                        vmax=6,
+                        vmax=np.max(density),
                         interpolation=interpolation,
                         cmap=cm.jet,
                         label=r"$\rho\; / 1/m^2$",
                         title="Density",
                     )
-                    msg  += f"Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]. "
+                    msg += f"Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]. "
             with c2:
                 if choose_vprofile:
                     Utilities.plot_profile(
@@ -327,7 +325,7 @@ if __name__ == "__main__":
                         data[:, 3],
                         speed,
                         vmin=0,
-                        vmax=1.3,
+                        vmax=np.max(speed),
                         interpolation=interpolation,
                         cmap=cm.jet.reversed(),
                         label=r"$v\; / m/s$",
