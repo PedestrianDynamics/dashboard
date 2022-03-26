@@ -16,7 +16,7 @@ import plotly.graph_objs as go
 def plot_NT(Frames, Nums, fps):
     logging.info("plot NT-curve")
     fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["N-T"], x_title="time / s", y_title="N"
+        rows=1, cols=1, subplot_titles=["N-T"], x_title="Time / s", y_title="Number of pedestrians"
     )
     for i, frames in Frames.items():
         nums = Nums[i]

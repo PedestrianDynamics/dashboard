@@ -94,7 +94,9 @@ if __name__ == "__main__":
             """
          #### Density
          The density can be calculated using different methods:
-         ##### Weidmann
+            
+         **1. Weidmann**
+            
          based on the speed (1) using the Weidmann-formula **[Weidmann1992 Eq. (15)]**:
          """
         )
@@ -120,13 +122,13 @@ if __name__ == "__main__":
         st.latex(r"""
         \rho_c = \frac{1}{T}\sum_{t=0}^T S_c,
         """)
-        st.write("where $S_c$ is the sum of $\\rho_i$ in $c$")
-        st.write("""##### Classical
+        st.write("where $S_c$ is the sum of $\\rho_i$ in $c$ and $T$ the evcuation time.")
+        st.write("""**2. Classical**
         """)
         st.latex(
             r"""\rho_c = \frac{1}{T}\sum_{t=0}^T \frac{N_c}{A_c},""")
         st.write("where $A_c$  the area of cell $c$ and $N_c$ the number of agents in $c$.")
-        st.write("""##### Gaussian
+        st.write("""**3. Gaussian**
 for every pedestrian $i$ a Gaussian distribution is calculated, then
         """)
         st.latex(

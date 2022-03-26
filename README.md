@@ -23,3 +23,11 @@ Therefore, use the `optional_output`-option in the inifile:
 ## NT-curve 
 
 Define in the geometry transitions, such that the pedestrian fully pass them. 
+
+
+## Todo
+
+- [ ] Congestion (histogram)
+- [ ] split file Utilities into plot-functions and utilities 
+- [ ] Number of agents in geometry over time
+- [ ] 
