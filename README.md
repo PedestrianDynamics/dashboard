@@ -30,4 +30,5 @@ Define in the geometry transitions, such that the pedestrian fully pass them.
 - [ ] Congestion (histogram)
 - [ ] split file Utilities into plot-functions and utilities 
 - [ ] Number of agents in geometry over time
-- [ ] 
+- [ ] Social distancing analysis (QIancheng's paper)
+- [ ] Use forms to avoid running everything at once!
