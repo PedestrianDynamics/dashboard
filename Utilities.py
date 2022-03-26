@@ -6,6 +6,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import stats
 import matplotlib.pyplot as plt
 import timeit
+
 # from plotly.graph_objs.scatter import Line
 from plotly.subplots import make_subplots
 from shapely.geometry import LineString, Point
@@ -112,7 +113,7 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
     for i, t in transitions.items():
         xm = np.sum(t[:, 0]) / 2
         ym = np.sum(t[:, 1]) / 2
-        length = np.sqrt(np.diff(t[:, 0])**2 + np.diff(t[:, 1])**2)
+        length = np.sqrt(np.diff(t[:, 0]) ** 2 + np.diff(t[:, 1]) ** 2)
         offset = 0.1 * length[0]
         logging.info(f"offsset transition {offset}")
         trace = go.Scatter(
@@ -156,29 +157,23 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
     st.plotly_chart(fig, use_container_width=True)
 
 
-# def file_selector(folder_path="."):
-#     filenames = os.listdir(folder_path)
-#     selected_filename = st.selectbox("Select a file", filenames)
-#     return os.path.join(folder_path, selected_filename)
-
-
 def plot_geometry(ax, _geometry_wall):
     for gw in _geometry_wall.keys():
         ax.plot(_geometry_wall[gw][:, 0], _geometry_wall[gw][:, 1], color="white", lw=2)
 
 
-def inv_weidmann(rho, v0=1.34, rho_max=5.4, gamma=1.913):
+def weidmann(rho, v0=1.34, rho_max=5.4, gamma=1.913):
     inv_rho = np.empty_like(rho)
-    mask = (rho == 0)
-    inv_rho[mask] = v0
-    inv_rho[~mask] = 1/rho[~mask]
-    return v0*(1-np.exp(-gamma*(inv_rho - 1 / rho_max)))  # Eq. 6
+    mask = rho <= 0.01
+    inv_rho[mask] = 1 / rho_max
+    inv_rho[~mask] = 1 / rho[~mask]
+    return v0 * (1 - np.exp(-gamma * (inv_rho - 1 / rho_max)))  # Eq. 6
 
 
-def weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
+def inv_weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
     v0 = np.max(v)
     v[v > v0] = v0
-    s = 1 - v/v0
+    s = 1 - v / v0
     x = -1 / gamma * np.log(s, out=np.zeros_like(s), where=(s != 0)) + 1 / rho_max
     return 1 / x
 
@@ -242,7 +237,6 @@ def passing_frame(ped_data: np.array, line: LineString, fps: int) -> int:
 
 def read_trajectory(input_file):
     data = read_csv(input_file, sep=r"\s+", dtype=np.float64, comment="#").values
-
     return data
 
 
@@ -273,7 +267,7 @@ def read_obstacle(xml_doc, unit):
                     # p_elem.getElementsByTagName("vertex")[v_num].attributes["py"].value
                     v_elem.attributes["py"].value
                 )
-                points = np.vstack([points, [vertex_x/cm2m, vertex_y/cm2m]])
+                points = np.vstack([points, [vertex_x / cm2m, vertex_y / cm2m]])
 
         points = np.unique(points, axis=0)
         x = points[:, 0]
@@ -315,7 +309,7 @@ def read_subroom_walls(xml_doc, unit):
                         .attributes["py"]
                         .value
                     )
-            
+
                 dict_polynom_wall[n_wall] = vertex_array / cm2m
 
     return dict_polynom_wall
@@ -405,52 +399,58 @@ def compute_speed(data, fps, df=10):
     return speeds
 
 
-def plot_profile(
-    geominX,
-    geomaxX,
-    geominY,
-    geomaxY,
-    geometry_wall,
-    dx,
-    X,
-    Y,
-    Z,
-    nframes,
-    interpolation,
-    cmap,
-    label,
-    title,
+def calculate_speed_average(
+    geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y, speed
 ):
-    """Plot profile + geometry for 3D data"""
-
+    """Calculate speed average over time"""
     xbins = np.arange(geominX, geomaxX + dx, dx)
     ybins = np.arange(geominY, geomaxY + dx, dx)
     ret = stats.binned_statistic_2d(
         X,
         Y,
-        Z,
+        speed,
         "sum",
         bins=[xbins, ybins],
     )
-    prof = np.nan_to_num(ret.statistic.T)/nframes
-    fig, ax = plt.subplots(1, 1)
-    im = ax.imshow(
-        prof,
-        cmap=cmap,
-        interpolation=interpolation,
-        origin="lower",
-        vmin=np.min(prof),
-        vmax=np.max(prof),
-        extent=[geominX, geomaxX, geominY, geomaxY],
+    return np.nan_to_num(ret.statistic.T) / nframes
+
+
+def calculate_density_average_weidmann(
+    geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y, speed
+):
+    """Calculate density using Weidmann(speed)"""
+    density = inv_weidmann(speed)
+    xbins = np.arange(geominX, geomaxX + dx, dx)
+    ybins = np.arange(geominY, geomaxY + dx, dx)
+    ret = stats.binned_statistic_2d(
+        X,
+        Y,
+        density,
+        "sum",
+        bins=[xbins, ybins],
     )
-    plot_geometry(ax, geometry_wall)
-    ax.set_title(title)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="3.5%", pad=0.3)
-    cb = plt.colorbar(im, cax=cax)
-    cb.set_label(label, rotation=90, labelpad=15, fontsize=15)
-    st.pyplot(fig)
-    return prof
+    return np.nan_to_num(ret.statistic.T) / nframes
+
+
+def calculate_density_average_classic(
+    geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y
+):
+    """Calculate classical method
+
+    Density = mean_time(N/A_i)
+    """
+
+    xbins = np.arange(geominX, geomaxX + dx, dx)
+    ybins = np.arange(geominY, geomaxY + dx, dx)
+    area = dx * dx
+    ret = stats.binned_statistic_2d(
+        X,
+        Y,
+        None,
+        "count",
+        bins=[xbins, ybins],
+    )
+    return np.nan_to_num(ret.statistic.T) / nframes / area
 
 
 def check_shape_and_stop(shape, how_speed):
@@ -467,15 +467,15 @@ def check_shape_and_stop(shape, how_speed):
 
 
 def widthOfGaußian(fwhm):
-    return fwhm * 0.6005612  # np.sqrt(2) / (2 * np.sqrt(2 * np.log(2)))
+    """np.sqrt(2) / (2 * np.sqrt(2 * np.log(2)))"""
+
+    return fwhm * 0.6005612
 
 
 def Gauss(x, a):
-    """
-    1 / (np.sqrt(np.pi) * a) * np.e ** (-x ** 2 / a ** 2)
-    """
+    """1 / (np.sqrt(np.pi) * a) * np.e ** (-x ** 2 / a ** 2)"""
 
-    return 1 / (1.7724538 * a) * np.e ** (-x ** 2 / a ** 2)
+    return 1 / (1.7724538 * a) * np.e ** (-(x**2) / a**2)
 
 
 def densityField(x_dens, y_dens, a):
@@ -491,69 +491,53 @@ def xdensYdens(lattice_x, lattice_y, x_array, y_array):
     return x_dens, y_dens
 
 
-def orderFieldPlot(
-        geominX,
-        geomaxX,
-        geominY,
-        geomaxY,
-        geometry_wall,
-        dx,
-        nframes,
-        X,
-        Y,
-        interpolation,
-        cmap,
-        label,
-        title,):
+def calculate_density_average_gauss(
+    geominX, geomaxX, geominY, geomaxY, dx, nframes, width, X, Y
+):
+    """
+    Calculate density using Gauss method
+    """
 
-    fig, ax = plt.subplots(1, 1)
     xbins = np.arange(geominX, geomaxX + dx, dx)
     ybins = np.arange(geominY, geomaxY + dx, dx)
     x_dens, y_dens = xdensYdens(X, Y, xbins, ybins)
-    a = widthOfGaußian(0.3)
-    rho_matrix = densityField(x_dens, y_dens, a)/nframes
-    z_min, z_max = rho_matrix.min(), rho_matrix.max()
-    im = ax.imshow(
-        rho_matrix,
-        cmap=cmap,
-        interpolation=interpolation,
-        origin="lower",
-        vmin=z_min,
-        vmax=z_max,
-        extent=[geominX, geomaxX, geominY, geomaxY],
-    )
-    plot_geometry(ax, geometry_wall)
-    ax.set_title(title)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="3.5%", pad=0.3)
-    cb = plt.colorbar(im, cax=cax)
-    cb.set_label(label, rotation=90, labelpad=15, fontsize=15)
-    st.pyplot(fig)
+    a = widthOfGaußian(width)
+    rho_matrix = densityField(x_dens, y_dens, a) / nframes
     return rho_matrix
 
 
-def plot_profile_velocity(
-        geominX,
-        geomaxX,
-        geominY,
-        geomaxY,
-        geometry_wall,
-        density,
-        interpolation,
-        cmap,
-        label,
-        title,):
+def plot_profile_and_geometry(
+    geominX,
+    geomaxX,
+    geominY,
+    geomaxY,
+    geometry_wall,
+    data,
+    interpolation,
+    cmap,
+    label,
+    title,
+    vmin=None,
+    vmax=None,
+):
+    """Plot profile + geometry for 3D data
+
+
+    if vmin or vmax is None, extract values from <data>
+    """
+
+    if vmin is None or vmax is None:
+        vmin = np.min(data)
+        vmax = np.max(data)
 
     fig, ax = plt.subplots(1, 1)
-    speed = inv_weidmann(density)
-    z_min, z_max = speed.min(), speed.max()
     im = ax.imshow(
-        speed,
+        data,
         cmap=cmap,
         interpolation=interpolation,
         origin="lower",
-        vmin=z_min,
-        vmax=z_max,
+        vmin=vmin,
+        vmax=vmax,
         extent=[geominX, geomaxX, geominY, geomaxY],
     )
     plot_geometry(ax, geometry_wall)
@@ -563,4 +547,3 @@ def plot_profile_velocity(
     cb = plt.colorbar(im, cax=cax)
     cb.set_label(label, rotation=90, labelpad=15, fontsize=15)
     st.pyplot(fig)
-    return speed

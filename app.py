@@ -93,7 +93,9 @@ if __name__ == "__main__":
         st.write(
             """
          #### Density
-         The density is calculated based on the speed (1) using the Weidmann-formula **[Weidmann1992 Eq. (15)]**:
+         The density can be calculated using different methods:
+         ##### Weidmann
+         based on the speed (1) using the Weidmann-formula **[Weidmann1992 Eq. (15)]**:
          """
         )
         st.latex(
@@ -115,6 +117,21 @@ if __name__ == "__main__":
         st.latex(
             r"""\gamma = 1.913\, m^{-2},\; \rho_{\max} = 5.4\, m^{-2}\; \;{\rm and}\; v^0 = 1.34\, m/s."""
         )
+        st.latex(r"""
+        \rho_c = \frac{1}{T}\sum_{t=0}^T S_c,
+        """)
+        st.write("where $S_c$ is the sum of $\\rho_i$ in $c$")
+        st.write("""##### Classical
+        """)
+        st.latex(
+            r"""\rho_c = \frac{1}{T}\sum_{t=0}^T \frac{N_c}{A_c},""")
+        st.write("where $A_c$  the area of cell $c$ and $N_c$ the number of agents in $c$.")
+        st.write("""##### Gaussian
+for every pedestrian $i$ a Gaussian distribution is calculated, then
+        """)
+        st.latex(
+            r"""\rho_c = \frac{1}{T}\sum_{t=0}^T G_c,""")
+        st.write("where $G_c$ the sum of all Gaussians.")
         st.markdown("--------")
         st.write("#### References:")
         st.code(
@@ -139,7 +156,9 @@ if __name__ == "__main__":
         help="Load geometry file",
     )
     st.sidebar.markdown("-------")
-    unit = st.sidebar.radio("Unit", ["m", "cm"], help="Choose the unit of the trajectories")
+    unit = st.sidebar.radio(
+        "Unit", ["m", "cm"], help="Choose the unit of the trajectories"
+    )
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
         unsafe_allow_html=True,
@@ -150,29 +169,13 @@ if __name__ == "__main__":
     choose_trajectories = c1.checkbox(
         "Trajectories", help="Plot trajectories", key="Traj"
     )
-    choose_transitions = c2.checkbox(
-        "Transitions", help="Show transittions", key="Tran"
-    )
+    if choose_trajectories:
+        choose_transitions = c2.checkbox(
+            "Transitions", help="Show transittions", key="Tran"
+        )
     st.sidebar.markdown("-------")
-    st.sidebar.header("Profile")
-    how_speed = st.sidebar.radio("Speed", ["from trajectory", "from simulation"])
-    st.write(
-        "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
-        unsafe_allow_html=True,
-    )
-    c1, c2 = st.sidebar.columns((1, 1))
-    choose_dprofile = c1.checkbox(
-        "Density", help="Plot density profile", key="dProfile"
-    )
-    choose_vprofile = c2.checkbox(
-        "Speed", help="Plot speed profile", key="vProfile"
-    )
-    choose_method = st.sidebar.radio("Method",
-                                     ["Binned statistic", "Gaussian kernel"],
-                                     help="""
-                                     Mean of binned statistic.
-                                     This is a generalization of a histogram2d function.
-                                     Gaussian kernel takes advantage of the KDE-Kernel""")
+    st.sidebar.header("Speed")
+    how_speed = st.sidebar.radio("Source:", ["from trajectory", "from simulation"])
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
         unsafe_allow_html=True,
@@ -186,10 +189,39 @@ if __name__ == "__main__":
             help="how many frames to consider for calculating the speed",
         )
 
+    st.sidebar.markdown("-------")
+    st.sidebar.header("Profile")
+    c1, c2 = st.sidebar.columns((1, 1))
+    #choose_dprofile = c1.checkbox(
+    #    "Density", help="Plot density profile", key="dProfile"
+    #)
+    #choose_vprofile = c2.checkbox("Speed", help="Plot speed profile", key="vProfile")
+    choose_d_method = st.sidebar.radio(
+        "Density method",
+        ["Classical", "Gaussian", "Weidmann"],
+        help="""
+        How to calculate average of density over time and space""",
+    )
+    # choose_v_method = st.sidebar.radio(
+    #     "Speed method",
+    #     ["Speed", "Density"],
+    #     help="""
+    #                                  How to calculate average of speed over time and space""",
+    # )
+
+    # st.write(
+    #     "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+    #     unsafe_allow_html=True,
+    # )
+    if choose_d_method == "Gaussian":
+        width = st.sidebar.slider(
+            "Width", 0.05, 1.0, 0.3, help="Width of Gaussian function"
+        )
+
     dx = st.sidebar.slider("Step", 0.01, 1.0, 0.5, help="Space discretization")
     methods = ["nearest", "gaussian", "sinc", "bicubic", "mitchell", "bilinear"]
     interpolation = st.sidebar.radio(
-        "Method", methods, help="Interpolation methods for imshow()"
+        "Interpolation", methods, help="Interpolation method for imshow()"
     )
     st.sidebar.markdown("-------")
     st.sidebar.header("Plot curves")
@@ -215,7 +247,7 @@ if __name__ == "__main__":
             string_data = stringio.read()
             fps = Utilities.get_fps(string_data)
             peds = np.unique(data[:, 0])
-            frames = np.unique(data[:, 1])            
+            frames = np.unique(data[:, 1])
             st.markdown("### :bar_chart: Statistics")
             pl = st.empty()
             msg = f"""
@@ -252,7 +284,7 @@ if __name__ == "__main__":
             geometry_wall = Utilities.read_subroom_walls(geo_xml, unit)
             logging.info("Got geometry walls successfully")
             transitions = Utilities.get_transitions(geo_xml, unit)
-            logging.info("Got geometry transitions successfully")            
+            logging.info("Got geometry transitions successfully")
             if transitions:
                 default = list(transitions.keys())[0]
             else:
@@ -278,8 +310,12 @@ if __name__ == "__main__":
             )
             st.stop()
 
-        choose_NT = c1.checkbox("N-T", help="Plot N-t curve", key="NT", disabled=disable_NT_flow)
-        choose_flow = c2.checkbox("Flow", help="Plot flow curve", key="Flow", disabled=disable_NT_flow)
+        choose_NT = c1.checkbox(
+            "N-T", help="Plot N-t curve", key="NT", disabled=disable_NT_flow
+        )
+        choose_flow = c2.checkbox(
+            "Flow", help="Plot flow curve", key="Flow", disabled=disable_NT_flow
+        )
         if disable_NT_flow:
             st.sidebar.info("N-T and Flow plots are disabled, because no transitions!")
         if choose_trajectories:
@@ -301,85 +337,99 @@ if __name__ == "__main__":
             logging.info("speed by trajectory")
             speed = Utilities.compute_speed(data, fps, df)
 
+        choose_dprofile = choose_vprofile = True  #todo: not sure is I want to keep this option
         if choose_dprofile or choose_vprofile:
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
             msg = ""
-            with st.spinner('Processing ...'):
+            with st.spinner("Processing ..."):
                 c1, _, c2 = st.columns((1, 0.05, 1))
                 if choose_dprofile:
-                    if choose_method == "Binned statistic":
-                        density = Utilities.weidmann(speed)
-                        with c1:
-                            density = Utilities.plot_profile(
-                                geominX,
-                                geomaxX,
-                                geominY,
-                                geomaxY,
-                                geometry_wall,
-                                dx,
-                                data[:, 2],
-                                data[:, 3],
-                                density,
-                                len(frames),
-                                interpolation=interpolation,
-                                cmap=cm.jet,
-                                label=r"$\rho\; / 1/m^2$",
-                                title="Density",
-                            )
-                    else:
-                        with c1:
-                            density = Utilities.orderFieldPlot(
-                                geominX,
-                                geomaxX,
-                                geominY,
-                                geomaxY,
-                                geometry_wall,
-                                dx,
-                                len(frames),
-                                data[:, 2],
-                                data[:, 3],
-                                interpolation=interpolation,
-                                cmap=cm.jet,
-                                label=r"$\rho\; / 1/m^2$",
-                                title="Density",
-                            )
-                            st.session_state.density = density
-                    msg += f"Density in range [{np.min(density):.2f} : {np.max(density):.2f}] [1/m^2]. "
+                    if choose_d_method == "Weidmann":
+                        density_ret = Utilities.calculate_density_average_weidmann(
+                            geominX,
+                            geomaxX,
+                            geominY,
+                            geomaxY,
+                            dx,
+                            len(frames),
+                            data[:, 2],
+                            data[:, 3],
+                            speed,
+                        )
+                    elif choose_d_method == "Gaussian":
+                        density_ret = Utilities.calculate_density_average_gauss(
+                            geominX,
+                            geomaxX,
+                            geominY,
+                            geomaxY,
+                            dx,
+                            len(frames),
+                            width,
+                            data[:, 2],
+                            data[:, 3],
+                        )
+                        print("HHH", density_ret.shape)
+                    elif choose_d_method == "Classical":
+                        density_ret = Utilities.calculate_density_average_classic(
+                            geominX,
+                            geomaxX,
+                            geominY,
+                            geomaxY,
+                            dx,
+                            len(frames),
+                            data[:, 2],
+                            data[:, 3],
+                        )
 
-                if choose_vprofile:
-                    if choose_method == "Binned statistic":
+                    st.session_state.density = density_ret
+                    msg += f"Density in range [{np.min(density_ret):.2f} : {np.max(density_ret):.2f}] [1/m^2]. "
+                    with c1:
+                        Utilities.plot_profile_and_geometry(
+                            geominX,
+                            geomaxX,
+                            geominY,
+                            geomaxY,
+                            geometry_wall,
+                            density_ret,
+                            interpolation,
+                            cmap=cm.jet,
+                            label=r"$\rho\; / 1/m^2$",
+                            title="Density",
+                            vmin=None,
+                            vmax=None,
+                        )
+                    if choose_vprofile:
+                        if choose_d_method == "Gaussian":
+                            speed_ret = speed = Utilities.weidmann(st.session_state.density)
+                        else:
+                            speed_ret = Utilities.calculate_speed_average(
+                            geominX,
+                            geomaxX,
+                            geominY,
+                            geomaxY,
+                            dx,
+                            len(frames),
+                            data[:, 2],
+                            data[:, 3],
+                            speed,
+                        )
                         with c2:
-                            speed = Utilities.plot_profile(
+                            Utilities.plot_profile_and_geometry(
                                 geominX,
                                 geomaxX,
                                 geominY,
                                 geomaxY,
                                 geometry_wall,
-                                dx,
-                                data[:, 2],
-                                data[:, 3],
-                                speed,
-                                len(frames),
-                                interpolation=interpolation,
+                                speed_ret,
+                                interpolation,
                                 cmap=cm.jet.reversed(),
                                 label=r"$v\; / m/s$",
                                 title="Speed",
+                                vmin=None,
+                                vmax=None,
                             )
-                    else:
-                        with c2:
-                            speed = Utilities.plot_profile_velocity(geominX,
-                                                                    geomaxX,
-                                                                    geominY,
-                                                                    geomaxY,
-                                                                    geometry_wall,
-                                                                    st.session_state.density,
-                                                                    interpolation=interpolation,
-                                                                    cmap=cm.jet.reversed(),
-                                                                    label=r"$v\; / m/s$",
-                                                                    title="Speed",)
-                       
-                       
-                    msg += f"Speed in range [{np.min(speed):.2f} : {np.max(speed):.2f}] [m/s]. "
+                        msg += f"Speed profile in range [{np.min(speed_ret):.2f} : {np.max(speed_ret):.2f}] [m/s]. "
+                        msg += f"Speed trajectory in range [{np.min(speed):.2f} : {np.max(speed):.2f}] [m/s]. "
 
             st.info(msg)
         if choose_NT or choose_flow:
@@ -388,8 +438,10 @@ if __name__ == "__main__":
             cum_num = {}
             msg = ""
             trans_used = {}
-            with st.spinner('Processing ...'):
-                max_len = -1  # longest array. Needed to stack arrays and save them in file
+            with st.spinner("Processing ..."):
+                max_len = (
+                    -1
+                )  # longest array. Needed to stack arrays and save them in file
                 for i, t in transitions.items():
                     trans_used[i] = False
                     if i in selected_transitions:
@@ -404,7 +456,7 @@ if __name__ == "__main__":
                         if trans_used[i]:
                             tstats[i].sort()
                             cum_num[i] = np.cumsum(np.ones(len(tstats[i])))
-                            flow = cum_num[i][-1] / tstats[i][-1] * fps                            
+                            flow = cum_num[i][-1] / tstats[i][-1] * fps
                             max_len = max(max_len, cum_num[i].size)
                             msg += f"Transition {i},  flow: {flow:.2f} [1/s] \n \n"
                         else:
@@ -425,16 +477,16 @@ if __name__ == "__main__":
             T = dt.datetime.now()
             n = trajectory_file.name.split(".txt")[0]
             file_download = f"{n}_{T.year}-{T.month:02}-{T.day:02}_{T.hour:02}-{T.minute:02}-{T.second:02}.txt"
-            once = 0  # don't download if file is empty            
+            once = 0  # don't download if file is empty
             for i in selected_transitions:
                 if not trans_used[i]:
                     continue
-                
+
                 if len(tstats[i]) < max_len:
                     tmp_stats = np.full(max_len, -1)
-                    tmp_stats[:len(tstats[i])] = tstats[i]
+                    tmp_stats[: len(tstats[i])] = tstats[i]
                     tmp_cum_num = np.full(max_len, -1)
-                    tmp_cum_num[:len(cum_num[i])] = cum_num[i]
+                    tmp_cum_num[: len(cum_num[i])] = cum_num[i]
                 else:
                     tmp_stats = tstats[i]
                     tmp_cum_num = cum_num[i]
@@ -444,7 +496,7 @@ if __name__ == "__main__":
                     once = 1
                 else:
                     all_stats = np.vstack((all_stats, tmp_stats, tmp_cum_num))
-                    
+
             if selected_transitions:
                 st.info(msg)
 
