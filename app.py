@@ -166,11 +166,9 @@ if __name__ == "__main__":
             if unit == "cm":
                 data[:, 2:] /= 100
 
-            h = st.expander("Head of trajectory (with first 4 columns)")
+            h = st.expander("Trajectories (first 4 columns)")
             with h:
                 headerColor = 'grey'
-                rowEvenColor = 'lightgrey'
-                rowOddColor = 'white'
                 fig = go.Figure(
                     data=[go.Table
                           (header=dict(
@@ -179,8 +177,7 @@ if __name__ == "__main__":
                                font=dict(color='white', size=12),
                            ),
                            cells=dict(
-                               values=[data[:10,0], data[:10, 1], data[:10, 2], data[:10, 3]],
-                               fill_color=[[rowOddColor,rowEvenColor,rowOddColor, rowEvenColor]*4],
+                               values=[data[:, 0], data[:, 1], data[:, 2], data[:, 3]],
                            )
                            )
                           ])
