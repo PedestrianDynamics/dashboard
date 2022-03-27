@@ -412,8 +412,7 @@ if __name__ == "__main__":
             fig = make_subplots(
                 rows=1, cols=1, subplot_titles=["Speed"], x_title="Time / s", y_title="Speed / m/s"
             )
-            print(start_ped, type(start_ped))
-            print(end_ped, type(end_ped))
+            logging.info(f"Pedesrians range: [{start_ped} {end_ped}]")
             for ped in np.arange(start_ped, end_ped+1):
                 agent = data[data[:, 0] == ped]
                 if how_speed == "from simulation":
