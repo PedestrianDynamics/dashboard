@@ -240,11 +240,11 @@ if __name__ == "__main__":
             # todo: check if ids of transitions and measurement_lines are unique
             transitions.update(measurement_lines)
             # select all per default
-            # if transitions:
-            #     default = list(transitions.keys())[0]  # choose this transition by default
-            # else:
-            #     default = []
-            #     disable_NT_flow = True
+            if transitions:
+                default = list(transitions.keys())  # choose this transition by default
+            else:
+                default = []
+                disable_NT_flow = True
 
             logging.info("Get geo_limits")
             geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml, unit)
@@ -271,20 +271,13 @@ if __name__ == "__main__":
             choose_evactime = c1.checkbox(
                 "Occupation", help="Plot number of pedestrians inside geometry over time", key="EvacT"
             )
-            choose_ped_speed = c2.checkbox(
-                "Speed", help="Plot speed of pedestrians over time", key="SpeedT"
-            )
+
         selected_transitions = NT_form.multiselect(
             "Select transition",
             transitions.keys(),
-            transitions.keys(), #default,
+            default,
             help="Transition to calculate N-T. Can select multiple transitions",
         )
-        start_ped = NT_form.select_slider(
-                'Select pedestrian id',
-                options=peds,
-                value=(peds[10]))
-            
         make_plots = NT_form.form_submit_button(label="🚦plot")
             
         if disable_NT_flow:
@@ -301,20 +294,41 @@ if __name__ == "__main__":
 
         if choose_trajectories:
             logging.info("plotting trajectories")
-
+            agent = data[data[:, 0] == plot_ped]
             if how_speed == "from simulation":
-                speed_agent = data[data[:, 0] == plot_ped][:, 9]
+                speed_agent = agent[:, 9]
             else:
-                speed_agent = Utilities.compute_agent_speed(data[data[:, 0] == plot_ped], fps, df)
+                speed_agent = Utilities.compute_agent_speed(agent, fps, df)
 
-            if choose_transitions:
-                plots.plot_trajectories(
-                    data, plot_ped, speed_agent, geometry_wall, transitions, geominX, geomaxX, geominY, geomaxY
+            c1, c2 = st.columns((1, 1))
+            logging.info(f"Pedesrians: [{plot_ped}]")
+            with c1:
+                if choose_transitions:
+                    plots.plot_trajectories(
+                        data, plot_ped, speed_agent, geometry_wall, transitions, geominX, geomaxX, geominY, geomaxY
+                    )
+                else:
+                    plots.plot_trajectories(
+                        data, plot_ped, speed_agent, geometry_wall, {}, geominX, geomaxX, geominY, geomaxY
+                    )
+            
+            
+            # if how_speed == "from simulation":
+            #     speed_agent = agent[:, 9]
+            # else:
+            #     speed_agent = Utilities.compute_agent_speed(agent, fps, df)
+            with c2:
+                fig = make_subplots(
+                    rows=1, cols=1, x_title="Time / s", y_title="Speed / m/s"
                 )
-            else:
-                plots.plot_trajectories(
-                    data, plot_ped, speed_agent, geometry_wall, {}, geominX, geomaxX, geominY, geomaxY
+                jam, free, threshold = plots.plot_agent_speed(plot_ped, agent[:, 1], speed_agent, fps)
+                fig.append_trace(free, row=1, col=1)
+                fig.append_trace(jam, row=1, col=1)
+                fig.append_trace(threshold, row=1, col=1)
+                fig.update_yaxes(
+                    range=[0, np.max(speed) + 0.01],
                 )
+                st.plotly_chart(fig, use_container_width=True)
                 
         #choose_dprofile =
         choose_vprofile = True  #todo: not sure is I want to keep this option
@@ -422,25 +436,8 @@ if __name__ == "__main__":
             with c1:
                 plots.plot_peds_inside(frames, peds_inside, fps)
 
-        if make_plots and choose_ped_speed:
-            fig = make_subplots(
-                rows=1, cols=1, subplot_titles=["Speed"], x_title="Time / s", y_title="Speed / m/s"
-            )
-            logging.info(f"Pedesrians range: [{start_ped} {start_ped}]")
-            once = 1
-            for ped in np.arange(start_ped, start_ped+1):
-                agent = data[data[:, 0] == ped]
-                if how_speed == "from simulation":
-                    speed_agent = agent[:, 9]
-                else:
-                    speed_agent = Utilities.compute_agent_speed(agent, fps, df)
+        # if make_plots and choose_ped_speed:
 
-                jam, free, threshold = plots.plot_agent_speed(ped, agent[:, 1], speed_agent, fps)
-                fig.append_trace(free, row=1, col=1)
-                fig.append_trace(jam, row=1, col=1)
-                if once:
-                    fig.append_trace(threshold, row=1, col=1)
-                    
             # fig.update_layout(
             #     width=500,
             #     height=500,
@@ -450,8 +447,8 @@ if __name__ == "__main__":
             #     scaleratio=1,
             #     autorange=True,
             # )
-            with c2:
-                st.plotly_chart(fig, use_container_width=True)
+            # with c2:
+            # st.plotly_chart(fig, use_container_width=True)
 
         plot_options = choose_NT or choose_flow
         if make_plots and plot_options:

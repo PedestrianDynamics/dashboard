@@ -84,7 +84,7 @@ def plot_flow(Frames, Nums, fps):
 def plot_peds_inside(frames, peds_inside, fps):
     logging.info("plot peds inside")
     fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["Evacuation rate"], x_title="Time / s", y_title="Number of Pedestrians"
+        rows=1, cols=1, subplot_titles=["Occupancy"], x_title="Time / s", y_title="Number of Pedestrians inside"
     )    
     times = frames / fps
     trace = go.Scatter(
@@ -122,7 +122,7 @@ def plot_agent_speed(pid, frames, speed_agent, fps):
         x=times,
         y=jam,
         mode="lines",
-        showlegend=True,
+        showlegend=False,
         name=f"P: {pid:.0f} - free",
         line=dict(width=3, color='royalblue'),
     )
@@ -131,7 +131,7 @@ def plot_agent_speed(pid, frames, speed_agent, fps):
         x=times,
         y=free,
         mode="lines",
-        showlegend=True,
+        showlegend=False,
         name=f"P: {pid:.0f} - jam",
         line=dict(width=3, color='firebrick'),
     )
@@ -139,8 +139,8 @@ def plot_agent_speed(pid, frames, speed_agent, fps):
         x=[times[0], times[-1]],
         y=[threshold, threshold],
         mode="lines",
-        showlegend=False,
-        name=f"Jam threshold {threshold:.0f}",
+        showlegend=True,
+        name=f"Jam threshold",
         line=dict(width=2, dash='dash', color="gray"),
     )
     return trace_jam, trace_free, trace_threshold
@@ -191,7 +191,6 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
 #     ),
 #     mode="markers"))
 
-    
     fig.append_trace(trace, row=1, col=1)
 
     for gw in geo_walls.keys():
@@ -232,23 +231,13 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
         fig.append_trace(trace_text, row=1, col=1)
 
     eps = 1
-    fig.update_layout(
-        width=500,
-        height=500,
-    )
     fig.update_yaxes(
-        scaleanchor="x",
-        scaleratio=1,
         range=[min_y - eps, max_y + eps],
-        # autorange=True,
     )
     fig.update_xaxes(
-        #      #scaleanchor="y",
-        #     # scaleratio=1,
         range=[min_x - eps, max_x + eps],
-        #     autorange=False,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=False)
 
 
 def plot_geometry(ax, _geometry_wall):
