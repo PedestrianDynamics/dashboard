@@ -28,8 +28,7 @@ def plot_NT(Frames, Nums, fps):
             mode="lines",
             showlegend=True,
             name=f"ID: {i}",
-            marker=dict(size=1),
-            line=dict(width=1),
+            line=dict(width=3),
         )
         fig.append_trace(trace, row=1, col=1)
 
@@ -66,8 +65,7 @@ def plot_flow(Frames, Nums, fps):
             mode="lines",
             showlegend=True,
             name=f"ID: {i}",
-            marker=dict(size=1),
-            line=dict(width=1),
+            line=dict(width=3),
         )
         fig.append_trace(trace, row=1, col=1)
 
@@ -96,10 +94,7 @@ def plot_peds_inside(frames, peds_inside, fps):
         #fill='tozeroy',
         mode="lines",
         showlegend=False,
-        
-        #name=f"ID: {i}",
-        marker=dict(size=1),
-        line=dict(width=1),
+        line=dict(width=3, color='royalblue'),
     )
     fig.append_trace(trace, row=1, col=1)
 
@@ -116,23 +111,48 @@ def plot_peds_inside(frames, peds_inside, fps):
 
 
 def plot_agent_speed(pid, frames, speed_agent, fps):
+    threshold = 0.5  # according to DIN19009-2
+    jam = np.copy(speed_agent)
+    free = np.copy(speed_agent)
     logging.info(f"plot agent speed {pid}")
     times = frames / fps
-    trace = go.Scatter(
+    jam[speed_agent <= threshold] = None
+    free[speed_agent >= threshold] = None
+    trace_jam = go.Scatter(
         x=times,
-        y=speed_agent,
+        y=jam,
         mode="lines",
         showlegend=True,
-        name=f"P: {pid:.0f}",
-        marker=dict(size=1),
-        line=dict(width=1),
+        name=f"P: {pid:.0f} - free",
+        line=dict(width=3, color='royalblue'),
     )
-    return trace
+
+    trace_free = go.Scatter(
+        x=times,
+        y=free,
+        mode="lines",
+        showlegend=True,
+        name=f"P: {pid:.0f} - jam",
+        line=dict(width=3, color='firebrick'),
+    )
+    trace_threshold = go.Scatter(
+        x=[times[0], times[-1]],
+        y=[threshold, threshold],
+        mode="lines",
+        showlegend=False,
+        name=f"Jam threshold {threshold:.0f}",
+        line=dict(width=2, dash='dash', color="gray"),
+    )
+    return trace_jam, trace_free, trace_threshold
+
+# marker=dict(size=5, color=np.where(speed_agent >= threshold, 'blue', 'red')),
 
 
-def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
+def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, max_x, min_y, max_y):
     fig = make_subplots(rows=1, cols=1)
     peds = np.unique(data[:, 0])
+    s = data[data[:, 0] == special_ped]
+    sc = 1-speed/np.max(speed)
     for ped in peds:
         d = data[data[:, 0] == ped]
         c = d[:, -1]
@@ -142,10 +162,37 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
             mode="lines",
             showlegend=False,
             name=f"{ped:0.0f}",
-            marker=dict(size=1, color=c),
-            line=dict(color="gray", width=1),
+            line=dict(color="gray", width=0.3),
         )
         fig.append_trace(trace, row=1, col=1)
+
+    trace = go.Scatter(
+        x=s[:, 2],
+        y=s[:, 3],
+        mode="markers",
+        showlegend=False,
+        name=f"{special_ped:0.0f}",
+        marker=dict(size=5, color=sc, colorscale='Jet'),
+        line=dict(color="firebrick", width=4),
+    )
+
+# fig.add_trace(go.Scatter(
+#     x=values,
+#     y=values,
+#     marker=dict(
+#         size=16,
+#         cmax=39,
+#         cmin=0,
+#         color=values,
+#         colorbar=dict(
+#             title="Colorbar"
+#         ),
+#         colorscale="Viridis"
+#     ),
+#     mode="markers"))
+
+    
+    fig.append_trace(trace, row=1, col=1)
 
     for gw in geo_walls.keys():
         trace = go.Scatter(

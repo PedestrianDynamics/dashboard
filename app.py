@@ -103,6 +103,8 @@ if __name__ == "__main__":
         choose_transitions = c2.checkbox(
             "Transitions", help="Show transittions", key="Tran"
         )
+        pl = st.sidebar.empty()
+
     st.sidebar.markdown("-------")
     st.sidebar.header("Speed")
     how_speed = st.sidebar.radio("Source:", ["from trajectory", "from simulation"])
@@ -122,9 +124,9 @@ if __name__ == "__main__":
     st.sidebar.markdown("-------")
     st.sidebar.header("Profile")
     c1, c2 = st.sidebar.columns((1, 1))
-    #choose_dprofile = c1.checkbox(
-    #    "Density", help="Plot density profile", key="dProfile"
-    #)
+    choose_dprofile = c1.checkbox(
+       "Show", help="Plot density and speed profiles", key="dProfile"
+    )
     #choose_vprofile = c2.checkbox("Speed", help="Plot speed profile", key="vProfile")
     choose_d_method = st.sidebar.radio(
         "Density method",
@@ -166,12 +168,12 @@ if __name__ == "__main__":
             if unit == "cm":
                 data[:, 2:] /= 100
 
-            h = st.expander("Trajectories (first 4 columns)")            
+            h = st.expander("Trajectories (first 4 columns)")
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
             if string_data != st.session_state.old_data:
                 st.session_state.old_data = string_data
-                with h:                    
+                with h:
                     headerColor = 'grey'
                     fig = go.Figure(
                         data=[go.Table
@@ -189,16 +191,22 @@ if __name__ == "__main__":
 
             fps = Utilities.get_fps(string_data)
             peds = np.unique(data[:, 0]).astype(np.int)
+            
             frames = np.unique(data[:, 1])
             st.markdown("### :bar_chart: Statistics")
-            pl = st.empty()
+            pl_msg = st.empty()
             msg = f"""
             Frames per second: {fps}\n
             Frames: {len(frames)} | First: {frames[0]:.0f} | Last: {frames[-1]:.0f}\n
             Agents: {len(peds)}\n
             Evac-time: {np.max(data[:, 1])/fps} [s]
             """
-            pl.info(msg)
+            pl_msg.info(msg)
+            plot_ped = pl.select_slider(
+                'Highlight pedestrian',
+                options=peds,
+                value=(peds[10]))
+        
             logging.info(f"fps = {fps}")
         except Exception as e:
             msg_status.error(
@@ -272,27 +280,17 @@ if __name__ == "__main__":
             transitions.keys(), #default,
             help="Transition to calculate N-T. Can select multiple transitions",
         )
-        start_ped, end_ped = NT_form.select_slider(
-                'Select a range of pedestrians',
+        start_ped = NT_form.select_slider(
+                'Select pedestrian id',
                 options=peds,
-                value=(peds[0], peds[10]))
+                value=(peds[10]))
             
         make_plots = NT_form.form_submit_button(label="🚦plot")
             
         if disable_NT_flow:
             st.sidebar.info("N-T and Flow plots are disabled, because no transitions!")
-            
-        if choose_trajectories:
-            logging.info("plotting trajectories")
-            if choose_transitions:
-                plots.plot_trajectories(
-                    data, geometry_wall, transitions, geominX, geomaxX, geominY, geomaxY
-                )
-            else:
-                plots.plot_trajectories(
-                    data, geometry_wall, {}, geominX, geomaxX, geominY, geomaxY
-                )
 
+            
         if how_speed == "from simulation":
             logging.info("speed by simulation")
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
@@ -301,7 +299,25 @@ if __name__ == "__main__":
             logging.info("speed by trajectory")
             speed = Utilities.compute_speed(data, fps, df)
 
-        choose_dprofile = choose_vprofile = True  #todo: not sure is I want to keep this option
+        if choose_trajectories:
+            logging.info("plotting trajectories")
+
+            if how_speed == "from simulation":
+                speed_agent = data[data[:, 0] == plot_ped][:, 9]
+            else:
+                speed_agent = Utilities.compute_agent_speed(data[data[:, 0] == plot_ped], fps, df)
+
+            if choose_transitions:
+                plots.plot_trajectories(
+                    data, plot_ped, speed_agent, geometry_wall, transitions, geominX, geomaxX, geominY, geomaxY
+                )
+            else:
+                plots.plot_trajectories(
+                    data, plot_ped, speed_agent, geometry_wall, {}, geominX, geomaxX, geominY, geomaxY
+                )
+                
+        #choose_dprofile =
+        choose_vprofile = True  #todo: not sure is I want to keep this option
         if choose_dprofile or choose_vprofile:
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
             msg = ""
@@ -394,7 +410,7 @@ if __name__ == "__main__":
                         msg += f"Speed profile in range [{np.min(speed_ret):.2f} : {np.max(speed_ret):.2f}] [m/s]. "
                         msg += f"Speed trajectory in range [{np.min(speed):.2f} : {np.max(speed):.2f}] [m/s]. "
 
-            st.info(msg)
+                    st.info(msg)
 
         c1, c2 = st.columns((1, 1))
         if make_plots and choose_evactime:
@@ -410,17 +426,21 @@ if __name__ == "__main__":
             fig = make_subplots(
                 rows=1, cols=1, subplot_titles=["Speed"], x_title="Time / s", y_title="Speed / m/s"
             )
-            logging.info(f"Pedesrians range: [{start_ped} {end_ped}]")
-            for ped in np.arange(start_ped, end_ped+1):
+            logging.info(f"Pedesrians range: [{start_ped} {start_ped}]")
+            once = 1
+            for ped in np.arange(start_ped, start_ped+1):
                 agent = data[data[:, 0] == ped]
                 if how_speed == "from simulation":
                     speed_agent = agent[:, 9]
                 else:
                     speed_agent = Utilities.compute_agent_speed(agent, fps, df)
 
-                trace = plots.plot_agent_speed(ped, agent[:, 1], speed_agent, fps)
-                fig.append_trace(trace, row=1, col=1)
-
+                jam, free, threshold = plots.plot_agent_speed(ped, agent[:, 1], speed_agent, fps)
+                fig.append_trace(free, row=1, col=1)
+                fig.append_trace(jam, row=1, col=1)
+                if once:
+                    fig.append_trace(threshold, row=1, col=1)
+                    
             # fig.update_layout(
             #     width=500,
             #     height=500,
