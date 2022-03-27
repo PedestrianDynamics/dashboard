@@ -9,9 +9,10 @@ import lovely_logger as logging
 import numpy as np
 import streamlit as st
 from matplotlib import cm
-from pandas import read_csv
 from shapely.geometry import LineString
-import streamlit as st
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
 import plots
 import Utilities
 
@@ -170,7 +171,6 @@ if __name__ == "__main__":
                 headerColor = 'grey'
                 rowEvenColor = 'lightgrey'
                 rowOddColor = 'white'
-                import plotly.graph_objects as go
                 fig = go.Figure(
                     data=[go.Table
                           (header=dict(
@@ -263,6 +263,9 @@ if __name__ == "__main__":
             )
             choose_evactime = c1.checkbox(
                 "Occupation", help="Plot number of pedestrians inside geometry over time", key="EvacT"
+            )
+            choose_ped_speed = c2.checkbox(
+                "Speed", help="Plot speed of pedestrians over time", key="SpeedT"
             )
         selected_transitions = NT_form.multiselect(
             "Select transition",
@@ -389,18 +392,45 @@ if __name__ == "__main__":
 
             st.info(msg)
 
-
+        c1, c2 = st.columns((1, 1))
         if make_plots and choose_evactime:
             peds_inside = []
             for frame in frames:
                 d = data[data[:, 1] == frame][:, 0]
                 peds_inside.append(len(d))
-                print(frame, len(d))
 
-            plots.plot_peds_inside(frames, peds_inside, fps)
+            with c1:
+                plots.plot_peds_inside(frames, peds_inside, fps)
+
+        if make_plots and choose_ped_speed:
+            fig = make_subplots(
+                rows=1, cols=1, subplot_titles=["Speed"], x_title="Time / s", y_title="Speed / m/s"
+            )
+            for ped in peds[:5]:
+                agent = data[data[:, 0] == ped]
+                if how_speed == "from simulation":
+                    speed_agent = agent[:, 9]
+                else:
+                    speed_agent = Utilities.compute_agent_speed(agent, fps, df)
+
+                trace = plots.plot_agent_speed(ped, agent[:, 1], speed_agent, fps)
+                fig.append_trace(trace, row=1, col=1)
+
+            # fig.update_layout(
+            #     width=500,
+            #     height=500,
+            # )
+            # fig.update_yaxes(
+            #     scaleanchor="x",
+            #     scaleratio=1,
+            #     autorange=True,
+            # )
+            with c2:
+                st.plotly_chart(fig, use_container_width=True)
 
         plot_options = choose_NT or choose_flow
         if make_plots and plot_options:
+            c1, c2 = st.columns((1, 1))
             peds = np.unique(data)
             tstats = defaultdict(list)
             cum_num = {}
@@ -432,9 +462,8 @@ if __name__ == "__main__":
 
             st.session_state.tstats = tstats
             st.session_state.cum_num = cum_num
-            
-        c1, c2 = st.columns((1, 1))
-        if make_plots:
+
+        if make_plots and plot_options:
             with c1:
                 if choose_NT and tstats:
                     plots.plot_NT(tstats, cum_num, fps)

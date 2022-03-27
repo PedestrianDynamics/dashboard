@@ -358,6 +358,31 @@ def compute_speed(data, fps, df=10):
 
     return speeds
 
+def compute_agent_speed(agent, fps, df=10):
+    """Calculates the speed and the angle from the trajectory points.
+
+    """
+ 
+    traj = agent[:, 2:4]
+    size = traj.shape[0]
+    speed = np.ones(size)
+    if size < df:
+        logging.warning(
+            f"""The number of frames used to calculate the speed {df}
+            exceeds the total amount of frames ({size}) in this trajectory."""
+        )
+        st.stop()
+        
+    delta = traj[df:, :] - traj[: size - df, :]
+    delta_square = np.square(delta)
+    delta_x_square = delta_square[:, 0]
+    delta_y_square = delta_square[:, 1]
+    s = np.sqrt(delta_x_square + delta_y_square)
+    speed[: size - df] = s / df * fps
+    speed[size - df :] = speed[size - df - 1]
+    
+    return speed
+
 
 def calculate_speed_average(
     geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y, speed
