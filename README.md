@@ -28,7 +28,7 @@ Define in the geometry transitions, such that the pedestrian fully pass them.
 ## Todo
 
 - [ ] Congestion (histogram)
-- [ ] split file Utilities into plot-functions and utilities 
-- [ ] Number of agents in geometry over time
-- [ ] Social distancing analysis (QIancheng's paper)
-- [ ] Use forms to avoid running everything at once!
+- [X] split file Utilities into plot-functions and utilities 
+- [X] Number of agents in geometry over time
+- [ ] Social distancing analysis (Qiancheng's paper)
+- [X] Use forms to avoid running everything at once!
