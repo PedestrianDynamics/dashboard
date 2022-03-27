@@ -110,7 +110,10 @@ def plot_peds_inside(frames, peds_inside, fps):
     st.plotly_chart(fig, use_container_width=True)
 
 
-def plot_agent_speed(pid, frames, speed_agent, fps):
+def plot_agent_speed(pid, frames, speed_agent, max_speed, fps):
+    fig = make_subplots(
+                    rows=1, cols=1, x_title="Time / s", y_title="Speed / m/s"
+                )
     threshold = 0.5  # according to DIN19009-2
     jam = np.copy(speed_agent)
     free = np.copy(speed_agent)
@@ -143,7 +146,15 @@ def plot_agent_speed(pid, frames, speed_agent, fps):
         name=f"Jam threshold",
         line=dict(width=2, dash='dash', color="gray"),
     )
-    return trace_jam, trace_free, trace_threshold
+    fig.append_trace(trace_free, row=1, col=1)
+    fig.append_trace(trace_jam, row=1, col=1)
+    fig.append_trace(trace_threshold, row=1, col=1)
+    fig.update_yaxes(
+        range=[0, max_speed + 0.01],
+    )
+    st.plotly_chart(fig, use_container_width=True)
+                
+    #return trace_jam, trace_free, trace_threshold
 
 # marker=dict(size=5, color=np.where(speed_agent >= threshold, 'blue', 'red')),
 

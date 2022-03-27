@@ -87,7 +87,7 @@ if __name__ == "__main__":
     )
     st.sidebar.markdown("-------")
     unit = st.sidebar.radio(
-        "Unit of the trajectories", ["m", "cm"], help="Choose the unit of the original trajectories. Data in the app will be converted to meter"
+        "Trajectories are in ", ["m", "cm"], help="Choose the unit of the original trajectories. Data in the app will be converted to meter"
     )
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
@@ -312,26 +312,11 @@ if __name__ == "__main__":
                         data, plot_ped, speed_agent, geometry_wall, {}, geominX, geomaxX, geominY, geomaxY
                     )
             
-            
-            # if how_speed == "from simulation":
-            #     speed_agent = agent[:, 9]
-            # else:
-            #     speed_agent = Utilities.compute_agent_speed(agent, fps, df)
             with c2:
-                fig = make_subplots(
-                    rows=1, cols=1, x_title="Time / s", y_title="Speed / m/s"
-                )
-                jam, free, threshold = plots.plot_agent_speed(plot_ped, agent[:, 1], speed_agent, fps)
-                fig.append_trace(free, row=1, col=1)
-                fig.append_trace(jam, row=1, col=1)
-                fig.append_trace(threshold, row=1, col=1)
-                fig.update_yaxes(
-                    range=[0, np.max(speed) + 0.01],
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                plots.plot_agent_speed(plot_ped, agent[:, 1], speed_agent, np.max(speed), fps)
                 
         #choose_dprofile =
-        choose_vprofile = True  #todo: not sure is I want to keep this option
+        choose_vprofile = True  # todo: not sure is I want to keep this option
         if choose_dprofile or choose_vprofile:
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
             msg = ""
