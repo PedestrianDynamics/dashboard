@@ -48,8 +48,8 @@ st.set_page_config(
 
 
 def set_state_variables():
-    if "old_configs" not in st.session_state:
-        st.session_state.old_configs = ""
+    if "old_data" not in st.session_state:
+        st.session_state.old_data = ""
 
     if "density" not in st.session_state:
         st.session_state.density = []
@@ -154,7 +154,7 @@ if __name__ == "__main__":
         "Interpolation", methods, help="Interpolation method for imshow()"
     )
     st.sidebar.markdown("-------")
-    st.sidebar.header("Plot curves")    
+    st.sidebar.header("Plot curves")
     c1, c2 = st.sidebar.columns((1, 1))
     msg_status = st.sidebar.empty()
     disable_NT_flow = False
@@ -166,26 +166,27 @@ if __name__ == "__main__":
             if unit == "cm":
                 data[:, 2:] /= 100
 
-            h = st.expander("Trajectories (first 4 columns)")
-            with h:
-                headerColor = 'grey'
-                fig = go.Figure(
-                    data=[go.Table
-                          (header=dict(
-                               values=['<b>ID</b>', '<b>Frame</b>', '<b>X</b>', '<b>Y</b>'],
-                               fill_color=headerColor,
-                               font=dict(color='white', size=12),
-                           ),
-                           cells=dict(
-                               values=[data[:, 0], data[:, 1], data[:, 2], data[:, 3]],
-                           )
-                           )
-                          ])
-                #fig.update_layout(width=800, height=300)
-                st.plotly_chart(fig, use_container_width=True)
-                #st.table(data[:10, :])  # will display the table
+            h = st.expander("Trajectories (first 4 columns)")            
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
+            if string_data != st.session_state.old_data:
+                st.session_state.old_data = string_data
+                with h:                    
+                    headerColor = 'grey'
+                    fig = go.Figure(
+                        data=[go.Table
+                              (header=dict(
+                                  values=['<b>ID</b>', '<b>Frame</b>', '<b>X</b>', '<b>Y</b>'],
+                                  fill_color=headerColor,
+                                  font=dict(color='white', size=12),
+                              ),
+                               cells=dict(
+                                   values=[data[:, 0], data[:, 1], data[:, 2], data[:, 3]],
+                               )
+                               )
+                              ])
+                    st.plotly_chart(fig, use_container_width=True)
+
             fps = Utilities.get_fps(string_data)
             peds = np.unique(data[:, 0]).astype(np.int)
             frames = np.unique(data[:, 1])
@@ -460,9 +461,12 @@ if __name__ == "__main__":
                             cum_num[i] = np.cumsum(np.ones(len(tstats[i])))
                             flow = cum_num[i][-1] / tstats[i][-1] * fps
                             max_len = max(max_len, cum_num[i].size)
-                            msg += f"Transition {i},  flow: {flow:.2f} [1/s] \n \n"
+                            msg += f"Transition {i}: length {line.length:.2f}, flow: {flow:.2f} [1/s], specific flow: {flow/line.length:.2f} [1/s/m] \n \n"
                         else:
-                            msg += f"Transition {i},  flow: 0 [1/s] \n \n"
+                            msg += f"Transition {i}: length {line.length:.2f}, flow: 0 [1/s] \n \n"
+
+            if selected_transitions:
+                    st.info(msg)
 
             st.session_state.tstats = tstats
             st.session_state.cum_num = cum_num
@@ -502,9 +506,7 @@ if __name__ == "__main__":
                     else:
                         all_stats = np.vstack((all_stats, tmp_stats, tmp_cum_num))
 
-                if selected_transitions:
-                    st.info(msg)
-
+                
                 if selected_transitions and once:
                     passed_lines = [i for i in selected_transitions if trans_used[i]]
                     fmt = len(passed_lines) * ["%d", "%d"]

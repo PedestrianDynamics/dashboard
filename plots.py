@@ -162,7 +162,7 @@ def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
         ym = np.sum(t[:, 1]) / 2
         length = np.sqrt(np.diff(t[:, 0]) ** 2 + np.diff(t[:, 1]) ** 2)
         offset = 0.1 * length[0]
-        logging.info(f"offsset transition {offset}")
+        logging.info(f"offset transition {offset}")
         trace = go.Scatter(
             x=t[:, 0],
             y=t[:, 1],
