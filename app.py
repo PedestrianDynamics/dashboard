@@ -190,7 +190,7 @@ if __name__ == "__main__":
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
             fps = Utilities.get_fps(string_data)
-            peds = np.unique(data[:, 0])
+            peds = np.unique(data[:, 0]).astype(np.int)
             frames = np.unique(data[:, 1])
             st.markdown("### :bar_chart: Statistics")
             pl = st.empty()
@@ -233,11 +233,12 @@ if __name__ == "__main__":
             logging.info("Got geometry measurement_lines successfully")
             # todo: check if ids of transitions and measurement_lines are unique
             transitions.update(measurement_lines)
-            if transitions:
-                default = list(transitions.keys())[0]  # choose this transition by default
-            else:
-                default = []
-                disable_NT_flow = True
+            # select all per default
+            # if transitions:
+            #     default = list(transitions.keys())[0]  # choose this transition by default
+            # else:
+            #     default = []
+            #     disable_NT_flow = True
 
             logging.info("Get geo_limits")
             geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml, unit)
@@ -270,9 +271,14 @@ if __name__ == "__main__":
         selected_transitions = NT_form.multiselect(
             "Select transition",
             transitions.keys(),
-            default,
+            transitions.keys(), #default,
             help="Transition to calculate N-T. Can select multiple transitions",
         )
+        start_ped, end_ped = NT_form.select_slider(
+                'Select a range of pedestrians',
+                options=peds,
+                value=(peds[0], peds[10]))
+            
         make_plots = NT_form.form_submit_button(label="🚦plot")
             
         if disable_NT_flow:
@@ -406,7 +412,9 @@ if __name__ == "__main__":
             fig = make_subplots(
                 rows=1, cols=1, subplot_titles=["Speed"], x_title="Time / s", y_title="Speed / m/s"
             )
-            for ped in peds[:5]:
+            print(start_ped, type(start_ped))
+            print(end_ped, type(end_ped))
+            for ped in np.arange(start_ped, end_ped+1):
                 agent = data[data[:, 0] == ped]
                 if how_speed == "from simulation":
                     speed_agent = agent[:, 9]
