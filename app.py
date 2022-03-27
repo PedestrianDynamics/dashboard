@@ -86,7 +86,7 @@ if __name__ == "__main__":
     )
     st.sidebar.markdown("-------")
     unit = st.sidebar.radio(
-        "Unit", ["m", "cm"], help="Choose the unit of the trajectories"
+        "Unit of the trajectories", ["m", "cm"], help="Choose the unit of the original trajectories. Data in the app will be converted to meter"
     )
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
@@ -165,9 +165,28 @@ if __name__ == "__main__":
             if unit == "cm":
                 data[:, 2:] /= 100
 
-            h = st.expander("Head of trajectory")
+            h = st.expander("Head of trajectory (with first 4 columns)")
             with h:
-                st.table(data[:10, :])  # will display the table
+                headerColor = 'grey'
+                rowEvenColor = 'lightgrey'
+                rowOddColor = 'white'
+                import plotly.graph_objects as go
+                fig = go.Figure(
+                    data=[go.Table
+                          (header=dict(
+                               values=['<b>ID</b>', '<b>Frame</b>', '<b>X</b>', '<b>Y</b>'],
+                               fill_color=headerColor,
+                               font=dict(color='white', size=12),
+                           ),
+                           cells=dict(
+                               values=[data[:10,0], data[:10, 1], data[:10, 2], data[:10, 3]],
+                               fill_color=[[rowOddColor,rowEvenColor,rowOddColor, rowEvenColor]*4],
+                           )
+                           )
+                          ])
+                #fig.update_layout(width=800, height=300)
+                st.plotly_chart(fig, use_container_width=True)
+                #st.table(data[:10, :])  # will display the table
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
             fps = Utilities.get_fps(string_data)
@@ -177,7 +196,7 @@ if __name__ == "__main__":
             pl = st.empty()
             msg = f"""
             Frames per second: {fps}\n
-            Frames: {len(frames)}\n
+            Frames: {len(frames)} | First: {frames[0]:.0f} | Last: {frames[-1]:.0f}\n
             Agents: {len(peds)}\n
             Evac-time: {np.max(data[:, 1])/fps} [s]
             """
@@ -210,12 +229,16 @@ if __name__ == "__main__":
             logging.info("Got geometry walls successfully")
             transitions = Utilities.get_transitions(geo_xml, unit)
             logging.info("Got geometry transitions successfully")
+            measurement_lines = Utilities.get_measurement_lines(geo_xml, unit)
+            logging.info("Got geometry measurement_lines successfully")
+            # todo: check if ids of transitions and measurement_lines are unique
+            transitions.update(measurement_lines)
             if transitions:
-                default = list(transitions.keys())[0]
+                default = list(transitions.keys())[0]  # choose this transition by default
             else:
                 default = []
                 disable_NT_flow = True
-                
+
             logging.info("Get geo_limits")
             geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml, unit)
 
@@ -237,6 +260,9 @@ if __name__ == "__main__":
         
             choose_flow = c2.checkbox(
                 "Flow", help="Plot flow curve", key="Flow", disabled=disable_NT_flow
+            )
+            choose_evactime = c1.checkbox(
+                "Occupation", help="Plot number of pedestrians inside geometry over time", key="EvacT"
             )
         selected_transitions = NT_form.multiselect(
             "Select transition",
@@ -299,7 +325,6 @@ if __name__ == "__main__":
                             data[:, 2],
                             data[:, 3],
                         )
-                        print("HHH", density_ret.shape)
                     elif choose_d_method == "Classical":
                         density_ret = Utilities.calculate_density_average_classic(
                             geominX,
@@ -364,8 +389,18 @@ if __name__ == "__main__":
 
             st.info(msg)
 
-        
-        if make_plots and (choose_NT or choose_flow):
+
+        if make_plots and choose_evactime:
+            peds_inside = []
+            for frame in frames:
+                d = data[data[:, 1] == frame][:, 0]
+                peds_inside.append(len(d))
+                print(frame, len(d))
+
+            plots.plot_peds_inside(frames, peds_inside, fps)
+
+        plot_options = choose_NT or choose_flow
+        if make_plots and plot_options:
             peds = np.unique(data)
             tstats = defaultdict(list)
             cum_num = {}
@@ -374,7 +409,7 @@ if __name__ == "__main__":
             with st.spinner("Processing ..."):
                 max_len = (
                     -1
-                )  # longest array. Needed to stack arrays and save them in file
+                )  # longest array. Needed to stack arrays and save them in file                
                 for i, t in transitions.items():
                     trans_used[i] = False
                     if i in selected_transitions:

@@ -12,6 +12,12 @@ def docs():
         """
     This app performs some basic measurements on data simulated by jpscore.
 
+     ### Flow
+     Flow and NT-curves are calculated at transitions and measurement lines.
+
+     Measurement lines `area_L` can be added as defined in
+     https://www.jupedsim.org/jpsreport_inifile#measurement-area
+
      #### Speed
      The speed can be calculated *from simulation*: in this case
      use in the inifile the option: `<optional_output   speed=\"TRUE\">`.
@@ -131,6 +137,40 @@ def get_transitions(xml_doc, unit):
         transitions[Id] = vertex_array / cm2m
 
     return transitions
+
+
+def get_measurement_lines(xml_doc, unit):
+    """ add area_L
+
+    https://www.jupedsim.org/jpsreport_inifile#measurement-area
+    """
+
+    if unit == "cm":
+        cm2m = 100
+    else:
+        cm2m = 1
+
+    measurement_lines = {}
+    for _, t_elem in enumerate(xml_doc.getElementsByTagName("area_L")):
+        Id = t_elem.getAttribute("id")
+        print("Measurement", Id)
+        n_vertex = 2
+        vertex_array = np.zeros((n_vertex, 2))
+        vertex_array[0, 0] = (
+            t_elem.getElementsByTagName("start")[0].attributes["px"].value
+        )
+        vertex_array[0, 1] = (
+            t_elem.getElementsByTagName("start")[0].attributes["py"].value
+        )
+        vertex_array[1, 0] = (
+            t_elem.getElementsByTagName("end")[0].attributes["px"].value
+        )
+        vertex_array[1, 1] = (
+            t_elem.getElementsByTagName("end")[0].attributes["py"].value
+        )
+        measurement_lines[Id] = vertex_array / cm2m
+        print(vertex_array)
+    return measurement_lines
 
 
 def passing_frame(ped_data: np.array, line: LineString, fps: int) -> int:
