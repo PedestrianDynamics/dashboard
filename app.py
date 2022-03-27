@@ -6,17 +6,13 @@ from pathlib import Path
 from xml.dom.minidom import parseString
 
 import lovely_logger as logging
-import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
-
-# import matplotlib.cm as cm
 from matplotlib import cm
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pandas import read_csv
-from scipy import stats
 from shapely.geometry import LineString
-
+import streamlit as st
+import plots
 import Utilities
 
 path = Path(__file__)
@@ -57,88 +53,19 @@ def set_state_variables():
     if "density" not in st.session_state:
         st.session_state.density = []
 
+    if "tstats" not in st.session_state:
+        st.session_state.tstats = defaultdict(list)
 
-def read_trajectory(input_file):
-    data = read_csv(input_file, sep=r"\s+", dtype=np.float64, comment="#").values
-
-    return data
-
+    if "cum_num" not in st.session_state:
+        st.session_state.cum_num = {}
+        
 
 if __name__ == "__main__":
     st.header(":information_source: Dashboard")
     info = st.expander("click to expand")
     with info:
-        st.write(
-            """
-         This app performs some basic measurements on data simulated by jpscore.
+        Utilities.docs()
 
-         #### Speed
-         The speed can be calculated *from simulation*: in this case
-         use in the inifile the option: `<optional_output   speed=\"TRUE\">`.
-
-         Alternatively, the speed can be calculated *from trajectory*
-         according to the forward-formula:
-         """
-        )
-        st.latex(
-            r"""
-         \begin{equation}
-         v_i(f) = \frac{x_i(f+df) - x_i(f))}{df},
-         \end{equation}
-         """
-        )
-        st.write(
-            r"""with $df$ a constant and $v_i(f)$ the speed of pedestrian $i$ at frame $f$."""
-        )
-        st.write(
-            """
-         #### Density
-         The density can be calculated using different methods:
-            
-         **1. Weidmann**
-            
-         based on the speed (1) using the Weidmann-formula **[Weidmann1992 Eq. (15)]**:
-         """
-        )
-        st.latex(
-            r"""
-         \begin{equation}
-         v_i = v^0 \Big(1 - \exp\big(\gamma (\frac{1}{\rho_i} - \frac{1}{\rho_{\max}}) \big)  \Big).
-         \end{equation}
-         """
-        )
-        st.text("Eq. (2) can be transformed in ")
-        st.latex(
-            r"""
-         \begin{equation*}
-         \rho_i = \Big(-\frac{1}{\gamma} \log(1 - \frac{v_i}{v^0})+ \frac{1}{\rho_{\max}}\Big)^{-1},
-         \end{equation*}
-         """
-        )
-        st.write("""where""")
-        st.latex(
-            r"""\gamma = 1.913\, m^{-2},\; \rho_{\max} = 5.4\, m^{-2}\; \;{\rm and}\; v^0 = 1.34\, m/s."""
-        )
-        st.latex(r"""
-        \rho_c = \frac{1}{T}\sum_{t=0}^T S_c,
-        """)
-        st.write("where $S_c$ is the sum of $\\rho_i$ in $c$ and $T$ the evcuation time.")
-        st.write("""**2. Classical**
-        """)
-        st.latex(
-            r"""\rho_c = \frac{1}{T}\sum_{t=0}^T \frac{N_c}{A_c},""")
-        st.write("where $A_c$  the area of cell $c$ and $N_c$ the number of agents in $c$.")
-        st.write("""**3. Gaussian**
-for every pedestrian $i$ a Gaussian distribution is calculated, then
-        """)
-        st.latex(
-            r"""\rho_c = \frac{1}{T}\sum_{t=0}^T G_c,""")
-        st.write("where $G_c$ the sum of all Gaussians.")
-        st.markdown("--------")
-        st.write("#### References:")
-        st.code(
-            "Weidmann1992: U. Weidmann, Transporttechnik der Fussgänger: Transporttechnische Eigenschaften des Fussgängerverkehrs, Literaturauswertung, 1992"
-        )
     set_state_variables()
     st.sidebar.image("jupedsim.png", use_column_width=True)
     gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
@@ -226,19 +153,15 @@ for every pedestrian $i$ a Gaussian distribution is calculated, then
         "Interpolation", methods, help="Interpolation method for imshow()"
     )
     st.sidebar.markdown("-------")
-    st.sidebar.header("Plot curves")
+    st.sidebar.header("Plot curves")    
     c1, c2 = st.sidebar.columns((1, 1))
-    st.write(
-        "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
-        unsafe_allow_html=True,
-    )
     msg_status = st.sidebar.empty()
     disable_NT_flow = False
     if trajectory_file and geometry_file:
         logging.info(f">> {trajectory_file.name}")
         logging.info(f">> {geometry_file.name}")
         try:
-            data = read_trajectory(trajectory_file)
+            data = Utilities.read_trajectory(trajectory_file)
             if unit == "cm":
                 data[:, 2:] /= 100
 
@@ -292,13 +215,7 @@ for every pedestrian $i$ a Gaussian distribution is calculated, then
             else:
                 default = []
                 disable_NT_flow = True
-
-            selected_transitions = st.sidebar.multiselect(
-                "Select transition",
-                transitions.keys(),
-                default,
-                help="Transition to calculate N-T. Can select multiple transitions",
-            )
+                
             logging.info("Get geo_limits")
             geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml, unit)
 
@@ -312,22 +229,34 @@ for every pedestrian $i$ a Gaussian distribution is calculated, then
             )
             st.stop()
 
-        choose_NT = c1.checkbox(
-            "N-T", help="Plot N-t curve", key="NT", disabled=disable_NT_flow
+        NT_form = st.sidebar.form("plot-NT")
+        with NT_form:
+            choose_NT = c1.checkbox(
+                "N-T", help="Plot N-t curve", key="NT", disabled=disable_NT_flow
+            )
+        
+            choose_flow = c2.checkbox(
+                "Flow", help="Plot flow curve", key="Flow", disabled=disable_NT_flow
+            )
+        selected_transitions = NT_form.multiselect(
+            "Select transition",
+            transitions.keys(),
+            default,
+            help="Transition to calculate N-T. Can select multiple transitions",
         )
-        choose_flow = c2.checkbox(
-            "Flow", help="Plot flow curve", key="Flow", disabled=disable_NT_flow
-        )
+        make_plots = NT_form.form_submit_button(label="🚦plot")
+            
         if disable_NT_flow:
             st.sidebar.info("N-T and Flow plots are disabled, because no transitions!")
+            
         if choose_trajectories:
             logging.info("plotting trajectories")
             if choose_transitions:
-                Utilities.plot_trajectories(
+                plots.plot_trajectories(
                     data, geometry_wall, transitions, geominX, geomaxX, geominY, geomaxY
                 )
             else:
-                Utilities.plot_trajectories(
+                plots.plot_trajectories(
                     data, geometry_wall, {}, geominX, geomaxX, geominY, geomaxY
                 )
 
@@ -386,7 +315,7 @@ for every pedestrian $i$ a Gaussian distribution is calculated, then
                     st.session_state.density = density_ret
                     msg += f"Density in range [{np.min(density_ret):.2f} : {np.max(density_ret):.2f}] [1/m^2]. "
                     with c1:
-                        Utilities.plot_profile_and_geometry(
+                        plots.plot_profile_and_geometry(
                             geominX,
                             geomaxX,
                             geominY,
@@ -416,7 +345,7 @@ for every pedestrian $i$ a Gaussian distribution is calculated, then
                             speed,
                         )
                         with c2:
-                            Utilities.plot_profile_and_geometry(
+                            plots.plot_profile_and_geometry(
                                 geominX,
                                 geomaxX,
                                 geominY,
@@ -434,7 +363,9 @@ for every pedestrian $i$ a Gaussian distribution is calculated, then
                         msg += f"Speed trajectory in range [{np.min(speed):.2f} : {np.max(speed):.2f}] [m/s]. "
 
             st.info(msg)
-        if choose_NT or choose_flow:
+
+        
+        if make_plots and (choose_NT or choose_flow):
             peds = np.unique(data)
             tstats = defaultdict(list)
             cum_num = {}
@@ -464,62 +395,66 @@ for every pedestrian $i$ a Gaussian distribution is calculated, then
                         else:
                             msg += f"Transition {i},  flow: 0 [1/s] \n \n"
 
-        c1, _, c2 = st.columns((1, 0.05, 1))
+            st.session_state.tstats = tstats
+            st.session_state.cum_num = cum_num
+            
+        c1, c2 = st.columns((1, 1))
+        if make_plots:
+            with c1:
+                if choose_NT and tstats:
+                    plots.plot_NT(tstats, cum_num, fps)
 
-        with c1:
-            if choose_NT and tstats:
-                Utilities.plot_NT(tstats, cum_num, fps)
-
-        with c2:
-            if choose_flow and tstats:
-                Utilities.plot_flow(tstats, cum_num, fps)
+            with c2:
+                if choose_flow and tstats:
+                    plots.plot_flow(tstats, cum_num, fps)
 
             # -- download stats
-        if choose_NT:
-            T = dt.datetime.now()
-            n = trajectory_file.name.split(".txt")[0]
-            file_download = f"{n}_{T.year}-{T.month:02}-{T.day:02}_{T.hour:02}-{T.minute:02}-{T.second:02}.txt"
-            once = 0  # don't download if file is empty
-            for i in selected_transitions:
-                if not trans_used[i]:
-                    continue
+        if make_plots:
+            if choose_NT:
+                T = dt.datetime.now()
+                n = trajectory_file.name.split(".txt")[0]
+                file_download = f"{n}_{T.year}-{T.month:02}-{T.day:02}_{T.hour:02}-{T.minute:02}-{T.second:02}.txt"
+                once = 0  # don't download if file is empty
+                for i in selected_transitions:
+                    if not trans_used[i]:
+                        continue
 
-                if len(tstats[i]) < max_len:
-                    tmp_stats = np.full(max_len, -1)
-                    tmp_stats[: len(tstats[i])] = tstats[i]
-                    tmp_cum_num = np.full(max_len, -1)
-                    tmp_cum_num[: len(cum_num[i])] = cum_num[i]
-                else:
-                    tmp_stats = tstats[i]
-                    tmp_cum_num = cum_num[i]
+                    if len(tstats[i]) < max_len:
+                        tmp_stats = np.full(max_len, -1)
+                        tmp_stats[: len(tstats[i])] = tstats[i]
+                        tmp_cum_num = np.full(max_len, -1)
+                        tmp_cum_num[: len(cum_num[i])] = cum_num[i]
+                    else:
+                        tmp_stats = tstats[i]
+                        tmp_cum_num = cum_num[i]
 
-                if not once:
-                    all_stats = np.vstack((tmp_stats, tmp_cum_num))
-                    once = 1
-                else:
-                    all_stats = np.vstack((all_stats, tmp_stats, tmp_cum_num))
+                    if not once:
+                        all_stats = np.vstack((tmp_stats, tmp_cum_num))
+                        once = 1
+                    else:
+                        all_stats = np.vstack((all_stats, tmp_stats, tmp_cum_num))
 
-            if selected_transitions:
-                st.info(msg)
+                if selected_transitions:
+                    st.info(msg)
 
-            if selected_transitions and once:
-                passed_lines = [i for i in selected_transitions if trans_used[i]]
-                fmt = len(passed_lines) * ["%d", "%d"]
-                all_stats = all_stats.T
-                np.savetxt(
-                    file_download,
-                    all_stats,
-                    fmt=fmt,
-                    header=np.array2string(
-                        np.array(passed_lines, dtype=int),
-                        precision=2,
-                        separator="\t",
-                        suppress_small=True,
-                    ),
-                    comments="#",
-                    delimiter="\t",
-                )
-                with open(file_download, encoding="utf-8") as f:
-                    download = st.sidebar.download_button(
-                        "Download statistics", f, file_name=file_download
+                if selected_transitions and once:
+                    passed_lines = [i for i in selected_transitions if trans_used[i]]
+                    fmt = len(passed_lines) * ["%d", "%d"]
+                    all_stats = all_stats.T
+                    np.savetxt(
+                        file_download,
+                        all_stats,
+                        fmt=fmt,
+                        header=np.array2string(
+                            np.array(passed_lines, dtype=int),
+                            precision=2,
+                            separator="\t",
+                            suppress_small=True,
+                        ),
+                        comments="#",
+                        delimiter="\t",
                     )
+                    with open(file_download, encoding="utf-8") as f:
+                        download = st.sidebar.download_button(
+                            "Download statistics", f, file_name=file_download
+                        )

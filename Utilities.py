@@ -2,164 +2,84 @@ import lovely_logger as logging
 import numpy as np
 import streamlit as st
 from pandas import read_csv
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import stats
-import matplotlib.pyplot as plt
-import timeit
-
-# from plotly.graph_objs.scatter import Line
-from plotly.subplots import make_subplots
 from shapely.geometry import LineString, Point
-import plotly.graph_objs as go
+import streamlit as st
 
 
-def plot_NT(Frames, Nums, fps):
-    logging.info("plot NT-curve")
-    fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["N-T"], x_title="Time / s", y_title="Number of pedestrians"
+def docs():
+    st.write(
+        """
+    This app performs some basic measurements on data simulated by jpscore.
+
+     #### Speed
+     The speed can be calculated *from simulation*: in this case
+     use in the inifile the option: `<optional_output   speed=\"TRUE\">`.
+
+     Alternatively, the speed can be calculated *from trajectory*
+     according to the forward-formula:
+     """
     )
-    for i, frames in Frames.items():
-        nums = Nums[i]
-        if not frames:
-            continue
-
-        trace = go.Scatter(
-            x=np.array(frames) / fps,
-            y=nums,
-            mode="lines",
-            showlegend=True,
-            name=f"ID: {i}",
-            marker=dict(size=1),
-            line=dict(width=1),
-        )
-        fig.append_trace(trace, row=1, col=1)
-
-    # eps = 0.5
-    # fig.update_xaxes(range=[xmin/fps - eps, xmax/fps + eps])
-    # fig.update_yaxes(range=[ymin - eps, ymax + eps], autorange=False)
-    fig.update_layout(
-        width=500,
-        height=500,
+    st.latex(
+        r"""
+    \begin{equation}
+    v_i(f) = \frac{x_i(f+df) - x_i(f))}{df},
+    \end{equation}
+    """
     )
-    fig.update_yaxes(
-        scaleanchor="x",
-        scaleratio=1,
-        autorange=True,
+    st.write(
+        r"""with $df$ a constant and $v_i(f)$ the speed of pedestrian $i$ at frame $f$."""
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.write(
+        """
+    #### Density
+    The density can be calculated using different methods:
 
+    **1. Weidmann**
 
-def plot_flow(Frames, Nums, fps):
-    logging.info("plot flow-curve")
-    fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["Flow"], x_title="time / s", y_title="J / 1/s"
+    based on the speed (1) using the Weidmann-formula **[Weidmann1992 Eq. (15)]**:
+    """
     )
-    for i, frames in Frames.items():
-        nums = Nums[i]
-        if not frames:
-            continue
-
-        times = np.array(frames) / fps
-        trace = go.Scatter(
-            x=times,
-            y=nums / times,
-            mode="lines",
-            showlegend=True,
-            name=f"ID: {i}",
-            marker=dict(size=1),
-            line=dict(width=1),
-        )
-        fig.append_trace(trace, row=1, col=1)
-
-    fig.update_layout(
-        width=500,
-        height=500,
+    st.latex(
+        r"""
+    \begin{equation}
+    v_i = v^0 \Big(1 - \exp\big(\gamma (\frac{1}{\rho_i} - \frac{1}{\rho_{\max}}) \big)  \Big).
+    \end{equation}
+    """
     )
-    fig.update_yaxes(
-        scaleanchor="x",
-        scaleratio=1,
-        autorange=True,
+    st.text("Eq. (2) can be transformed in ")
+    st.latex(
+        r"""
+    \begin{equation*}
+    \rho_i = \Big(-\frac{1}{\gamma} \log(1 - \frac{v_i}{v^0})+ \frac{1}{\rho_{\max}}\Big)^{-1},
+    \end{equation*}
+    """
     )
-    st.plotly_chart(fig, use_container_width=False)
-
-
-def plot_trajectories(data, geo_walls, transitions, min_x, max_x, min_y, max_y):
-    fig = make_subplots(rows=1, cols=1)
-    peds = np.unique(data[:, 0])
-    for ped in peds:
-        d = data[data[:, 0] == ped]
-        c = d[:, -1]
-        trace = go.Scatter(
-            x=d[:, 2],
-            y=d[:, 3],
-            mode="lines",
-            showlegend=False,
-            name=f"{ped:0.0f}",
-            marker=dict(size=1, color=c),
-            line=dict(color="gray", width=1),
-        )
-        fig.append_trace(trace, row=1, col=1)
-
-    for gw in geo_walls.keys():
-        trace = go.Scatter(
-            x=geo_walls[gw][:, 0],
-            y=geo_walls[gw][:, 1],
-            showlegend=False,
-            mode="lines",
-            line=dict(color="black", width=2),
-        )
-        fig.append_trace(trace, row=1, col=1)
-
-    for i, t in transitions.items():
-        xm = np.sum(t[:, 0]) / 2
-        ym = np.sum(t[:, 1]) / 2
-        length = np.sqrt(np.diff(t[:, 0]) ** 2 + np.diff(t[:, 1]) ** 2)
-        offset = 0.1 * length[0]
-        logging.info(f"offsset transition {offset}")
-        trace = go.Scatter(
-            x=t[:, 0],
-            y=t[:, 1],
-            showlegend=False,
-            mode="lines+markers",
-            line=dict(color="red", width=3),
-            marker=dict(color="black", size=5),
-        )
-        trace_text = go.Scatter(
-            x=[xm + offset],
-            y=[ym + offset],
-            text=f"{i}",
-            textposition="middle center",
-            showlegend=False,
-            mode="markers+text",
-            marker=dict(color="red", size=0.1),
-            textfont=dict(color="red", size=18),
-        )
-        fig.append_trace(trace, row=1, col=1)
-        fig.append_trace(trace_text, row=1, col=1)
-
-    eps = 1
-    fig.update_layout(
-        width=500,
-        height=500,
+    st.write("""where""")
+    st.latex(
+        r"""\gamma = 1.913\, m^{-2},\; \rho_{\max} = 5.4\, m^{-2}\; \;{\rm and}\; v^0 = 1.34\, m/s."""
     )
-    fig.update_yaxes(
-        scaleanchor="x",
-        scaleratio=1,
-        range=[min_y - eps, max_y + eps],
-        # autorange=True,
+    st.latex(
+        r"""
+    \rho_c = \frac{1}{T}\sum_{t=0}^T S_c,
+    """
     )
-    fig.update_xaxes(
-        #      #scaleanchor="y",
-        #     # scaleratio=1,
-        range=[min_x - eps, max_x + eps],
-        #     autorange=False,
+    st.write("where $S_c$ is the sum of $\\rho_i$ in $c$ and $T$ the evcuation time.")
+    st.write("""**2. Classical**  """)
+    st.latex(r"""\rho_c = \frac{1}{T}\sum_{t=0}^T \frac{N_c}{A_c},""")
+    st.write("where $A_c$  the area of cell $c$ and $N_c$ the number of agents in $c$.")
+    st.write(
+        """**3. Gaussian**  
+    for every pedestrian $i$ a Gaussian distribution is calculated, then
+    """
     )
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def plot_geometry(ax, _geometry_wall):
-    for gw in _geometry_wall.keys():
-        ax.plot(_geometry_wall[gw][:, 0], _geometry_wall[gw][:, 1], color="white", lw=2)
+    st.latex(r"""\rho_c = \frac{1}{T}\sum_{t=0}^T G_c,""")
+    st.write("where $G_c$ the sum of all Gaussians.")
+    st.markdown("--------")
+    st.write("#### References:")
+    st.code(
+        "Weidmann1992: U. Weidmann, Transporttechnik der Fussgänger: Transporttechnische Eigenschaften des Fussgängerverkehrs, Literaturauswertung, 1992"
+    )
 
 
 def weidmann(rho, v0=1.34, rho_max=5.4, gamma=1.913):
@@ -504,46 +424,3 @@ def calculate_density_average_gauss(
     a = widthOfGaußian(width)
     rho_matrix = densityField(x_dens, y_dens, a) / nframes
     return rho_matrix
-
-
-def plot_profile_and_geometry(
-    geominX,
-    geomaxX,
-    geominY,
-    geomaxY,
-    geometry_wall,
-    data,
-    interpolation,
-    cmap,
-    label,
-    title,
-    vmin=None,
-    vmax=None,
-):
-    """Plot profile + geometry for 3D data
-
-
-    if vmin or vmax is None, extract values from <data>
-    """
-
-    if vmin is None or vmax is None:
-        vmin = np.min(data)
-        vmax = np.max(data)
-
-    fig, ax = plt.subplots(1, 1)
-    im = ax.imshow(
-        data,
-        cmap=cmap,
-        interpolation=interpolation,
-        origin="lower",
-        vmin=vmin,
-        vmax=vmax,
-        extent=[geominX, geomaxX, geominY, geomaxY],
-    )
-    plot_geometry(ax, geometry_wall)
-    ax.set_title(title)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="3.5%", pad=0.3)
-    cb = plt.colorbar(im, cax=cax)
-    cb.set_label(label, rotation=90, labelpad=15, fontsize=15)
-    st.pyplot(fig)
