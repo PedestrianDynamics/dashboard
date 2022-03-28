@@ -4,6 +4,7 @@ import streamlit as st
 from pandas import read_csv
 from scipy import stats
 from shapely.geometry import LineString, Point
+from collections import defaultdict
 
 
 def docs():
@@ -187,7 +188,7 @@ def passing_frame(ped_data: np.array, line: LineString, fps: int) -> int:
     """
     eps = 1 / fps * 1.3
     line_buffer = line.buffer(eps)
-    for (frame, x, y) in ped_data[:, 1:4]:
+    for (frame, x, y), v in zip(ped_data[:, 1:4], ped_data[:, st.session_state.speed_index]):
         if Point(x, y).within(line_buffer):
             return frame
 
@@ -358,7 +359,7 @@ def compute_speed(data, fps, df=10):
     return speeds
 
 
-def compute_agent_speed(agent, fps, df=10):
+def compute_agent_speed_and_angle(agent, fps, df=10):
     """Calculates the speed and the angle from the trajectory points.
 
     """
@@ -366,6 +367,7 @@ def compute_agent_speed(agent, fps, df=10):
     traj = agent[:, 2:4]
     size = traj.shape[0]
     speed = np.ones(size)
+    angle = np.zeros(size)
     if size < df:
         logging.warning(
             f"""The number of frames used to calculate the speed {df}
@@ -374,14 +376,18 @@ def compute_agent_speed(agent, fps, df=10):
         st.stop()
 
     delta = traj[df:, :] - traj[: size - df, :]
+    delta_x = delta[:, 0]
+    delta_y = delta[:, 1]
     delta_square = np.square(delta)
     delta_x_square = delta_square[:, 0]
     delta_y_square = delta_square[:, 1]
+    angle[: size - df] = np.arctan2(delta_y, delta_x) * 180 / np.pi
     s = np.sqrt(delta_x_square + delta_y_square)
     speed[: size - df] = s / df * fps
     speed[size - df :] = speed[size - df - 1]
-
-    return speed
+    angle[size - df :] = angle[size - df - 1]
+    
+    return speed, angle
 
 
 def calculate_speed_average(
@@ -521,7 +527,7 @@ def jam_waiting_time(peds: np.array, jam_data: np.array, jam_min_duration: int, 
 
 
 def jam_lifetime(jam_data: np.array, jam_min_agents: int, fps: int):
-    """Lifespane of a Jam
+    """Lifespane of a Jam and how many pedestrian in chunck
 
     """
     jam_frames = jam_data[:, 1]
@@ -532,8 +538,53 @@ def jam_lifetime(jam_data: np.array, jam_min_agents: int, fps: int):
         d = jam_data[jam_data[:, 1] == frame]
         num_ped_in_jam = len(d[:, 0])
         if num_ped_in_jam > jam_min_agents:
-            lifetime.append([frame, num_ped_in_jam])
+            lifetime.append([frame/fps, num_ped_in_jam])
 
         clifetime = consecutive_chunks(np.array(lifetime)[:, 0])
 
-    return np.max(clifetime[:, 0])/fps
+    return clifetime
+
+
+def calculate_NT_data(transitions, selected_transitions, data, fps):
+    """ Frame and cumulative number of pedestrian passing transitions.
+
+    return:
+    Frame
+    cum_num
+    trans_used
+    max_len (len of longest vector)
+
+    """
+    tstats = defaultdict(list)    
+    cum_num = {}
+    msg = ""
+    trans_used = {}
+    
+    peds = np.unique(data[:, 0]).astype(int)
+    with st.spinner("Processing ..."):
+        max_len = -1
+        # longest array. Needed to stack arrays and save them in file
+        for i, t in transitions.items():
+            trans_used[i] = False
+            if i in selected_transitions:
+                line = LineString(t)
+                for ped in peds:
+                    ped_data = data[data[:, 0] == ped]
+                    frame= passing_frame(ped_data, line, fps)
+                    if frame >= 0:
+                        tstats[i].append(frame)           
+                        trans_used[i] = [True]
+
+                if trans_used[i]:
+                    tstats[i].sort()
+                    cum_num[i] = np.cumsum(np.ones(len(tstats[i])))
+                    flow = cum_num[i][-1] / tstats[i][-1] * fps
+                    max_len = max(max_len, cum_num[i].size)
+                    msg += f"Transition {i}: length {line.length:.2f}, flow: {flow:.2f} [1/s], specific flow: {flow/line.length:.2f} [1/s/m] \n \n"
+                else:
+                    msg += f"Transition {i}: length {line.length:.2f}, flow: 0 [1/s] \n \n"
+
+    if selected_transitions:
+        st.info(msg)
+
+    return tstats, cum_num, trans_used, max_len

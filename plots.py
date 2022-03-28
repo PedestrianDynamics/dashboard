@@ -49,19 +49,8 @@ def plot_NT(Frames, Nums, fps):
         )
         fig.append_trace(trace, row=1, col=1)
 
-    # eps = 0.5
-    # fig.update_xaxes(range=[xmin/fps - eps, xmax/fps + eps])
-    # fig.update_yaxes(range=[ymin - eps, ymax + eps], autorange=False)
-    # fig.update_layout(
-    #     width=500,
-    #     height=500,
-    # )
-    # fig.update_yaxes(
-    #     scaleanchor="x",
-    #     scaleratio=1,
-    #     autorange=True,
-    # )
     st.plotly_chart(fig, use_container_width=True)
+
 
 
 def plot_flow(Frames, Nums, fps):
@@ -86,15 +75,6 @@ def plot_flow(Frames, Nums, fps):
         )
         fig.append_trace(trace, row=1, col=1)
 
-    # fig.update_layout(
-    #     width=500,
-    #     height=500,
-    # )
-    # fig.update_yaxes(
-    #     scaleanchor="x",
-    #     scaleratio=1,
-    #     autorange=True,
-    # )
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -102,28 +82,64 @@ def plot_peds_inside(frames, peds_inside, fps):
     logging.info("plot peds inside")
     fig = make_subplots(
         rows=1, cols=1, subplot_titles=["Occupancy"], x_title="Time / s", y_title="Number of Pedestrians inside"
-    )    
+    )
     times = frames / fps
     trace = go.Scatter(
         x=times,
         y=peds_inside,
-        #mode="none",
-        #fill='tozeroy',
         mode="lines",
         showlegend=False,
         line=dict(width=3, color='royalblue'),
     )
     fig.append_trace(trace, row=1, col=1)
+    st.plotly_chart(fig, use_container_width=True)
 
-    # fig.update_layout(
-    #     width=500,
-    #     height=500,
-    # )
-    # fig.update_yaxes(
-    #     scaleanchor="x",
-    #     scaleratio=1,
-    #     autorange=True,
-    # )
+
+def plot_agent_xy(frames, X, Y, fps):
+    fig = make_subplots(specs=[[{"secondary_y": True}]],
+        rows=1, cols=1, x_title="Time / s",
+    )
+    times = frames/fps
+    traceX = go.Scatter(
+        x=times,
+        y=X,
+        mode="lines",
+        showlegend=True,
+        name='X',
+        line=dict(width=3, color='firebrick'),
+    )
+    traceY = go.Scatter(
+        x=times,
+        y=Y,
+        mode="lines",
+        name='Y',
+        showlegend=True,
+        line=dict(width=3, color='royalblue'),
+    )
+    fig.add_trace(traceX, row=1, col=1, secondary_y=False,)
+    fig.add_trace(traceY, row=1, col=1, secondary_y=True,)
+    # Set y-axes titles
+    fig.update_yaxes(title_text="X", secondary_y=False)
+    fig.update_yaxes(title_text="Y", secondary_y=True,)
+    fig.update_layout(hovermode="x")
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_agent_angle(pid, frames, angles, fps):
+    fig = make_subplots(
+        rows=1, cols=1, x_title="Time / s", y_title=r"Angle / Degree",
+    )
+    times = frames/fps
+    trace = go.Scatter(
+        x=times,
+        y=angles,
+        mode="lines",
+        showlegend=False,
+        name=f"Agent: {pid:.0f}",
+        line=dict(width=3, color='royalblue'),
+    )
+    fig.append_trace(trace, row=1, col=1)
+    fig.update_layout(hovermode="x")
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -132,46 +148,46 @@ def plot_agent_speed(pid, frames, speed_agent, max_speed, fps):
                     rows=1, cols=1, x_title="Time / s", y_title="Speed / m/s"
                 )
     threshold = 0.5  # according to DIN19009-2
-    jam = np.copy(speed_agent)
-    free = np.copy(speed_agent)
     logging.info(f"plot agent speed {pid}")
+    m = np.copy(speed_agent)
     times = frames / fps
-    jam[speed_agent <= threshold] = None
-    free[speed_agent >= threshold] = None
-    trace_jam = go.Scatter(
+    tt = np.ones(len(speed_agent))*threshold
+    cc = np.isclose(m, tt, rtol=0.04)
+    m[~cc] = None
+    trace = go.Scatter(
         x=times,
-        y=jam,
+        y=speed_agent,
         mode="lines",
         showlegend=False,
-        name=f"P: {pid:.0f} - free",
+        name=f"Agent: {pid:.0f}",
         line=dict(width=3, color='royalblue'),
-    )
-
-    trace_free = go.Scatter(
-        x=times,
-        y=free,
-        mode="lines",
-        showlegend=False,
-        name=f"P: {pid:.0f} - jam",
-        line=dict(width=3, color='firebrick'),
+        stackgroup='one'
     )
     trace_threshold = go.Scatter(
         x=[times[0], times[-1]],
         y=[threshold, threshold],
         mode="lines",
         showlegend=True,
-        name=f"Jam threshold",
-        line=dict(width=2, dash='dash', color="gray"),
+        name="Jam threshold",
+        line=dict(width=4, dash='dash', color="gray"),
     )
-    fig.append_trace(trace_free, row=1, col=1)
-    fig.append_trace(trace_jam, row=1, col=1)
+    tracem = go.Scatter(
+        x=times,
+        y=m,
+        mode="markers",
+        showlegend=False,
+        name="Jam speed",
+        marker=dict(size=5,  color="red"),
+    )
+    fig.append_trace(trace, row=1, col=1)
     fig.append_trace(trace_threshold, row=1, col=1)
+    fig.append_trace(tracem, row=1, col=1)
     fig.update_yaxes(
         range=[0, max_speed + 0.01],
     )
+    fig.update_layout(hovermode="x")
     st.plotly_chart(fig, use_container_width=True)
-                
-    #return trace_jam, trace_free, trace_threshold
+
 
 # marker=dict(size=5, color=np.where(speed_agent >= threshold, 'blue', 'red')),
 
@@ -183,13 +199,13 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
     sc = 1-speed/np.max(speed)
     for ped in peds:
         d = data[data[:, 0] == ped]
-        c = d[:, -1]
+        #c = d[:, -1]
         trace = go.Scatter(
             x=d[:, 2],
             y=d[:, 3],
             mode="lines",
             showlegend=False,
-            name=f"{ped:0.0f}",
+            name=f"Agent: {ped:0.0f}",
             line=dict(color="gray", width=0.3),
         )
         fig.append_trace(trace, row=1, col=1)
@@ -199,26 +215,10 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
         y=s[:, 3],
         mode="markers",
         showlegend=False,
-        name=f"{special_ped:0.0f}",
+        name=f"Agent: {special_ped:0.0f}",
         marker=dict(size=5, color=sc, colorscale='Jet'),
         line=dict(color="firebrick", width=4),
     )
-
-# fig.add_trace(go.Scatter(
-#     x=values,
-#     y=values,
-#     marker=dict(
-#         size=16,
-#         cmax=39,
-#         cmin=0,
-#         color=values,
-#         colorbar=dict(
-#             title="Colorbar"
-#         ),
-#         colorscale="Viridis"
-#     ),
-#     mode="markers"))
-
     fig.append_trace(trace, row=1, col=1)
 
     for gw in geo_walls.keys():
@@ -241,6 +241,7 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
             x=t[:, 0],
             y=t[:, 1],
             showlegend=False,
+            name=f"Transition: {i}",
             mode="lines+markers",
             line=dict(color="red", width=3),
             marker=dict(color="black", size=5),
@@ -314,3 +315,5 @@ def plot_profile_and_geometry(
     cb = plt.colorbar(im, cax=cax)
     cb.set_label(label, rotation=90, labelpad=15, fontsize=15)
     st.pyplot(fig)
+
+    

@@ -58,6 +58,9 @@ def set_state_variables():
     if "cum_num" not in st.session_state:
         st.session_state.cum_num = {}
 
+    if "speed_index" not in st.session_state:
+        st.session_state.speed_index = 9
+
 
 if __name__ == "__main__":
     st.header(":information_source: Dashboard")
@@ -85,7 +88,9 @@ if __name__ == "__main__":
     )
     st.sidebar.markdown("-------")
     unit = st.sidebar.radio(
-        "Trajectories are in ", ["m", "cm"], help="Choose the unit of the original trajectories. Data in the app will be converted to meter"
+        "Trajectories are in ",
+        ["m", "cm"],
+        help="Choose the unit of the original trajectories. Data in the app will be converted to meter",
     )
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
@@ -101,7 +106,7 @@ if __name__ == "__main__":
         choose_transitions = c2.checkbox(
             "Transitions", help="Show transittions", key="Tran"
         )
-        
+
     pl = st.sidebar.empty()
 
     st.sidebar.markdown("-------")
@@ -124,9 +129,9 @@ if __name__ == "__main__":
     st.sidebar.header("Profile")
     c1, c2 = st.sidebar.columns((1, 1))
     choose_dprofile = c1.checkbox(
-       "Show", help="Plot density and speed profiles", key="dProfile"
+        "Show", help="Plot density and speed profiles", key="dProfile"
     )
-    #choose_vprofile = c2.checkbox("Speed", help="Plot speed profile", key="vProfile")
+    # choose_vprofile = c2.checkbox("Speed", help="Plot speed profile", key="vProfile")
     choose_d_method = st.sidebar.radio(
         "Density method",
         ["Classical", "Gaussian", "Weidmann"],
@@ -163,11 +168,13 @@ if __name__ == "__main__":
         logging.info(f">> {trajectory_file.name}")
         logging.info(f">> {geometry_file.name}")
         try:
+            print("todo. do once")
             data = Utilities.read_trajectory(trajectory_file)
             if unit == "cm":
+
                 data[:, 2:] /= 100
 
-            h = st.expander("Trajectories (first 4 columns)")
+            h = st.expander("Trajectories (first 4 columns)", expanded=True)
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
             if string_data != st.session_state.old_data:
@@ -176,7 +183,7 @@ if __name__ == "__main__":
                     plots.show_trajectories_table(data)
 
             fps = Utilities.get_fps(string_data)
-            peds = np.unique(data[:, 0]).astype(np.int)
+            peds = np.unique(data[:, 0]).astype(int)
             frames = np.unique(data[:, 1])
             st.markdown("### :bar_chart: Statistics")
             pl_msg = st.empty()
@@ -188,9 +195,8 @@ if __name__ == "__main__":
             """
             pl_msg.info(msg)
             plot_ped = pl.select_slider(
-                'Highlight pedestrian',
-                options=peds,
-                value=(peds[10]))
+                "Highlight pedestrian", options=peds, value=(peds[10])
+            )
 
             logging.info(f"fps = {fps}")
         except Exception as e:
@@ -254,7 +260,9 @@ if __name__ == "__main__":
                 "Flow", help="Plot flow curve", key="Flow", disabled=disable_NT_flow
             )
             choose_evactime = c1.checkbox(
-                "Occupation", help="Plot number of pedestrians inside geometry over time", key="EvacT"
+                "Occupation",
+                help="Plot number of pedestrians inside geometry over time",
+                key="EvacT",
             )
 
         selected_transitions = NT_form.multiselect(
@@ -264,26 +272,32 @@ if __name__ == "__main__":
             help="Transition to calculate N-T. Can select multiple transitions",
         )
         make_plots = NT_form.form_submit_button(label="🚦plot")
-        #----- Jam
+        # ----- Jam
         st.sidebar.header("Jam")
-        st.sidebar.slider("Min jam speed",
-                          0.1,
-                          1.0,
-                          0.5,
-                          help="Agent slower that this speed is in jam",
-                          key="jVmin")
-        st.sidebar.slider("Min jam duration",
-                          1,
-                          300,
-                          60,
-                          help="A jam last at least that long",
-                          key="jTmin")
-        st.sidebar.slider("Min agents in jam",
-                          2,
-                          50,
-                          20,
-                          help="A jam has at least so many agents",
-                          key="jNmin")
+        st.sidebar.slider(
+            "Min jam speed",
+            0.1,
+            1.0,
+            0.5,
+            help="Agent slower that this speed is in jam",
+            key="jVmin",
+        )
+        st.sidebar.slider(
+            "Min jam duration",
+            1,
+            300,
+            60,
+            help="A jam last at least that long",
+            key="jTmin",
+        )
+        st.sidebar.slider(
+            "Min agents in jam",
+            2,
+            50,
+            20,
+            help="A jam has at least so many agents",
+            key="jNmin",
+        )
 
         if disable_NT_flow:
             st.sidebar.info("N-T and Flow plots are disabled, because no transitions!")
@@ -292,34 +306,63 @@ if __name__ == "__main__":
             logging.info("speed by simulation")
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
             speed = data[:, 9]
+            st.session_state.speed_index = 9
         else:
             logging.info("speed by trajectory")
             speed = Utilities.compute_speed(data, fps, df)
+            st.session_state.speed_index = -1
 
         if choose_trajectories:
             logging.info("plotting trajectories")
             agent = data[data[:, 0] == plot_ped]
+            # print("index", st.session_state.speed_index)
+            # speed_agent1 = agent[:, st.session_state.speed_index]
             if how_speed == "from simulation":
                 speed_agent = agent[:, 9]
+                angle_agent = agent[:, 7]
             else:
-                speed_agent = Utilities.compute_agent_speed(agent, fps, df)
+                speed_agent, angle_agent = Utilities.compute_agent_speed_and_angle(agent, fps, df)
 
             c1, c2 = st.columns((1, 1))
             logging.info(f"Pedesrians: [{plot_ped}]")
             with c1:
                 if choose_transitions:
                     plots.plot_trajectories(
-                        data, plot_ped, speed_agent, geometry_wall, transitions, geominX, geomaxX, geominY, geomaxY
+                        data,
+                        plot_ped,
+                        speed_agent,
+                        geometry_wall,
+                        transitions,
+                        geominX,
+                        geomaxX,
+                        geominY,
+                        geomaxY,
                     )
                 else:
                     plots.plot_trajectories(
-                        data, plot_ped, speed_agent, geometry_wall, {}, geominX, geomaxX, geominY, geomaxY
+                        data,
+                        plot_ped,
+                        speed_agent,
+                        geometry_wall,
+                        {},
+                        geominX,
+                        geomaxX,
+                        geominY,
+                        geomaxY,
                     )
-            
-            with c2:
-                plots.plot_agent_speed(plot_ped, agent[:, 1], speed_agent, np.max(speed), fps)
 
-        #choose_dprofile =
+            with c2:
+                plots.plot_agent_xy(agent[:, 1], agent[:, 2], agent[:, 3], fps)
+
+            with c1:
+                plots.plot_agent_angle(plot_ped, agent[:, 1], angle_agent, fps)
+
+            with c2:
+                plots.plot_agent_speed(
+                    plot_ped, agent[:, 1], speed_agent, np.max(speed), fps
+                )
+
+        # choose_dprofile =
         choose_vprofile = True  # todo: not sure is I want to keep this option
         if choose_dprofile or choose_vprofile:
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
@@ -382,19 +425,21 @@ if __name__ == "__main__":
                         )
                     if choose_vprofile:
                         if choose_d_method == "Gaussian":
-                            speed_ret = speed = Utilities.weidmann(st.session_state.density)
+                            speed_ret = speed = Utilities.weidmann(
+                                st.session_state.density
+                            )
                         else:
                             speed_ret = Utilities.calculate_speed_average(
-                            geominX,
-                            geomaxX,
-                            geominY,
-                            geomaxY,
-                            dx,
-                            len(frames),
-                            data[:, 2],
-                            data[:, 3],
-                            speed,
-                        )
+                                geominX,
+                                geomaxX,
+                                geominY,
+                                geomaxY,
+                                dx,
+                                len(frames),
+                                data[:, 2],
+                                data[:, 3],
+                                speed,
+                            )
                         with c2:
                             plots.plot_profile_and_geometry(
                                 geominX,
@@ -415,6 +460,27 @@ if __name__ == "__main__":
 
                     st.info(msg)
 
+        # todo
+        choose_speed = True
+        plot_options = choose_NT or choose_flow or choose_speed
+        if make_plots and plot_options:
+            peds = np.unique(data)
+            tstats, cum_num, trans_used, max_len = Utilities.calculate_NT_data(
+                transitions, selected_transitions, data, fps
+            )
+            st.session_state.tstats = tstats
+            st.session_state.cum_num = cum_num
+
+        if make_plots:
+            c1, c2 = st.columns((1, 1))
+            with c1:
+                if choose_NT and tstats:
+                    plots.plot_NT(tstats, cum_num, fps)
+
+            with c2:
+                if choose_flow and tstats:
+                    plots.plot_flow(tstats, cum_num, fps)
+
         c1, c2 = st.columns((1, 1))
         if make_plots and choose_evactime:
             peds_inside = []
@@ -425,68 +491,11 @@ if __name__ == "__main__":
             with c1:
                 plots.plot_peds_inside(frames, peds_inside, fps)
 
-        # if make_plots and choose_ped_speed:
-
-            # fig.update_layout(
-            #     width=500,
-            #     height=500,
-            # )
-            # fig.update_yaxes(
-            #     scaleanchor="x",
-            #     scaleratio=1,
-            #     autorange=True,
-            # )
-            # with c2:
-            # st.plotly_chart(fig, use_container_width=True)
-
-        plot_options = choose_NT or choose_flow
-        if make_plots and plot_options:
-            c1, c2 = st.columns((1, 1))
-            peds = np.unique(data)
-            tstats = defaultdict(list)
-            cum_num = {}
-            msg = ""
-            trans_used = {}
-            with st.spinner("Processing ..."):
-                max_len = (
-                    -1
-                )  # longest array. Needed to stack arrays and save them in file
-                for i, t in transitions.items():
-                    trans_used[i] = False
-                    if i in selected_transitions:
-                        line = LineString(t)
-                        for ped in peds:
-                            ped_data = data[data[:, 0] == ped]
-                            frame = Utilities.passing_frame(ped_data, line, fps)
-                            if frame >= 0:
-                                tstats[i].append(frame)
-                                trans_used[i] = True
-
-                        if trans_used[i]:
-                            tstats[i].sort()
-                            cum_num[i] = np.cumsum(np.ones(len(tstats[i])))
-                            flow = cum_num[i][-1] / tstats[i][-1] * fps
-                            max_len = max(max_len, cum_num[i].size)
-                            msg += f"Transition {i}: length {line.length:.2f}, flow: {flow:.2f} [1/s], specific flow: {flow/line.length:.2f} [1/s/m] \n \n"
-                        else:
-                            msg += f"Transition {i}: length {line.length:.2f}, flow: 0 [1/s] \n \n"
-
-            if selected_transitions:
-                    st.info(msg)
-
-            st.session_state.tstats = tstats
-            st.session_state.cum_num = cum_num
-
-        if make_plots and plot_options:
-            with c1:
-                if choose_NT and tstats:
-                    plots.plot_NT(tstats, cum_num, fps)
-
             with c2:
-                if choose_flow and tstats:
-                    plots.plot_flow(tstats, cum_num, fps)
+                # plots.plot_speed(tstats, fps)
+                pass
 
-            # -- download stats
+        # -- download stats
         if make_plots:
             if choose_NT:
                 T = dt.datetime.now()
@@ -511,7 +520,6 @@ if __name__ == "__main__":
                         once = 1
                     else:
                         all_stats = np.vstack((all_stats, tmp_stats, tmp_cum_num))
-
 
                 if selected_transitions and once:
                     passed_lines = [i for i in selected_transitions if trans_used[i]]
