@@ -10,8 +10,6 @@ import numpy as np
 import streamlit as st
 from matplotlib import cm
 from shapely.geometry import LineString
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 import plots
 import Utilities
@@ -59,7 +57,7 @@ def set_state_variables():
 
     if "cum_num" not in st.session_state:
         st.session_state.cum_num = {}
-        
+
 
 if __name__ == "__main__":
     st.header(":information_source: Dashboard")
@@ -103,7 +101,8 @@ if __name__ == "__main__":
         choose_transitions = c2.checkbox(
             "Transitions", help="Show transittions", key="Tran"
         )
-        pl = st.sidebar.empty()
+        
+    pl = st.sidebar.empty()
 
     st.sidebar.markdown("-------")
     st.sidebar.header("Speed")
@@ -174,24 +173,10 @@ if __name__ == "__main__":
             if string_data != st.session_state.old_data:
                 st.session_state.old_data = string_data
                 with h:
-                    headerColor = 'grey'
-                    fig = go.Figure(
-                        data=[go.Table
-                              (header=dict(
-                                  values=['<b>ID</b>', '<b>Frame</b>', '<b>X</b>', '<b>Y</b>'],
-                                  fill_color=headerColor,
-                                  font=dict(color='white', size=12),
-                              ),
-                               cells=dict(
-                                   values=[data[:, 0], data[:, 1], data[:, 2], data[:, 3]],
-                               )
-                               )
-                              ])
-                    st.plotly_chart(fig, use_container_width=True)
+                    plots.show_trajectories_table(data)
 
             fps = Utilities.get_fps(string_data)
             peds = np.unique(data[:, 0]).astype(np.int)
-            
             frames = np.unique(data[:, 1])
             st.markdown("### :bar_chart: Statistics")
             pl_msg = st.empty()
@@ -206,7 +191,7 @@ if __name__ == "__main__":
                 'Highlight pedestrian',
                 options=peds,
                 value=(peds[10]))
-        
+
             logging.info(f"fps = {fps}")
         except Exception as e:
             msg_status.error(
@@ -264,7 +249,7 @@ if __name__ == "__main__":
             choose_NT = c1.checkbox(
                 "N-T", help="Plot N-t curve", key="NT", disabled=disable_NT_flow
             )
-        
+
             choose_flow = c2.checkbox(
                 "Flow", help="Plot flow curve", key="Flow", disabled=disable_NT_flow
             )
@@ -279,11 +264,30 @@ if __name__ == "__main__":
             help="Transition to calculate N-T. Can select multiple transitions",
         )
         make_plots = NT_form.form_submit_button(label="🚦plot")
-            
+        #----- Jam
+        st.sidebar.header("Jam")
+        st.sidebar.slider("Min jam speed",
+                          0.1,
+                          1.0,
+                          0.5,
+                          help="Agent slower that this speed is in jam",
+                          key="jVmin")
+        st.sidebar.slider("Min jam duration",
+                          1,
+                          300,
+                          60,
+                          help="A jam last at least that long",
+                          key="jTmin")
+        st.sidebar.slider("Min agents in jam",
+                          2,
+                          50,
+                          20,
+                          help="A jam has at least so many agents",
+                          key="jNmin")
+
         if disable_NT_flow:
             st.sidebar.info("N-T and Flow plots are disabled, because no transitions!")
 
-            
         if how_speed == "from simulation":
             logging.info("speed by simulation")
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
@@ -314,7 +318,7 @@ if __name__ == "__main__":
             
             with c2:
                 plots.plot_agent_speed(plot_ped, agent[:, 1], speed_agent, np.max(speed), fps)
-                
+
         #choose_dprofile =
         choose_vprofile = True  # todo: not sure is I want to keep this option
         if choose_dprofile or choose_vprofile:
@@ -446,7 +450,7 @@ if __name__ == "__main__":
             with st.spinner("Processing ..."):
                 max_len = (
                     -1
-                )  # longest array. Needed to stack arrays and save them in file                
+                )  # longest array. Needed to stack arrays and save them in file
                 for i, t in transitions.items():
                     trans_used[i] = False
                     if i in selected_transitions:
@@ -508,7 +512,7 @@ if __name__ == "__main__":
                     else:
                         all_stats = np.vstack((all_stats, tmp_stats, tmp_cum_num))
 
-                
+
                 if selected_transitions and once:
                     passed_lines = [i for i in selected_transitions if trans_used[i]]
                     fmt = len(passed_lines) * ["%d", "%d"]

@@ -4,7 +4,6 @@ import streamlit as st
 from pandas import read_csv
 from scipy import stats
 from shapely.geometry import LineString, Point
-import streamlit as st
 
 
 def docs():
@@ -358,11 +357,12 @@ def compute_speed(data, fps, df=10):
 
     return speeds
 
+
 def compute_agent_speed(agent, fps, df=10):
     """Calculates the speed and the angle from the trajectory points.
 
     """
- 
+
     traj = agent[:, 2:4]
     size = traj.shape[0]
     speed = np.ones(size)
@@ -372,7 +372,7 @@ def compute_agent_speed(agent, fps, df=10):
             exceeds the total amount of frames ({size}) in this trajectory."""
         )
         st.stop()
-        
+
     delta = traj[df:, :] - traj[: size - df, :]
     delta_square = np.square(delta)
     delta_x_square = delta_square[:, 0]
@@ -380,7 +380,7 @@ def compute_agent_speed(agent, fps, df=10):
     s = np.sqrt(delta_x_square + delta_y_square)
     speed[: size - df] = s / df * fps
     speed[size - df :] = speed[size - df - 1]
-    
+
     return speed
 
 
@@ -489,3 +489,51 @@ def calculate_density_average_gauss(
     a = widthOfGaußian(width)
     rho_matrix = densityField(x_dens, y_dens, a) / nframes
     return rho_matrix
+
+
+def jam(data, speed, jam_speed):
+    return data[speed < jam_speed]
+
+
+def consecutive_chunks(data):
+    # input array([ 1,  2,  3,  4, 10, 11, 12, 15])
+    # output array([3, 2])
+    consecutive = np.diff(data[:, 1])
+    condition = (consecutive == 1)
+    if condition[0]:
+        condition = np.concatenate([[False], condition])
+
+    idx = np.where(~condition)[0]
+    chunks = np.ediff1d(idx) - 1
+    return chunks
+
+
+def jam_waiting_time(peds: np.array, jam_data: np.array, jam_min_duration: int, fps: int):
+    waiting_times = []
+    for ped in peds:
+        jam_data_ped = jam_data[jam_data[:, 0] == ped]
+        jam_times = consecutive_chunks(jam_data_ped)
+        max_waiting_time = np.max(jam_times)
+        if max_waiting_time >= jam_min_duration:
+            waiting_times.append([ped, max_waiting_time])
+
+    return waiting_times/fps
+
+
+def jam_lifetime(jam_data: np.array, jam_min_agents: int, fps: int):
+    """Lifespane of a Jam
+
+    """
+    jam_frames = jam_data[:, 1]
+    lifetime = []
+    # frame, num peds in jam. Using only the first,
+    # since I dont know yet how to use the second
+    for frame in jam_frames:
+        d = jam_data[jam_data[:, 1] == frame]
+        num_ped_in_jam = len(d[:, 0])
+        if num_ped_in_jam > jam_min_agents:
+            lifetime.append([frame, num_ped_in_jam])
+
+        clifetime = consecutive_chunks(np.array(lifetime)[:, 0])
+
+    return np.max(clifetime[:, 0])/fps

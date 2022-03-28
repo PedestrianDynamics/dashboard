@@ -7,6 +7,23 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
 
 
+def show_trajectories_table(data):
+    headerColor = 'grey'
+    fig = go.Figure(
+        data=[go.Table
+              (header=dict(
+                  values=['<b>ID</b>', '<b>Frame</b>', '<b>X</b>', '<b>Y</b>'],
+                  fill_color=headerColor,
+                  font=dict(color='white', size=12),
+              ),
+               cells=dict(
+                   values=[data[:, 0], data[:, 1], data[:, 2], data[:, 3]],
+               )
+               )
+              ])
+    st.plotly_chart(fig, use_container_width=True)
+
+    
 def plot_NT(Frames, Nums, fps):
     logging.info("plot NT-curve")
     fig = make_subplots(
