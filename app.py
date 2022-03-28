@@ -49,6 +49,21 @@ def set_state_variables():
     if "old_data" not in st.session_state:
         st.session_state.old_data = ""
 
+    if "data" not in st.session_state:
+        st.session_state.data = []
+
+    if "frames" not in st.session_state:
+        st.session_state.frames = []
+
+    if "fps" not in st.session_state:
+        st.session_state.fps = 16
+
+    if "peds" not in st.session_state:
+        st.session_state.peds = []
+
+    if "conv" not in st.session_state:
+        st.session_state.conv = False
+
     if "density" not in st.session_state:
         st.session_state.density = []
 
@@ -168,23 +183,46 @@ if __name__ == "__main__":
         logging.info(f">> {trajectory_file.name}")
         logging.info(f">> {geometry_file.name}")
         try:
-            print("todo. do once")
-            data = Utilities.read_trajectory(trajectory_file)
-            if unit == "cm":
-
-                data[:, 2:] /= 100
 
             h = st.expander("Trajectories (first 4 columns)", expanded=True)
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
+            new_data = False
             if string_data != st.session_state.old_data:
                 st.session_state.old_data = string_data
+                new_data = True
+                logging.info("Loaded new trajectories")
+
+            if new_data:
+                logging.info("Load trajectories")
+                data = Utilities.read_trajectory(trajectory_file)
+                fps = Utilities.get_fps(string_data)
+                peds = np.unique(data[:, 0]).astype(int)
+                frames = np.unique(data[:, 1])
+
+                st.session_state.data = data
+                st.session_state.fps = fps
+                st.session_state.peds = peds
+                st.session_state.frames = frames
+                st.session_state.conv = False
+
                 with h:
                     plots.show_trajectories_table(data)
 
-            fps = Utilities.get_fps(string_data)
-            peds = np.unique(data[:, 0]).astype(int)
-            frames = np.unique(data[:, 1])
+            else:
+                data = st.session_state.data
+                fps = st.session_state.fps
+                peds = st.session_state.peds
+                frames = st.session_state.frames
+
+            if st.session_state.conv is False and unit == "cm":
+                data[:, 2:] /= 100
+                st.session_state.conv = True
+
+            if st.session_state.conv is True and unit == "m":
+                data[:, 2:] *= 100
+                st.session_state.conv = False
+
             st.markdown("### :bar_chart: Statistics")
             pl_msg = st.empty()
             msg = f"""
@@ -440,6 +478,7 @@ if __name__ == "__main__":
                                 data[:, 3],
                                 speed,
                             )
+                            print(speed, len(frames))
                         with c2:
                             plots.plot_profile_and_geometry(
                                 geominX,
