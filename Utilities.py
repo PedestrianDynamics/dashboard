@@ -418,10 +418,10 @@ def calculate_speed_average(
         X,
         Y,
         speed,
-        "sum",
+        "mean",
         bins=[xbins, ybins],
     )
-    return np.nan_to_num(ret.statistic.T) / nframes
+    return np.nan_to_num(ret.statistic.T) #/ nframes
 
 
 def calculate_density_average_weidmann(
@@ -435,10 +435,10 @@ def calculate_density_average_weidmann(
         X,
         Y,
         density,
-        "sum",
+        "mean",
         bins=[xbins, ybins],
     )
-    return np.nan_to_num(ret.statistic.T) / nframes
+    return np.nan_to_num(ret.statistic.T) #/ nframes
 
 
 def calculate_density_average_classic(
