@@ -49,6 +49,7 @@ def plot_NT(Frames, Nums, fps):
         )
         fig.append_trace(trace, row=1, col=1)
 
+    fig.update_layout(hovermode="x")
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -75,13 +76,14 @@ def plot_flow(Frames, Nums, fps):
         )
         fig.append_trace(trace, row=1, col=1)
 
+    fig.update_layout(hovermode="x")
     st.plotly_chart(fig, use_container_width=True)
 
 
 def plot_peds_inside(frames, peds_inside, fps):
     logging.info("plot peds inside")
     fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["Occupancy"], x_title="Time / s", y_title="Number of Pedestrians inside"
+        rows=1, cols=1, subplot_titles=["Discharge curve"], x_title="Time / s", y_title="Number of Pedestrians inside"
     )
     times = frames / fps
     trace = go.Scatter(
@@ -92,7 +94,26 @@ def plot_peds_inside(frames, peds_inside, fps):
         line=dict(width=3, color='royalblue'),
     )
     fig.append_trace(trace, row=1, col=1)
+    fig.update_layout(hovermode="x")
     st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_timeserie(frames, t, fps, title):
+    fig = make_subplots(
+        rows=1, cols=1, x_title="Time / s", y_title=title
+    )
+    times = frames / fps
+    trace = go.Scatter(
+        x=times,
+        y=t,
+        mode="lines",
+        showlegend=False,
+        line=dict(width=3, color='royalblue'),
+    )
+    fig.append_trace(trace, row=1, col=1)
+    fig.update_layout(hovermode="x")
+    st.plotly_chart(fig, use_container_width=True)
+
 
 
 def plot_agent_xy(frames, X, Y, fps):
@@ -266,7 +287,7 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
     fig.update_xaxes(
         range=[min_x - eps, max_x + eps],
     )
-    st.plotly_chart(fig, use_container_width=False)
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def plot_geometry(ax, _geometry_wall):
@@ -280,6 +301,9 @@ def plot_profile_and_geometry(
     geominY,
     geomaxY,
     geometry_wall,
+    xpos,
+    ypos,
+    lm,
     data,
     interpolation,
     cmap,
@@ -309,6 +333,7 @@ def plot_profile_and_geometry(
         extent=[geominX, geomaxX, geominY, geomaxY],
     )
     plot_geometry(ax, geometry_wall)
+    plot_square(ax, xpos, ypos, lm)
     ax.set_title(title)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="3.5%", pad=0.3)
@@ -316,4 +341,16 @@ def plot_profile_and_geometry(
     cb.set_label(label, rotation=90, labelpad=15, fontsize=15)
     st.pyplot(fig)
 
-    
+
+def plot_square(ax, xpos, ypos, lm):
+    x = [xpos - lm/2,
+         xpos - lm/2,
+         xpos + lm/2,
+         xpos + lm/2,
+         xpos - lm/2,]
+    y = [ypos - lm/2,
+         ypos + lm/2,
+         ypos + lm/2,
+         ypos - lm/2,
+         ypos - lm/2,]
+    ax.plot(x, y, color="gray", lw=2)
