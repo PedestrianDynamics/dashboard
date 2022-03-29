@@ -94,6 +94,8 @@ def set_state_variables():
     if "speed_index" not in st.session_state:
         st.session_state.speed_index = 9
 
+    if "unit" not in st.session_state:
+        st.session_state.unit = "m"
 
 if __name__ == "__main__":
     st.header(":information_source: Dashboard")
@@ -120,16 +122,7 @@ if __name__ == "__main__":
         help="Load geometry file",
     )
     st.sidebar.markdown("-------")
-    unit = st.sidebar.radio(
-        "What is the unit of the trajectories?",
-        ["m", "cm"],
-        help="Choose the unit of the original trajectories. Data in the app will be converted to meter",
-    )
-    st.write(
-        "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
-        unsafe_allow_html=True,
-    )
-    st.sidebar.markdown("-------")
+    unit_pl = st.sidebar.empty()
     st.sidebar.header("Plot")
     c1, c2 = st.sidebar.columns((1, 1))
     choose_trajectories = c1.checkbox(
@@ -144,7 +137,7 @@ if __name__ == "__main__":
 
     st.sidebar.markdown("-------")
     st.sidebar.header("Speed")
-    how_speed = st.sidebar.radio("Source:", ["from trajectory", "from simulation"])
+    how_speed = st.sidebar.radio("Source:", ["from simulation", "from trajectory"])
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
         unsafe_allow_html=True,
@@ -159,7 +152,7 @@ if __name__ == "__main__":
         )
 
     st.sidebar.markdown("-------")
-    st.sidebar.header("Profile")
+    st.sidebar.header("Profiles and Timeseries")
     c1, c2 = st.sidebar.columns((1, 1))
     choose_dprofile = c1.checkbox(
         "Show", help="Plot density and speed profiles", key="dProfile"
@@ -171,23 +164,16 @@ if __name__ == "__main__":
         help="""
         How to calculate average of density over time and space""",
     )
-    # choose_v_method = st.sidebar.radio(
-    #     "Speed method",
-    #     ["Speed", "Density"],
-    #     help="""
-    #                                  How to calculate average of speed over time and space""",
-    # )
-
-    # st.write(
-    #     "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
-    #     unsafe_allow_html=True,
-    # )
     if choose_d_method == "Gaussian":
         width = st.sidebar.slider(
-            "Width", 0.05, 1.0, 0.3, help="Width of Gaussian function"
+            "Width", 0.05, 1.0, 0.6, help="Width of Gaussian function"
         )
 
-    dx = st.sidebar.slider("Step", 0.01, 1.0, 0.5, help="Space discretization")
+    dx = st.sidebar.slider("Grid size", 0.1, 1.0, 0.5, help="Space discretization")
+    posx_pl = st.sidebar.empty()
+    posy_pl = st.sidebar.empty()
+    side_pl = st.sidebar.empty()
+    
     methods = ["nearest", "gaussian", "sinc", "bicubic", "mitchell", "bilinear"]
     interpolation = st.sidebar.radio(
         "Interpolation", methods, help="Interpolation method for imshow()"
@@ -216,6 +202,8 @@ if __name__ == "__main__":
                 logging.info("Load trajectories")
                 data = Utilities.read_trajectory(trajectory_file)
                 fps = Utilities.get_fps(string_data)
+                unit = Utilities.get_unit(string_data)
+                st.session_state.unit = unit
                 peds = np.unique(data[:, 0]).astype(int)
                 frames = np.unique(data[:, 1])
                 st.session_state.data = np.copy(data)
@@ -230,10 +218,24 @@ if __name__ == "__main__":
                 fps = st.session_state.fps
                 peds = np.copy(st.session_state.peds)
                 frames = np.copy(st.session_state.frames)
-
+                unit = st.session_state.unit
+            
+            if unit not in ["cm", "m"]:
+                unit = unit_pl.radio(
+                    "What is the unit of the trajectories?",
+                    ["cm", "m"],
+                    help="Choose the unit of the original trajectories. Data in the app will be converted to meter",
+                )
+                st.write(
+                    "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+                    unsafe_allow_html=True,
+                )
+                st.sidebar.markdown("-------")
+                
             st.markdown("### :bar_chart: Statistics")
             pl_msg = st.empty()
             msg = f"""
+            Unit: {unit}\n
             Frames per second: {fps}\n
             Frames: {len(frames)} | First: {frames[0]:.0f} | Last: {frames[-1]:.0f}\n
             Agents: {len(peds)}\n
@@ -272,8 +274,8 @@ if __name__ == "__main__":
                 logging.info("Geometry parsed successfully")
                 geometry_wall = Utilities.read_subroom_walls(geo_xml, unit="m")
                 logging.info("Got geometry walls successfully")
-                transitions = Utilities.get_transitions(geo_xml, unit)
-                logging.info("Got geometry transitions successfully")
+                transitions = Utilities.get_transitions(geo_xml, unit="m")
+                logging.info("Got geometry transitions successfully")                
                 measurement_lines = Utilities.get_measurement_lines(geo_xml, unit="m")
                 logging.info("Got geometry measurement_lines successfully")
                 # todo: check if ids of transitions and measurement_lines are unique
@@ -290,16 +292,15 @@ if __name__ == "__main__":
                 st.session_state.geometry_wall = deepcopy(geometry_wall)
                 logging.info(
                     f"GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geomaxY:.2f})"
-                )
+                )                
             else:
                 new_geometry = False
                 geominX = st.session_state.geominX
                 geomaxX = st.session_state.geomaxX
                 geominY = st.session_state.geominY
                 geomaxY = st.session_state.geomaxY
-
                 geometry_wall = deepcopy(st.session_state.geometry_wall)
-                transitions = deepcopy(st.session_state.transitions)
+                transitions = deepcopy(st.session_state.transitions)                
 
             # select all per default
             if transitions:
@@ -314,8 +315,8 @@ if __name__ == "__main__":
                 Error: {e}"""
             )
             st.stop()
-
-        if unit == "cm":
+        
+        if unit == "cm":            
             data[:, 2:] /= 100
             geominX /= 100
             geomaxX /= 100
@@ -332,7 +333,6 @@ if __name__ == "__main__":
             choose_NT = c1.checkbox(
                 "N-T", help="Plot N-t curve", key="NT", disabled=disable_NT_flow
             )
-
             choose_flow = c2.checkbox(
                 "Flow", help="Plot flow curve", key="Flow", disabled=disable_NT_flow
             )
@@ -441,9 +441,38 @@ if __name__ == "__main__":
 
         # choose_dprofile =
         choose_vprofile = True  # todo: not sure is I want to keep this option
+        if st.session_state.transitions:
+            v = [x for x in transitions.values()]
+            t = v[0]
+            xm = np.sum(t[:, 0]) / 2
+            ym = np.sum(t[:, 1]) / 2
+        else:
+            xm = 0.5 * (geominX + geomaxX)
+            ym = 0.5 * (geominY + geomaxY)
+        
+        xpos = posx_pl.number_input('x-position of measurement area',
+                                       min_value=float(geominX),
+                                       max_value=float(geomaxX),
+                                       value=xm,
+                                       step=dx,
+                                       help="X-ccordinate of the center of the measurement square.")
+        ypos = posy_pl.number_input('y-position of measurement area',
+                                       min_value=float(geominY),
+                                       max_value=float(geomaxY),
+                                       value=ym,
+                                       step=dx,
+                                       help="Y-ccordinate of the center of the measurement square.")
+        lm = side_pl.number_input('side of measurement square',
+                                     min_value=0.5,
+                                     max_value=5.0,
+                                     value=1.0,
+                                     step=0.5,
+                                     help="Length of the side of the measurement square.")
+    
         if choose_dprofile or choose_vprofile:
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
             msg = ""
+            
             with st.spinner("Processing ..."):
                 c1, _, c2 = st.columns((1, 0.05, 1))
                 if choose_dprofile:
@@ -459,6 +488,26 @@ if __name__ == "__main__":
                             data[:, 3],
                             speed,
                         )
+                        # time serie
+                        density_time = []
+                        for frame in frames:
+                            x = data[data[:, 1] == frame][:, 2]
+                            y = data[data[:, 1] == frame][:, 3]
+                            agent = data[data[:, 0] == plot_ped]
+                            speed_agent = data[data[:, 1] == frame][:, st.session_state.speed_index]
+                            
+                            dtime = Utilities.calculate_density_average_weidmann(
+                                xpos - lm/2,
+                                xpos + lm/2,
+                                ypos - lm/2,
+                                ypos + lm/2,
+                                lm,
+                                1,
+                                x,
+                                y,
+                                speed_agent
+                            )
+                            density_time.append(dtime[0, 0])
                     elif choose_d_method == "Gaussian":
                         density_ret = Utilities.calculate_density_average_gauss(
                             geominX,
@@ -471,6 +520,23 @@ if __name__ == "__main__":
                             data[:, 2],
                             data[:, 3],
                         )
+                        # time serie
+                        density_time = []
+                        for frame in frames:
+                            x = data[data[:, 1] == frame][:, 2]
+                            y = data[data[:, 1] == frame][:, 3]
+                            dtime = Utilities.calculate_density_average_gauss(
+                                xpos - lm/2,
+                                xpos + lm/2,
+                                ypos - lm/2,
+                                ypos + lm/2,
+                                lm,
+                                1,
+                                width,
+                                x,
+                                y,
+                            )
+                            density_time.append(dtime[0, 0])
                     elif choose_d_method == "Classical":
                         density_ret = Utilities.calculate_density_average_classic(
                             geominX,
@@ -482,6 +548,22 @@ if __name__ == "__main__":
                             data[:, 2],
                             data[:, 3],
                         )
+                        # time serie
+                        density_time = []
+                        for frame in frames:
+                            x = data[data[:, 1] == frame][:, 2]
+                            y = data[data[:, 1] == frame][:, 3]
+                            
+                            dtime = Utilities.calculate_density_frame_classic(
+                                xpos - lm/2,
+                                xpos + lm/2,
+                                ypos - lm/2,
+                                ypos + lm/2,
+                                lm,
+                                x,
+                                y,
+                            )
+                            density_time.append(dtime[0, 0])
 
                     st.session_state.density = density_ret
                     msg += f"Density in range [{np.min(density_ret):.2f} : {np.max(density_ret):.2f}] [1/m^2]. "
@@ -492,6 +574,9 @@ if __name__ == "__main__":
                             geominY,
                             geomaxY,
                             geometry_wall,
+                            xpos,
+                            ypos,
+                            lm,
                             density_ret,
                             interpolation,
                             cmap=cm.jet,
@@ -500,10 +585,15 @@ if __name__ == "__main__":
                             vmin=None,
                             vmax=None,
                         )
+                        plots.plot_timeserie(frames, density_time, fps, "Density / m / m")
+
                     if choose_vprofile:
                         if choose_d_method == "Gaussian":
-                            speed_ret = speed = Utilities.weidmann(
+                            speed_ret = Utilities.weidmann(
                                 st.session_state.density
+                            )
+                            speed_time = Utilities.weidmann(
+                                np.array(density_time)
                             )
                         else:
                             speed_ret = Utilities.calculate_speed_average(
@@ -517,6 +607,25 @@ if __name__ == "__main__":
                                 data[:, 3],
                                 speed,
                             )
+                            speed_time = []
+                            for frame in frames:
+                                x = data[data[:, 1] == frame][:, 2]
+                                y = data[data[:, 1] == frame][:, 3]
+                                agent = data[data[:, 0] == plot_ped]
+                                speed_agent = data[data[:, 1] == frame][:, st.session_state.speed_index]
+                                stime = Utilities.calculate_speed_average(
+                                    xpos - lm/2,
+                                    xpos + lm/2,
+                                    ypos - lm/2,
+                                    ypos + lm/2,
+                                    lm,
+                                    1,
+                                    x,
+                                    y,
+                                    speed_agent
+                                )
+                                speed_time.append(stime[0, 0])
+                            
                         with c2:
                             plots.plot_profile_and_geometry(
                                 geominX,
@@ -524,6 +633,9 @@ if __name__ == "__main__":
                                 geominY,
                                 geomaxY,
                                 geometry_wall,
+                                xpos,
+                                ypos,
+                                lm,
                                 speed_ret,
                                 interpolation,
                                 cmap=cm.jet.reversed(),
@@ -532,6 +644,8 @@ if __name__ == "__main__":
                                 vmin=None,
                                 vmax=None,
                             )
+                            plots.plot_timeserie(frames, speed_time, fps, "Speed / m/s")
+
                         msg += f"Speed profile in range [{np.min(speed_ret):.2f} : {np.max(speed_ret):.2f}] [m/s]. "
                         msg += f"Speed trajectory in range [{np.min(speed):.2f} : {np.max(speed):.2f}] [m/s]. "
 

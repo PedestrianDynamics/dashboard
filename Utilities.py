@@ -104,6 +104,7 @@ def inv_weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
     return 1 / x
 
 
+# todo: update with more rules for more files
 def get_fps(traj_file):
     fps = traj_file.split("#framerate:")[-1].split("\n")[0]
     try:
@@ -113,6 +114,23 @@ def get_fps(traj_file):
         st.stop()
 
     return fps
+
+
+# todo: update with more rules for more files
+def get_unit(traj_file):
+    if "#description: jpscore" in traj_file:
+        unit = "m"
+    else:
+        unit_list = traj_file.split("#unit:")
+        if len(unit_list) > 1:
+            unit = unit_list[-1].split("\n")[0]
+
+        else:
+            unit = "NOTHING"
+
+    unit = unit.strip()
+    logging.info(f"Unit detected: <{unit}>")
+    return unit
 
 
 def get_transitions(xml_doc, unit):
@@ -188,7 +206,7 @@ def passing_frame(ped_data: np.array, line: LineString, fps: int) -> int:
     """
     eps = 1 / fps * 1.3
     line_buffer = line.buffer(eps)
-    for (frame, x, y), v in zip(ped_data[:, 1:4], ped_data[:, st.session_state.speed_index]):
+    for (frame, x, y) in ped_data[:, 1:4]:
         if Point(x, y).within(line_buffer):
             return frame
 
@@ -442,6 +460,27 @@ def calculate_density_average_classic(
         bins=[xbins, ybins],
     )
     return np.nan_to_num(ret.statistic.T) / nframes / area
+
+
+def calculate_density_frame_classic(
+    geominX, geomaxX, geominY, geomaxY, dx, X, Y
+):
+    """Calculate classical method
+
+    Density = mean_time(N/A_i)
+    """
+
+    xbins = np.arange(geominX, geomaxX + dx, dx)
+    ybins = np.arange(geominY, geomaxY + dx, dx)
+    area = dx * dx
+    ret = stats.binned_statistic_2d(
+        X,
+        Y,
+        None,
+        "count",
+        bins=[xbins, ybins],  expand_binnumbers=True,
+    )
+    return np.nan_to_num(ret.statistic.T) / area
 
 
 def check_shape_and_stop(shape, how_speed):

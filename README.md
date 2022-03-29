@@ -32,3 +32,7 @@ Define in the geometry transitions, such that the pedestrian fully pass them.
 - [X] Number of agents in geometry over time
 - [ ] Social distancing analysis (Qiancheng's paper)
 - [X] Use forms to avoid running everything at once!
+- [ ] Density profiles slider: from and to frames
+- [ ] survival function
+- [X] Density time series in squares (l x l):
+    -  sliders l, x, y
