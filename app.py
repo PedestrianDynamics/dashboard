@@ -10,7 +10,7 @@ import numpy as np
 import streamlit as st
 from matplotlib import cm
 from shapely.geometry import LineString
-
+from copy import deepcopy
 import plots
 import Utilities
 
@@ -49,6 +49,27 @@ def set_state_variables():
     if "old_data" not in st.session_state:
         st.session_state.old_data = ""
 
+    if "geometry_data" not in st.session_state:
+        st.session_state.geometry_data = ""
+
+    if "geominX" not in st.session_state:
+        st.session_state.geominX = -10
+
+    if "geomaxX" not in st.session_state:
+        st.session_state.geomaxX = 10
+
+    if "geominY" not in st.session_state:
+        st.session_state.geominY = -10
+
+    if "geomaxY" not in st.session_state:
+        st.session_state.geomaxY = 10
+
+    if "geometry_wall" not in st.session_state:
+        st.session_state.geometry_wall = 10
+
+    if "transitions" not in st.session_state:
+        st.session_state.transitions = []
+
     if "data" not in st.session_state:
         st.session_state.data = []
 
@@ -60,9 +81,6 @@ def set_state_variables():
 
     if "peds" not in st.session_state:
         st.session_state.peds = []
-
-    if "conv" not in st.session_state:
-        st.session_state.conv = False
 
     if "density" not in st.session_state:
         st.session_state.density = []
@@ -103,7 +121,7 @@ if __name__ == "__main__":
     )
     st.sidebar.markdown("-------")
     unit = st.sidebar.radio(
-        "Trajectories are in ",
+        "What is the unit of the trajectories?",
         ["m", "cm"],
         help="Choose the unit of the original trajectories. Data in the app will be converted to meter",
     )
@@ -177,7 +195,7 @@ if __name__ == "__main__":
     st.sidebar.markdown("-------")
     st.sidebar.header("Plot curves")
     c1, c2 = st.sidebar.columns((1, 1))
-    msg_status = st.sidebar.empty()
+    msg_status = st.empty()
     disable_NT_flow = False
     if trajectory_file and geometry_file:
         logging.info(f">> {trajectory_file.name}")
@@ -187,11 +205,12 @@ if __name__ == "__main__":
             h = st.expander("Trajectories (first 4 columns)", expanded=True)
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
-            new_data = False
             if string_data != st.session_state.old_data:
                 st.session_state.old_data = string_data
                 new_data = True
                 logging.info("Loaded new trajectories")
+            else:
+                new_data = False
 
             if new_data:
                 logging.info("Load trajectories")
@@ -199,29 +218,18 @@ if __name__ == "__main__":
                 fps = Utilities.get_fps(string_data)
                 peds = np.unique(data[:, 0]).astype(int)
                 frames = np.unique(data[:, 1])
-
-                st.session_state.data = data
+                st.session_state.data = np.copy(data)
                 st.session_state.fps = fps
-                st.session_state.peds = peds
-                st.session_state.frames = frames
-                st.session_state.conv = False
-
+                st.session_state.peds = np.copy(peds)
+                st.session_state.frames = np.copy(frames)
                 with h:
                     plots.show_trajectories_table(data)
 
             else:
-                data = st.session_state.data
+                data = np.copy(st.session_state.data)
                 fps = st.session_state.fps
-                peds = st.session_state.peds
-                frames = st.session_state.frames
-
-            if st.session_state.conv is False and unit == "cm":
-                data[:, 2:] /= 100
-                st.session_state.conv = True
-
-            if st.session_state.conv is True and unit == "m":
-                data[:, 2:] *= 100
-                st.session_state.conv = False
+                peds = np.copy(st.session_state.peds)
+                frames = np.copy(st.session_state.frames)
 
             st.markdown("### :bar_chart: Statistics")
             pl_msg = st.empty()
@@ -254,20 +262,45 @@ if __name__ == "__main__":
                 )
                 st.stop()
 
-            stringio = StringIO(geometry_file.getvalue().decode("utf-8"))
-            string_data = stringio.read()
-            file_data = geometry_file.read()
+            geo_stringio = StringIO(geometry_file.getvalue().decode("utf-8"))
+            geo_string_data = geo_stringio.read()
+            if geo_string_data != st.session_state.geometry_data:
+                new_geometry = True
+                st.session_state.geometry_data = geo_string_data
+                file_data = geometry_file.read()
+                geo_xml = parseString(geometry_file.getvalue())
+                logging.info("Geometry parsed successfully")
+                geometry_wall = Utilities.read_subroom_walls(geo_xml, unit="m")
+                logging.info("Got geometry walls successfully")
+                transitions = Utilities.get_transitions(geo_xml, unit)
+                logging.info("Got geometry transitions successfully")
+                measurement_lines = Utilities.get_measurement_lines(geo_xml, unit="m")
+                logging.info("Got geometry measurement_lines successfully")
+                # todo: check if ids of transitions and measurement_lines are unique
+                transitions.update(measurement_lines)
+                logging.info("Get geo_limits")
+                geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(
+                    geo_xml, unit="m"
+                )
+                st.session_state.geominX = geominX
+                st.session_state.geomaxX = geomaxX
+                st.session_state.geominY = geominY
+                st.session_state.geomaxY = geomaxY
+                st.session_state.transitions = deepcopy(transitions)
+                st.session_state.geometry_wall = deepcopy(geometry_wall)
+                logging.info(
+                    f"GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geomaxY:.2f})"
+                )
+            else:
+                new_geometry = False
+                geominX = st.session_state.geominX
+                geomaxX = st.session_state.geomaxX
+                geominY = st.session_state.geominY
+                geomaxY = st.session_state.geomaxY
 
-            geo_xml = parseString(geometry_file.getvalue())
-            logging.info("Geometry parsed successfully")
-            geometry_wall = Utilities.read_subroom_walls(geo_xml, unit)
-            logging.info("Got geometry walls successfully")
-            transitions = Utilities.get_transitions(geo_xml, unit)
-            logging.info("Got geometry transitions successfully")
-            measurement_lines = Utilities.get_measurement_lines(geo_xml, unit)
-            logging.info("Got geometry measurement_lines successfully")
-            # todo: check if ids of transitions and measurement_lines are unique
-            transitions.update(measurement_lines)
+                geometry_wall = deepcopy(st.session_state.geometry_wall)
+                transitions = deepcopy(st.session_state.transitions)
+
             # select all per default
             if transitions:
                 default = list(transitions.keys())  # choose this transition by default
@@ -275,18 +308,24 @@ if __name__ == "__main__":
                 default = []
                 disable_NT_flow = True
 
-            logging.info("Get geo_limits")
-            geominX, geomaxX, geominY, geomaxY = Utilities.geo_limits(geo_xml, unit)
-
-            logging.info(
-                f"GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geominY:.2f})"
-            )
         except Exception as e:
             msg_status.error(
                 f"""Can't parse geometry file.
                 Error: {e}"""
             )
             st.stop()
+
+        if unit == "cm":
+            data[:, 2:] /= 100
+            geominX /= 100
+            geomaxX /= 100
+            geominY /= 100
+            geomaxY /= 100
+            geometry_wall = {k: geometry_wall[k] / 100 for k in geometry_wall}
+            transitions = {k: transitions[k] / 100 for k in transitions}
+            logging.info(
+                f"CM GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geomaxY:.2f})"
+            )
 
         NT_form = st.sidebar.form("plot-NT")
         with NT_form:
@@ -353,16 +392,16 @@ if __name__ == "__main__":
         if choose_trajectories:
             logging.info("plotting trajectories")
             agent = data[data[:, 0] == plot_ped]
-            # print("index", st.session_state.speed_index)
             # speed_agent1 = agent[:, st.session_state.speed_index]
             if how_speed == "from simulation":
                 speed_agent = agent[:, 9]
                 angle_agent = agent[:, 7]
             else:
-                speed_agent, angle_agent = Utilities.compute_agent_speed_and_angle(agent, fps, df)
+                speed_agent, angle_agent = Utilities.compute_agent_speed_and_angle(
+                    agent, fps, df
+                )
 
             c1, c2 = st.columns((1, 1))
-            logging.info(f"Pedesrians: [{plot_ped}]")
             with c1:
                 if choose_transitions:
                     plots.plot_trajectories(
@@ -478,7 +517,6 @@ if __name__ == "__main__":
                                 data[:, 3],
                                 speed,
                             )
-                            print(speed, len(frames))
                         with c2:
                             plots.plot_profile_and_geometry(
                                 geominX,
