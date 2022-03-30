@@ -94,14 +94,11 @@ def set_state_variables():
     if "cum_num" not in st.session_state:
         st.session_state.cum_num = {}
 
-    if "speed_index" not in st.session_state:
-        st.session_state.speed_index = 9
-
     if "unit" not in st.session_state:
         st.session_state.unit = "m"
 
     if "df" not in st.session_state:
-        st.session_state.df = 10
+        st.session_state.df = 12
 
     if "xpos" not in st.session_state:
         st.session_state.xpos = 0
@@ -236,6 +233,7 @@ def main():
                     help="how many frames to consider for calculating the speed",
                 )
 
+                    
             if new_data:
                 with Utilities.profile("Load trajecgories"):
                     logging.info("Load trajectories ..")
@@ -254,10 +252,7 @@ def main():
                     st.session_state.peds = np.copy(peds)
                     st.session_state.frames = np.copy(frames)
                     logging.info("Done loading trajectories")
-                    with h:
-                        with Utilities.profile("show_table"):
-                            plots.show_trajectories_table(data[0:10, 0:5])
-            
+
             else:
                 with Utilities.profile("Second init"):
                     data = np.copy(st.session_state.data)
@@ -265,7 +260,12 @@ def main():
                     peds = np.copy(st.session_state.peds)
                     frames = np.copy(st.session_state.frames)
                     unit = st.session_state.unit
-            
+
+            with h:
+                with Utilities.profile("show_table"):
+                    fig = plots.show_trajectories_table(data[:, 0:5])
+                    st.plotly_chart(fig, use_container_width=True)
+
             if unit not in ["cm", "m"]:
                 unit = unit_pl.radio(
                     "What is the unit of the trajectories?",
@@ -431,7 +431,6 @@ def main():
             logging.info("speed by simulation")
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
             speed = data[:, 9]
-            st.session_state.speed_index = 9
         else:
             logging.info("speed by trajectory")
             if df != st.session_state.df:
@@ -441,21 +440,17 @@ def main():
             else:
                 speed = np.copy(st.session_state.speed)
 
-            st.session_state.speed_index = -1
-
         if choose_trajectories:
             agent = data[data[:, 0] == plot_ped]
-            # speed_agent1 = agent[:, st.session_state.speed_index]
             if how_speed == "from simulation":
                 speed_agent = agent[:, 9]
                 angle_agent = agent[:, 7]
-            else:
+            else: # todo: performance
                 speed_agent, angle_agent = Utilities.compute_agent_speed_and_angle(
                     agent, fps, df
                 )
 
             c1, c2 = st.columns((1, 1))
-            figs = defaultdict(list)
             with c1:
                 with Utilities.profile("plot_trajectories"):
                     fig = plots.plot_trajectories(
@@ -469,7 +464,7 @@ def main():
                         geominY,
                         geomaxY,
                         choose_transitions,
-                    )                    
+                    )
                     st.plotly_chart(fig, use_container_width=True)
 
             with c2:
@@ -484,8 +479,9 @@ def main():
 
             with c2:
                 with Utilities.profile("plot_agent_speed"):
+                    
                     fig = plots.plot_agent_speed(
-                        plot_ped, agent[:, 1], speed_agent, np.max(speed), fps
+                       plot_ped, agent[:, 1], speed_agent, np.max(speed), fps
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
@@ -743,12 +739,13 @@ def main():
         choose_speed = True
         plot_options = choose_NT or choose_flow or choose_speed
         if make_plots and plot_options:
-            peds = np.unique(data)
-            tstats, cum_num, trans_used, max_len = Utilities.calculate_NT_data(
-                transitions, selected_transitions, data, fps
-            )
-            st.session_state.tstats = tstats
-            st.session_state.cum_num = cum_num
+            #peds = np.unique(data)
+            with Utilities.profile("calculate_NT_data"):
+                tstats, cum_num, trans_used, max_len = Utilities.calculate_NT_data(
+                    transitions, selected_transitions, data, fps
+                )
+            #st.session_state.tstats = tstats
+            #st.session_state.cum_num = cum_num
 
         if make_plots:
             c1, c2 = st.columns((1, 1))

@@ -22,7 +22,6 @@ def show_trajectories_table(data):
                )
                )
               ])
-    #st.plotly_chart(fig, use_container_width=True)
     return fig
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})    

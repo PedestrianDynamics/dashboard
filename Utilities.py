@@ -210,7 +210,7 @@ def get_measurement_lines(xml_doc, unit):
     return measurement_lines
 
 
-def passing_frame(ped_data: np.array, line: LineString, fps: int) -> int:
+def passing_frame(ped_data: np.array, line: LineString, fps: int, l: float) -> int:
     """Return frame of first time ped enters the line buffer
 
     Enlarge the line by eps, a constant that is dependent on fps
@@ -225,7 +225,8 @@ def passing_frame(ped_data: np.array, line: LineString, fps: int) -> int:
     """
     eps = 1 / fps * 1.3
     line_buffer = line.buffer(eps)
-    for (frame, x, y) in ped_data[:, 1:4]:
+    p = ped_data[np.abs(ped_data[:, 2] - line.centroid.x) < l]
+    for (frame, x, y) in p[:, 1:4]:
         if Point(x, y).within(line_buffer):
             return frame
 
@@ -613,11 +614,11 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
     max_len (len of longest vector)
 
     """
-    tstats = defaultdict(list)    
+    tstats = defaultdict(list)
     cum_num = {}
     msg = ""
     trans_used = {}
-    
+
     peds = np.unique(data[:, 0]).astype(int)
     with st.spinner("Processing ..."):
         max_len = -1
@@ -626,12 +627,13 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
             trans_used[i] = False
             if i in selected_transitions:
                 line = LineString(t)
+                len_line = line.length
                 for ped in peds:
                     ped_data = data[data[:, 0] == ped]
-                    frame= passing_frame(ped_data, line, fps)
+                    frame = passing_frame(ped_data, line, fps, len_line)
                     if frame >= 0:
-                        tstats[i].append(frame)           
-                        trans_used[i] = [True]
+                        tstats[i].append(frame)
+                        trans_used[i] = True
 
                 if trans_used[i]:
                     tstats[i].sort()
