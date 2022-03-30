@@ -5,8 +5,9 @@ import plotly.graph_objs as go
 import streamlit as st
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
+import matplotlib
 
-
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def show_trajectories_table(data):
     headerColor = 'grey'
     fig = go.Figure(
@@ -21,9 +22,10 @@ def show_trajectories_table(data):
                )
                )
               ])
-    st.plotly_chart(fig, use_container_width=True)
+    #st.plotly_chart(fig, use_container_width=True)
+    return fig
 
-    
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})    
 def plot_NT(Frames, Nums, fps):
     logging.info("plot NT-curve")
     fig = make_subplots(
@@ -50,10 +52,11 @@ def plot_NT(Frames, Nums, fps):
         fig.append_trace(trace, row=1, col=1)
 
     fig.update_layout(hovermode="x")
-    st.plotly_chart(fig, use_container_width=True)
+    #st.plotly_chart(fig, use_container_width=True)
+    return fig
 
 
-
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_flow(Frames, Nums, fps):
     logging.info("plot flow-curve")
     fig = make_subplots(
@@ -77,9 +80,11 @@ def plot_flow(Frames, Nums, fps):
         fig.append_trace(trace, row=1, col=1)
 
     fig.update_layout(hovermode="x")
-    st.plotly_chart(fig, use_container_width=True)
+    #st.plotly_chart(fig, use_container_width=True)
+    return fig
 
-
+    
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_peds_inside(frames, peds_inside, fps):
     logging.info("plot peds inside")
     fig = make_subplots(
@@ -95,10 +100,12 @@ def plot_peds_inside(frames, peds_inside, fps):
     )
     fig.append_trace(trace, row=1, col=1)
     fig.update_layout(hovermode="x")
-    st.plotly_chart(fig, use_container_width=True)
+    return fig
 
 
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_timeserie(frames, t, fps, title):
+    logging.info("plot timeseries")
     fig = make_subplots(
         rows=1, cols=1, x_title="Time / s", y_title=title
     )
@@ -112,11 +119,12 @@ def plot_timeserie(frames, t, fps, title):
     )
     fig.append_trace(trace, row=1, col=1)
     fig.update_layout(hovermode="x")
-    st.plotly_chart(fig, use_container_width=True)
+    return fig
 
 
-
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_agent_xy(frames, X, Y, fps):
+    logging.info("plot agent xy")
     fig = make_subplots(specs=[[{"secondary_y": True}]],
         rows=1, cols=1, x_title="Time / s",
     )
@@ -143,10 +151,12 @@ def plot_agent_xy(frames, X, Y, fps):
     fig.update_yaxes(title_text="X", secondary_y=False)
     fig.update_yaxes(title_text="Y", secondary_y=True,)
     fig.update_layout(hovermode="x")
-    st.plotly_chart(fig, use_container_width=True)
+    return fig
 
 
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_agent_angle(pid, frames, angles, fps):
+    logging.info("plot angle")
     fig = make_subplots(
         rows=1, cols=1, x_title="Time / s", y_title=r"Angle / Degree",
     )
@@ -161,10 +171,11 @@ def plot_agent_angle(pid, frames, angles, fps):
     )
     fig.append_trace(trace, row=1, col=1)
     fig.update_layout(hovermode="x")
-    st.plotly_chart(fig, use_container_width=True)
+    return fig
 
 
-def plot_agent_speed(pid, frames, speed_agent, max_speed, fps):
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_agent_speed(pid, frames, speed_agent, max_speed, fps):    
     fig = make_subplots(
                     rows=1, cols=1, x_title="Time / s", y_title="Speed / m/s"
                 )
@@ -207,20 +218,18 @@ def plot_agent_speed(pid, frames, speed_agent, max_speed, fps):
         range=[0, max_speed + 0.01],
     )
     fig.update_layout(hovermode="x")
-    st.plotly_chart(fig, use_container_width=True)
+    return fig
 
-
-# marker=dict(size=5, color=np.where(speed_agent >= threshold, 'blue', 'red')),
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, max_x, min_y, max_y, choose_transitions):
-    print("plot")
+    logging.info("plot trajectories")
     fig = make_subplots(rows=1, cols=1)
     peds = np.unique(data[:, 0])
     s = data[data[:, 0] == special_ped]
     sc = 1-speed/np.max(speed)
     for ped in peds:
-        d = data[data[:, 0] == ped]        
+        d = data[data[:, 0] == ped]
         trace_traj = go.Scatter(
             x=d[:, 2],
             y=d[:, 3],
@@ -240,13 +249,7 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
         marker=dict(size=5, color=sc, colorscale='Jet'),
         line=dict(color="firebrick", width=4),
     )
-    
     fig.append_trace(trace_agent, row=1, col=1)
-    # l = int(len(s[:, 2])/2)
-    # fig.add_annotation(x=s[l, 2], y=s[l, 3],
-    #                    text=f"<b>Agent: {special_ped:0.0f}</b>",
-    #                    showarrow=True,
-    #                    arrowhead=1)
     for gw in geo_walls.keys():
         trace_walls = go.Scatter(
             x=geo_walls[gw][:, 0],
@@ -301,6 +304,8 @@ def plot_geometry(ax, _geometry_wall):
         ax.plot(_geometry_wall[gw][:, 0], _geometry_wall[gw][:, 1], color="white", lw=2)
 
 
+matplotlib.figure.Figure
+@st.cache(suppress_st_warning=True, hash_funcs={matplotlib.figure.Figure: lambda _: None})
 def plot_profile_and_geometry(
     geominX,
     geomaxX,
@@ -323,12 +328,13 @@ def plot_profile_and_geometry(
 
     if vmin or vmax is None, extract values from <data>
     """
-
+    logging.info("plot_profile and geometry")
     if vmin is None or vmax is None:
         vmin = np.min(data)
         vmax = np.max(data)
 
     fig, ax = plt.subplots(1, 1)
+    print(type(fig))
     im = ax.imshow(
         data,
         cmap=cmap,
@@ -347,7 +353,7 @@ def plot_profile_and_geometry(
     cax = divider.append_axes("right", size="3.5%", pad=0.3)
     cb = plt.colorbar(im, cax=cax)
     cb.set_label(label, rotation=90, labelpad=15, fontsize=15)
-    st.pyplot(fig)
+    return fig
 
 
 def plot_square(ax, xpos, ypos, lm):

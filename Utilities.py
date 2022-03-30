@@ -5,6 +5,15 @@ from pandas import read_csv
 from scipy import stats
 from shapely.geometry import LineString, Point
 from collections import defaultdict
+import contextlib
+import time
+
+@contextlib.contextmanager
+def profile(name):
+    start_time = time.time()
+    yield  # <-- your code will execute here
+    total_time = time.time() - start_time
+    print("%s: %.4f ms" % (name, total_time * 1000.0))
 
 
 def docs():
