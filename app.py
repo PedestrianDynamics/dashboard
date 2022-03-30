@@ -4,7 +4,7 @@ from collections import defaultdict
 from io import StringIO
 from pathlib import Path
 from xml.dom.minidom import parseString
-
+import timeit
 import lovely_logger as logging
 import numpy as np
 import streamlit as st
@@ -85,6 +85,9 @@ def set_state_variables():
     if "density" not in st.session_state:
         st.session_state.density = []
 
+    if "speed" not in st.session_state:
+        st.session_state.speed = []
+        
     if "tstats" not in st.session_state:
         st.session_state.tstats = defaultdict(list)
 
@@ -97,7 +100,14 @@ def set_state_variables():
     if "unit" not in st.session_state:
         st.session_state.unit = "m"
 
+    if "df" not in st.session_state:
+        st.session_state.df = 10
+
+
 if __name__ == "__main__":
+    time_main_start = timeit.default_timer()                
+    #print("Time speed: ", time_end-time_start)            
+
     st.header(":information_source: Dashboard")
     info = st.expander("click to expand")
     with info:
@@ -123,7 +133,7 @@ if __name__ == "__main__":
     )
     st.sidebar.markdown("-------")
     unit_pl = st.sidebar.empty()
-    st.sidebar.header("Plot")
+    st.sidebar.header("📉 Plot")
     c1, c2 = st.sidebar.columns((1, 1))
     choose_trajectories = c1.checkbox(
         "Trajectories", help="Plot trajectories", key="Traj"
@@ -136,7 +146,7 @@ if __name__ == "__main__":
     pl = st.sidebar.empty()
 
     st.sidebar.markdown("-------")
-    st.sidebar.header("Speed")
+    st.sidebar.header("🔵 Speed")
     how_speed = st.sidebar.radio("Source:", ["from simulation", "from trajectory"])
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
@@ -152,7 +162,7 @@ if __name__ == "__main__":
         )
 
     st.sidebar.markdown("-------")
-    st.sidebar.header("Profiles and Timeseries")
+    st.sidebar.header("🔴 Profiles")
     c1, c2 = st.sidebar.columns((1, 1))
     choose_dprofile = c1.checkbox(
         "Show", help="Plot density and speed profiles", key="dProfile"
@@ -170,16 +180,25 @@ if __name__ == "__main__":
         )
 
     dx = st.sidebar.slider("Grid size", 0.1, 1.0, 0.5, help="Space discretization")
-    posx_pl = st.sidebar.empty()
-    posy_pl = st.sidebar.empty()
-    side_pl = st.sidebar.empty()
-    
     methods = ["nearest", "gaussian", "sinc", "bicubic", "mitchell", "bilinear"]
     interpolation = st.sidebar.radio(
         "Interpolation", methods, help="Interpolation method for imshow()"
     )
+    if choose_dprofile:
+        st.sidebar.markdown("-------")
+        st.sidebar.header("📈 Timeseries (slow)")
+        choose_timeseries = st.sidebar.checkbox(
+            "🚦Plot", help="Plot density and speed timeseries", key="timeseries"
+        )
+    else:
+        choose_timeseries = False
+        
+    posx_pl = st.sidebar.empty()
+    posy_pl = st.sidebar.empty()
+    side_pl = st.sidebar.empty()
+    
     st.sidebar.markdown("-------")
-    st.sidebar.header("Plot curves")
+    st.sidebar.header("📊 Plot curves")
     c1, c2 = st.sidebar.columns((1, 1))
     msg_status = st.empty()
     disable_NT_flow = False
@@ -194,25 +213,39 @@ if __name__ == "__main__":
             if string_data != st.session_state.old_data:
                 st.session_state.old_data = string_data
                 new_data = True
-                logging.info("Loaded new trajectories")
+                logging.info("Loading new trajectory data")
             else:
                 new_data = False
 
             if new_data:
-                logging.info("Load trajectories")
+                logging.info("Load trajectories ..")
                 data = Utilities.read_trajectory(trajectory_file)
+                
+                print("11")
                 fps = Utilities.get_fps(string_data)
+                if data.shape[1] < 10:
+                    speed = Utilities.compute_speed(data, fps, st.session_state.df)
+                    st.session_state.speed = np.copy(speed)
+
+                print("22")
                 unit = Utilities.get_unit(string_data)
+                print("33")
                 st.session_state.unit = unit
                 peds = np.unique(data[:, 0]).astype(int)
+                print("BB")
                 frames = np.unique(data[:, 1])
+                print("HH")
                 st.session_state.data = np.copy(data)
                 st.session_state.fps = fps
                 st.session_state.peds = np.copy(peds)
                 st.session_state.frames = np.copy(frames)
+                logging.info("Done loading trajectories")
                 with h:
-                    plots.show_trajectories_table(data)
-
+                    time_start = timeit.default_timer()
+                    plots.show_trajectories_table(data[0:10, 0:5])
+                    time_end = timeit.default_timer()
+                    print("Table speed: ", time_end-time_start)
+            
             else:
                 data = np.copy(st.session_state.data)
                 fps = st.session_state.fps
@@ -292,7 +325,7 @@ if __name__ == "__main__":
                 st.session_state.geometry_wall = deepcopy(geometry_wall)
                 logging.info(
                     f"GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geomaxY:.2f})"
-                )                
+                )
             else:
                 new_geometry = False
                 geominX = st.session_state.geominX
@@ -316,7 +349,7 @@ if __name__ == "__main__":
             )
             st.stop()
         
-        if unit == "cm":            
+        if unit == "cm":
             data[:, 2:] /= 100
             geominX /= 100
             geomaxX /= 100
@@ -385,9 +418,15 @@ if __name__ == "__main__":
             speed = data[:, 9]
             st.session_state.speed_index = 9
         else:
-            logging.info("speed by trajectory")
-            speed = Utilities.compute_speed(data, fps, df)
-            st.session_state.speed_index = -1
+            logging.info("speed by trajectory")            
+            if df != st.session_state.df:                
+                speed = Utilities.compute_speed(data, fps, df)
+                st.session_state.speed = np.copy(speed)
+                st.session_state.df = df
+            else:
+                speed = np.copy(st.session_state.speed)
+
+            st.session_state.speed_index = -1          
 
         if choose_trajectories:
             logging.info("plotting trajectories")
@@ -397,36 +436,31 @@ if __name__ == "__main__":
                 speed_agent = agent[:, 9]
                 angle_agent = agent[:, 7]
             else:
+                time_start = timeit.default_timer()                
                 speed_agent, angle_agent = Utilities.compute_agent_speed_and_angle(
                     agent, fps, df
                 )
+                time_end = timeit.default_timer()                
+                print("Time speed: ", time_end-time_start)            
 
             c1, c2 = st.columns((1, 1))
             with c1:
-                if choose_transitions:
-                    plots.plot_trajectories(
-                        data,
-                        plot_ped,
-                        speed_agent,
-                        geometry_wall,
-                        transitions,
-                        geominX,
-                        geomaxX,
-                        geominY,
-                        geomaxY,
-                    )
-                else:
-                    plots.plot_trajectories(
-                        data,
-                        plot_ped,
-                        speed_agent,
-                        geometry_wall,
-                        {},
-                        geominX,
-                        geomaxX,
-                        geominY,
-                        geomaxY,
-                    )
+                time_end = timeit.default_timer()
+                fig = plots.plot_trajectories(
+                    data,
+                    plot_ped,
+                    speed_agent,
+                    geometry_wall,
+                    transitions,
+                    geominX,
+                    geomaxX,
+                    geominY,
+                    geomaxY,
+                    choose_transitions,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                time_end = timeit.default_timer()
+                print("Run plot traj: ", time_end-time_start)
 
             with c2:
                 plots.plot_agent_xy(agent[:, 1], agent[:, 2], agent[:, 3], fps)
@@ -435,10 +469,13 @@ if __name__ == "__main__":
                 plots.plot_agent_angle(plot_ped, agent[:, 1], angle_agent, fps)
 
             with c2:
+                
                 plots.plot_agent_speed(
                     plot_ped, agent[:, 1], speed_agent, np.max(speed), fps
                 )
-
+                time_end = timeit.default_timer()
+                
+                
         # choose_dprofile =
         choose_vprofile = True  # todo: not sure is I want to keep this option
         if st.session_state.transitions:
@@ -449,25 +486,26 @@ if __name__ == "__main__":
         else:
             xm = 0.5 * (geominX + geomaxX)
             ym = 0.5 * (geominY + geomaxY)
-        
-        xpos = posx_pl.number_input('x-position of measurement area',
-                                       min_value=float(geominX),
-                                       max_value=float(geomaxX),
-                                       value=xm,
-                                       step=dx,
-                                       help="X-ccordinate of the center of the measurement square.")
-        ypos = posy_pl.number_input('y-position of measurement area',
-                                       min_value=float(geominY),
-                                       max_value=float(geomaxY),
-                                       value=ym,
-                                       step=dx,
-                                       help="Y-ccordinate of the center of the measurement square.")
-        lm = side_pl.number_input('side of measurement square',
-                                     min_value=0.5,
-                                     max_value=5.0,
-                                     value=1.0,
-                                     step=0.5,
-                                     help="Length of the side of the measurement square.")
+
+        if choose_timeseries:
+            xpos = posx_pl.number_input('x-position of measurement area',
+                                        min_value=float(geominX),
+                                        max_value=float(geomaxX),
+                                        value=xm,
+                                        step=dx,
+                                        help="X-ccordinate of the center of the measurement square.")
+            ypos = posy_pl.number_input('y-position of measurement area',
+                                        min_value=float(geominY),
+                                        max_value=float(geomaxY),
+                                        value=ym,
+                                        step=dx,
+                                        help="Y-ccordinate of the center of the measurement square.")
+            lm = side_pl.number_input('side of measurement square',
+                                      min_value=0.5,
+                                      max_value=5.0,
+                                      value=1.0,
+                                      step=0.5,
+                                      help="Length of the side of the measurement square.")
     
         if choose_dprofile or choose_vprofile:
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
@@ -489,28 +527,31 @@ if __name__ == "__main__":
                             speed,
                         )
                         # time serie
-                        density_time = []
-                        for frame in frames:
-                            x = data[data[:, 1] == frame][:, 2]
-                            y = data[data[:, 1] == frame][:, 3]
-                            agent = data[data[:, 0] == plot_ped]
-                            speed_agent = data[data[:, 1] == frame][:, st.session_state.speed_index]
-                            
-                            dtime = Utilities.calculate_density_average_weidmann(
-                                xpos - lm/2,
-                                xpos + lm/2,
-                                ypos - lm/2,
-                                ypos + lm/2,
-                                lm,
-                                1,
-                                x,
-                                y,
-                                speed_agent
-                            )
-                            density_time.append(dtime[0, 0])
+                        if choose_timeseries:
+                            density_time = []
+                            for frame in frames:
+                                x = data[data[:, 1] == frame][:, 2]
+                                y = data[data[:, 1] == frame][:, 3]
+                                agent = data[data[:, 0] == plot_ped]
+                                speed_agent = data[data[:, 1] == frame][:, st.session_state.speed_index]
+
+                                dtime = Utilities.calculate_density_average_weidmann(
+                                    xpos - lm/2,
+                                    xpos + lm/2,
+                                    ypos - lm/2,
+                                    ypos + lm/2,
+                                    lm,
+                                    1,
+                                    x,
+                                    y,
+                                    speed_agent
+                                )
+                                density_time.append(dtime[0, 0])
                     elif choose_d_method == "Gaussian":
+                        print("s density gauss", timeit.default_timer())
                         density_ret = Utilities.calculate_density_average_gauss(
                             geominX,
+                            
                             geomaxX,
                             geominY,
                             geomaxY,
@@ -520,24 +561,29 @@ if __name__ == "__main__":
                             data[:, 2],
                             data[:, 3],
                         )
-                        # time serie
-                        density_time = []
-                        for frame in frames:
-                            x = data[data[:, 1] == frame][:, 2]
-                            y = data[data[:, 1] == frame][:, 3]
-                            dtime = Utilities.calculate_density_average_gauss(
-                                xpos - lm/2,
-                                xpos + lm/2,
-                                ypos - lm/2,
-                                ypos + lm/2,
-                                lm,
-                                1,
-                                width,
-                                x,
-                                y,
-                            )
-                            density_time.append(dtime[0, 0])
+                        if choose_timeseries:
+                            print("e density gauss", timeit.default_timer())
+                            # time serie
+                            density_time = []
+                            print("s density gauss serie", timeit.default_timer())
+                            for frame in frames:
+                                x = data[data[:, 1] == frame][:, 2]
+                                y = data[data[:, 1] == frame][:, 3]
+                                dtime = Utilities.calculate_density_average_gauss(
+                                    xpos - lm/2,
+                                    xpos + lm/2,
+                                    ypos - lm/2,
+                                    ypos + lm/2,
+                                    lm,
+                                    1,
+                                    width,
+                                    x,
+                                    y,
+                                )
+                                density_time.append(dtime[0, 0])
+                            print("e density gauss serie", timeit.default_timer())    
                     elif choose_d_method == "Classical":
+                        print("s density classical", timeit.default_timer())
                         density_ret = Utilities.calculate_density_average_classic(
                             geominX,
                             geomaxX,
@@ -548,26 +594,35 @@ if __name__ == "__main__":
                             data[:, 2],
                             data[:, 3],
                         )
+                        print("e density classical", timeit.default_timer())
                         # time serie
                         density_time = []
-                        for frame in frames:
-                            x = data[data[:, 1] == frame][:, 2]
-                            y = data[data[:, 1] == frame][:, 3]
-                            
-                            dtime = Utilities.calculate_density_frame_classic(
-                                xpos - lm/2,
-                                xpos + lm/2,
-                                ypos - lm/2,
-                                ypos + lm/2,
-                                lm,
-                                x,
-                                y,
-                            )
-                            density_time.append(dtime[0, 0])
+                        if choose_timeseries:
+                            print("s density classical serie", timeit.default_timer())
+                            for frame in frames:
+                                x = data[data[:, 1] == frame][:, 2]
+                                y = data[data[:, 1] == frame][:, 3]
 
+                                dtime = Utilities.calculate_density_frame_classic(
+                                    xpos - lm/2,
+                                    xpos + lm/2,
+                                    ypos - lm/2,
+                                    ypos + lm/2,
+                                    lm,
+                                    x,
+                                    y,
+                                )
+                                density_time.append(dtime[0, 0])
+                            print("e density classical serie", timeit.default_timer())
                     st.session_state.density = density_ret
                     msg += f"Density in range [{np.min(density_ret):.2f} : {np.max(density_ret):.2f}] [1/m^2]. "
                     with c1:
+                        time_start = timeit.default_timer()
+                        if not choose_timeseries:
+                            xpos = None
+                            ypos = None
+                            lm = None
+                            
                         plots.plot_profile_and_geometry(
                             geominX,
                             geomaxX,
@@ -585,16 +640,25 @@ if __name__ == "__main__":
                             vmin=None,
                             vmax=None,
                         )
-                        plots.plot_timeserie(frames, density_time, fps, "Density / m / m")
-
+                        time_end = timeit.default_timer()
+                        print("Time Profile density: ", time_end-time_start)
+                        if choose_timeseries:
+                            time_start = timeit.default_timer()
+                            plots.plot_timeserie(frames, density_time, fps, "Density / m / m")
+                            time_end = timeit.default_timer()
+                            print("Time time density: ", time_end-time_start)
+            
                     if choose_vprofile:
+                        print("s speed", timeit.default_timer())
                         if choose_d_method == "Gaussian":
                             speed_ret = Utilities.weidmann(
                                 st.session_state.density
                             )
-                            speed_time = Utilities.weidmann(
-                                np.array(density_time)
-                            )
+                            if choose_timeseries:
+                                speed_time = Utilities.weidmann(
+                                    np.array(density_time)
+                                )
+                            print("e speed gauss", timeit.default_timer())
                         else:
                             speed_ret = Utilities.calculate_speed_average(
                                 geominX,
@@ -607,26 +671,34 @@ if __name__ == "__main__":
                                 data[:, 3],
                                 speed,
                             )
-                            speed_time = []
-                            for frame in frames:
-                                x = data[data[:, 1] == frame][:, 2]
-                                y = data[data[:, 1] == frame][:, 3]
-                                agent = data[data[:, 0] == plot_ped]
-                                speed_agent = data[data[:, 1] == frame][:, st.session_state.speed_index]
-                                stime = Utilities.calculate_speed_average(
-                                    xpos - lm/2,
-                                    xpos + lm/2,
-                                    ypos - lm/2,
-                                    ypos + lm/2,
-                                    lm,
-                                    1,
-                                    x,
-                                    y,
-                                    speed_agent
-                                )
+                            print("e speed average", timeit.default_timer())
+                            if choose_timeseries:
+                                speed_time = []
+                                print("s speed time", timeit.default_timer())
+                                for frame in frames:
+                                    x = data[data[:, 1] == frame][:, 2]
+                                    y = data[data[:, 1] == frame][:, 3]
+                                    agent = data[data[:, 0] == plot_ped]
+                                    speed_agent = data[data[:, 1] == frame][:, st.session_state.speed_index]
+                                    stime = Utilities.calculate_speed_average(
+                                        xpos - lm/2,
+                                        xpos + lm/2,
+                                        ypos - lm/2,
+                                        ypos + lm/2,
+                                        lm,
+                                        1,
+                                        x,
+                                        y,
+                                        speed_agent
+                                    )
                                 speed_time.append(stime[0, 0])
-                            
+                                print("e speed time", timeit.default_timer())
                         with c2:
+                            time_start = timeit.default_timer()
+                            if not choose_timeseries:
+                                xpos = None
+                                ypos = None
+                                lm = None
                             plots.plot_profile_and_geometry(
                                 geominX,
                                 geomaxX,
@@ -644,8 +716,15 @@ if __name__ == "__main__":
                                 vmin=None,
                                 vmax=None,
                             )
-                            plots.plot_timeserie(frames, speed_time, fps, "Speed / m/s")
-
+                            time_end = timeit.default_timer()
+                            if choose_timeseries:
+                                print("Time Profile speed: ", time_end-time_start)
+                            
+                                time_start = timeit.default_timer()                                                    
+                                plots.plot_timeserie(frames, speed_time, fps, "Speed / m/s")
+                                time_end = timeit.default_timer()
+                                print("Time time speed: ", time_end-time_start)
+                        
                         msg += f"Speed profile in range [{np.min(speed_ret):.2f} : {np.max(speed_ret):.2f}] [m/s]. "
                         msg += f"Speed trajectory in range [{np.min(speed):.2f} : {np.max(speed):.2f}] [m/s]. "
 
@@ -733,3 +812,6 @@ if __name__ == "__main__":
                         download = st.sidebar.download_button(
                             "Download statistics", f, file_name=file_download
                         )
+
+    time_main_end = timeit.default_timer()
+    print("Run Time: ", time_main_end-time_main_start)            

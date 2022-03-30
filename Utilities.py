@@ -106,10 +106,11 @@ def inv_weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
 
 # todo: update with more rules for more files
 def get_fps(traj_file):
-    fps = traj_file.split("#framerate:")[-1].split("\n")[0]
+    fps = traj_file.split("framerate:")[-1].split("\n")[0]
     try:
         fps = int(float(fps))
     except ValueError:
+        st.error(f"{fps} in header can not be converted to int")
         logging.error(f"{fps} in header can not be converted to int")
         st.stop()
 
@@ -121,7 +122,7 @@ def get_unit(traj_file):
     if "#description: jpscore" in traj_file:
         unit = "m"
     else:
-        unit_list = traj_file.split("#unit:")
+        unit_list = traj_file.split("unit:")
         if len(unit_list) > 1:
             unit = unit_list[-1].split("\n")[0]
 

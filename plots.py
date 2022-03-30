@@ -212,16 +212,16 @@ def plot_agent_speed(pid, frames, speed_agent, max_speed, fps):
 
 # marker=dict(size=5, color=np.where(speed_agent >= threshold, 'blue', 'red')),
 
-
-def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, max_x, min_y, max_y):
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, max_x, min_y, max_y, choose_transitions):
+    print("plot")
     fig = make_subplots(rows=1, cols=1)
     peds = np.unique(data[:, 0])
     s = data[data[:, 0] == special_ped]
     sc = 1-speed/np.max(speed)
     for ped in peds:
-        d = data[data[:, 0] == ped]
-        #c = d[:, -1]
-        trace = go.Scatter(
+        d = data[data[:, 0] == ped]        
+        trace_traj = go.Scatter(
             x=d[:, 2],
             y=d[:, 3],
             mode="lines",
@@ -229,9 +229,9 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
             name=f"Agent: {ped:0.0f}",
             line=dict(color="gray", width=0.3),
         )
-        fig.append_trace(trace, row=1, col=1)
+        fig.append_trace(trace_traj, row=1, col=1)
 
-    trace = go.Scatter(
+    trace_agent = go.Scatter(
         x=s[:, 2],
         y=s[:, 3],
         mode="markers",
@@ -240,45 +240,51 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
         marker=dict(size=5, color=sc, colorscale='Jet'),
         line=dict(color="firebrick", width=4),
     )
-    fig.append_trace(trace, row=1, col=1)
-
+    
+    fig.append_trace(trace_agent, row=1, col=1)
+    # l = int(len(s[:, 2])/2)
+    # fig.add_annotation(x=s[l, 2], y=s[l, 3],
+    #                    text=f"<b>Agent: {special_ped:0.0f}</b>",
+    #                    showarrow=True,
+    #                    arrowhead=1)
     for gw in geo_walls.keys():
-        trace = go.Scatter(
+        trace_walls = go.Scatter(
             x=geo_walls[gw][:, 0],
             y=geo_walls[gw][:, 1],
             showlegend=False,
             mode="lines",
             line=dict(color="black", width=2),
         )
-        fig.append_trace(trace, row=1, col=1)
+        fig.append_trace(trace_walls, row=1, col=1)
 
-    for i, t in transitions.items():
-        xm = np.sum(t[:, 0]) / 2
-        ym = np.sum(t[:, 1]) / 2
-        length = np.sqrt(np.diff(t[:, 0]) ** 2 + np.diff(t[:, 1]) ** 2)
-        offset = 0.1 * length[0]
-        logging.info(f"offset transition {offset}")
-        trace = go.Scatter(
-            x=t[:, 0],
-            y=t[:, 1],
-            showlegend=False,
-            name=f"Transition: {i}",
-            mode="lines+markers",
-            line=dict(color="red", width=3),
-            marker=dict(color="black", size=5),
-        )
-        trace_text = go.Scatter(
-            x=[xm + offset],
-            y=[ym + offset],
-            text=f"{i}",
-            textposition="middle center",
-            showlegend=False,
-            mode="markers+text",
-            marker=dict(color="red", size=0.1),
-            textfont=dict(color="red", size=18),
-        )
-        fig.append_trace(trace, row=1, col=1)
-        fig.append_trace(trace_text, row=1, col=1)
+    if choose_transitions:
+        for i, t in transitions.items():
+            xm = np.sum(t[:, 0]) / 2
+            ym = np.sum(t[:, 1]) / 2
+            length = np.sqrt(np.diff(t[:, 0]) ** 2 + np.diff(t[:, 1]) ** 2)
+            offset = 0.1 * length[0]
+            logging.info(f"offset transition {offset}")
+            trace_transitions = go.Scatter(
+                x=t[:, 0],
+                y=t[:, 1],
+                showlegend=False,
+                name=f"Transition: {i}",
+                mode="lines+markers",
+                line=dict(color="red", width=3),
+                marker=dict(color="black", size=5),
+            )
+            trace_text = go.Scatter(
+                x=[xm + offset],
+                y=[ym + offset],
+                text=f"{i}",
+                textposition="middle center",
+                showlegend=False,
+                mode="markers+text",
+                marker=dict(color="red", size=0.1),
+                textfont=dict(color="red", size=18),
+            )
+            fig.append_trace(trace_transitions, row=1, col=1)
+            fig.append_trace(trace_text, row=1, col=1)
 
     eps = 1
     fig.update_yaxes(
@@ -287,7 +293,7 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
     fig.update_xaxes(
         range=[min_x - eps, max_x + eps],
     )
-    st.plotly_chart(fig, use_container_width=True)
+    return fig
 
 
 def plot_geometry(ax, _geometry_wall):
@@ -333,7 +339,9 @@ def plot_profile_and_geometry(
         extent=[geominX, geomaxX, geominY, geomaxY],
     )
     plot_geometry(ax, geometry_wall)
-    plot_square(ax, xpos, ypos, lm)
+    if xpos is not None:
+        plot_square(ax, xpos, ypos, lm)
+
     ax.set_title(title)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="3.5%", pad=0.3)
