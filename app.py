@@ -447,7 +447,7 @@ if __name__ == "__main__":
 
             c1, c2 = st.columns((1, 1))
             with c1:
-                time_end = timeit.default_timer()
+                time_start = timeit.default_timer()
                 fig = plots.plot_trajectories(
                     data,
                     plot_ped,
