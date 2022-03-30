@@ -693,7 +693,7 @@ if __name__ == "__main__":
                                         y,
                                         speed_agent
                                     )
-                                speed_time.append(stime[0, 0])
+                                    speed_time.append(stime[0, 0])
                                 print("e speed time", timeit.default_timer())
                         with c2:
                             time_start = timeit.default_timer()
@@ -701,6 +701,7 @@ if __name__ == "__main__":
                                 xpos = None
                                 ypos = None
                                 lm = None
+
                             plots.plot_profile_and_geometry(
                                 geominX,
                                 geomaxX,
@@ -719,13 +720,11 @@ if __name__ == "__main__":
                                 vmax=None,
                             )
                             time_end = timeit.default_timer()
-                            if choose_timeseries:
-                                print("Time Profile speed: ", time_end-time_start)
-                            
-                                time_start = timeit.default_timer()                                                    
+                            if choose_timeseries:                
+                                time_start = timeit.default_timer()
                                 plots.plot_timeserie(frames, speed_time, fps, "Speed / m/s")
                                 time_end = timeit.default_timer()
-                                print("Time time speed: ", time_end-time_start)
+                                print("Time Profile speed: ", time_end-time_start)
                         
                         msg += f"Speed profile in range [{np.min(speed_ret):.2f} : {np.max(speed_ret):.2f}] [m/s]. "
                         msg += f"Speed trajectory in range [{np.min(speed):.2f} : {np.max(speed):.2f}] [m/s]. "
