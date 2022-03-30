@@ -117,17 +117,26 @@ def get_fps(traj_file):
     return fps
 
 
-# todo: update with more rules for more files
+def detect_jpscore(traj_file):
+    return "#description: jpscore" in traj_file
+
+
 def get_unit(traj_file):
+    unit = "NOTHING"
     if "#description: jpscore" in traj_file:
         unit = "m"
     else:
+        # petrack
         unit_list = traj_file.split("unit:")
         if len(unit_list) > 1:
             unit = unit_list[-1].split("\n")[0]
 
-        else:
-            unit = "NOTHING"
+        if "x/" in traj_file:
+            unit = traj_file.split("x/")[-1].split()[0]
+
+        if "<x>" in traj_file:
+            # <number> <frame> <x> [in m] <y> [in m] <z> [in m]
+            unit = traj_file.split("<x>")[-1].split()[1].strip("]")
 
     unit = unit.strip()
     logging.info(f"Unit detected: <{unit}>")

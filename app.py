@@ -147,20 +147,8 @@ if __name__ == "__main__":
 
     st.sidebar.markdown("-------")
     st.sidebar.header("🔵 Speed")
-    how_speed = st.sidebar.radio("Source:", ["from simulation", "from trajectory"])
-    st.write(
-        "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
-        unsafe_allow_html=True,
-    )
-    if how_speed == "from trajectory":
-        df = st.sidebar.slider(
-            "df",
-            2,
-            50,
-            10,
-            help="how many frames to consider for calculating the speed",
-        )
-
+    how_speed_pl = st.sidebar.empty()
+    df_pl = st.sidebar.empty()
     st.sidebar.markdown("-------")
     st.sidebar.header("🔴 Profiles")
     c1, c2 = st.sidebar.columns((1, 1))
@@ -207,7 +195,7 @@ if __name__ == "__main__":
         logging.info(f">> {geometry_file.name}")
         try:
 
-            h = st.expander("Trajectories (first 4 columns)", expanded=True)
+            h = st.expander("Head of Trajectories (first 4 columns)", expanded=True)
             stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
             string_data = stringio.read()
             if string_data != st.session_state.old_data:
@@ -217,24 +205,38 @@ if __name__ == "__main__":
             else:
                 new_data = False
 
+            if Utilities.detect_jpscore(string_data):
+                how_speed = how_speed_pl.radio("Source:", ["from simulation", "from trajectory"])
+                st.write(
+                    "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                how_speed = how_speed_pl.radio("Source:", ["from trajectory", "from simulation"])
+                st.write(
+                "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+                    unsafe_allow_html=True,
+                )                
+                df = df_pl.slider(
+                    "df",
+                    2,
+                    50,
+                    10,
+                    help="how many frames to consider for calculating the speed",
+                )
+
             if new_data:
                 logging.info("Load trajectories ..")
-                data = Utilities.read_trajectory(trajectory_file)
-                
-                print("11")
+                data = Utilities.read_trajectory(trajectory_file)                   
                 fps = Utilities.get_fps(string_data)
                 if data.shape[1] < 10:
                     speed = Utilities.compute_speed(data, fps, st.session_state.df)
                     st.session_state.speed = np.copy(speed)
-
-                print("22")
+                
                 unit = Utilities.get_unit(string_data)
-                print("33")
                 st.session_state.unit = unit
                 peds = np.unique(data[:, 0]).astype(int)
-                print("BB")
                 frames = np.unique(data[:, 1])
-                print("HH")
                 st.session_state.data = np.copy(data)
                 st.session_state.fps = fps
                 st.session_state.peds = np.copy(peds)
