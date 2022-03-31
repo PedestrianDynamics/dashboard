@@ -7,6 +7,8 @@ from shapely.geometry import LineString, Point
 from collections import defaultdict
 import contextlib
 import time
+import pandas as pd
+
 
 @contextlib.contextmanager
 def profile(name):
@@ -736,9 +738,11 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
                 if trans_used[i]:
                     tstats[i].sort()
                     cum_num[i] = np.cumsum(np.ones(len(tstats[i])))
-                    flow = cum_num[i][-1] / tstats[i][-1] * fps
+                    flow = (cum_num[i][-1] - 1) / (tstats[i][-1]-tstats[i][0]) * fps
+                    with profile("rolling flow: "):
+                        mean_flow, std_flow = rolling_flow(tstats[i], fps, windows=100)
                     max_len = max(max_len, cum_num[i].size)
-                    msg += f"Transition {i}: length {line.length:.2f}, flow: {flow:.2f} [1/s], specific flow: {flow/line.length:.2f} [1/s/m] \n \n"
+                    msg += f"Transition {i}: length {line.length:.2f}, flow: {flow:.2f} [1/s], rolling_flow: {mean_flow:.2} +- {std_flow:.3f} [1/s],  specific flow: {flow/line.length:.2f} [1/s/m] \n \n"
                 else:
                     msg += f"Transition {i}: length {line.length:.2f}, flow: 0 [1/s] \n \n"
 
@@ -746,3 +750,28 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
         st.info(msg)
 
     return tstats, cum_num, trans_used, max_len
+
+
+# empirical CDF P(x<=X)
+def CDF(x, times):
+    return float(len(times[times <= x]))/len(times)
+
+
+def survival(times):
+    diff = np.diff(times)
+    diff = np.sort(diff)
+    vF = np.vectorize(CDF, excluded=['times'])
+    y_diff = 1-vF(x=diff, times=diff)
+    return y_diff, diff
+
+
+def rolling_flow(times, fps, windows=200):
+    times = np.sort(times)
+    serie = pd.Series(times)
+    minp = 100;  #windows = 200 #int(len(times)/10);
+    minp = min(minp, windows)
+    flow = fps*(windows-1)/(serie.rolling(windows, min_periods=minp).max()  - serie.rolling(windows, min_periods=minp).min())
+    flow = flow[~np.isnan(flow)] # remove NaN
+    wmean = flow.rolling(windows, min_periods=minp).mean()
+    wstd = flow.rolling(windows, min_periods=minp).std()
+    return np.mean(wmean), np.mean(wstd)

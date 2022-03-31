@@ -6,6 +6,7 @@ import streamlit as st
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
 import matplotlib
+from Utilities import survival
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def show_trajectories_table(data):
@@ -24,7 +25,7 @@ def show_trajectories_table(data):
               ])
     return fig
 
-@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})    
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_NT(Frames, Nums, fps):
     logging.info("plot NT-curve")
     fig = make_subplots(
@@ -372,3 +373,37 @@ def plot_square(ax, xpos, ypos, lm):
          ypos - lm/2,
          ypos - lm/2,]
     ax.plot(x, y, color="gray", lw=2)
+
+
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_survival(Frames, fps):
+    logging.info("plot survival function")
+    fig = make_subplots(
+        rows=1, cols=1, subplot_titles=["Survival function of time gaps"], x_title="Delta / s", y_title=r"P(t>Delta)"
+    )
+    for i, frames in Frames.items():
+        if not frames:
+            continue
+
+        times = np.array(frames)/fps
+        y, dif = survival(times)
+        trace = go.Scatter(
+            x=dif,
+            y=y,
+            mode="lines",
+            showlegend=True,
+            name=f"ID: {i}",
+            line=dict(width=3),
+        )
+        fig.append_trace(trace, row=1, col=1)
+
+    fig.update_yaxes(
+        type="log",
+        # range=[-1, 0]
+    )
+    fig.update_xaxes(
+        type="log",
+        #range=[-1, 1]
+    )
+    fig.update_layout(hovermode="x")
+    return fig

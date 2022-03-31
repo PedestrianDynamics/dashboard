@@ -407,6 +407,11 @@ def main():
                 help="Plot number of pedestrians inside geometry over time",
                 key="EvacT",
             )
+            choose_survival = c2.checkbox(
+                "Survival",
+                help="Plot survival function (clogging)",
+                key="Survival",
+            )
 
         selected_transitions = NT_form.multiselect(
             "Select transition",
@@ -571,6 +576,11 @@ def main():
 
             if lm != st.session_state.lm:
                 st.session_state.lm = lm
+
+        else:
+            st.session_state.xpos = None
+            st.session_state.ypos = None
+            st.session_state.lm = None
 
         if choose_dprofile or choose_vprofile:
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
@@ -753,7 +763,7 @@ def main():
                                 st.session_state.lm,
                                 speed_ret,
                                 interpolation,
-                                cmap=cm.jet.reversed(),
+                                cmap=cm.jet, #.reversed(),
                                 label=r"$v\; / m/s$",
                                 title="Speed",
                                 vmin=None,
@@ -806,9 +816,10 @@ def main():
                 fig = plots.plot_peds_inside(frames, peds_inside, fps)
                 st.plotly_chart(fig, use_container_width=True)
 
+        if make_plots and choose_survival:
             with c2:
-                # plots.plot_speed(tstats, fps)
-                pass
+                fig = plots.plot_survival(tstats, fps)
+                st.plotly_chart(fig, use_container_width=True)
 
         # -- download stats
         if make_plots:
