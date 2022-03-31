@@ -103,7 +103,7 @@ def plot_peds_inside(frames, peds_inside, fps):
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_timeserie(frames, t, fps, title):
+def plot_timeserie(frames, t, fps, title, miny, maxy):
     logging.info("plot timeseries")
     fig = make_subplots(
         rows=1, cols=1, x_title="Time / s", y_title=title
@@ -117,6 +117,9 @@ def plot_timeserie(frames, t, fps, title):
         line=dict(width=3, color='royalblue'),
     )
     fig.append_trace(trace, row=1, col=1)
+    fig.update_yaxes(
+        range=[miny-0.1, maxy+2],
+    )
     fig.update_layout(hovermode="x")
     return fig
 
@@ -303,7 +306,6 @@ def plot_geometry(ax, _geometry_wall):
         ax.plot(_geometry_wall[gw][:, 0], _geometry_wall[gw][:, 1], color="white", lw=2)
 
 
-matplotlib.figure.Figure
 @st.cache(suppress_st_warning=True, hash_funcs={matplotlib.figure.Figure: lambda _: None})
 def plot_profile_and_geometry(
     geominX,
@@ -360,7 +362,7 @@ def plot_square(ax, xpos, ypos, lm):
          xpos - lm/2,
          xpos + lm/2,
          xpos + lm/2,
-         xpos - lm/2,]
+         xpos - lm/2, ]
     y = [ypos - lm/2,
          ypos + lm/2,
          ypos + lm/2,
