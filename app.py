@@ -140,7 +140,8 @@ def main():
             "Transitions", help="Show transittions", key="Tran"
         )
 
-    pl = st.sidebar.empty()
+    pl_select_special_agent = st.sidebar.empty()
+    pl_sample_trajectories = st.sidebar.empty()
 
     st.sidebar.markdown("-------")
     st.sidebar.header("🔵 Speed")
@@ -290,7 +291,18 @@ def main():
             else:
                 special_agent = peds[10]
 
-            plot_ped = pl.select_slider(
+            sample_trajectories = pl_sample_trajectories.number_input(
+                "sample",
+                min_value=1,
+                max_value=int(np.max(frames * 0.2)),
+                value=10,
+                step=5,
+                help="Sample rate of ploting trajectories and time series \
+                (the lower the slower)",
+                key="sample_traj"
+            )
+
+            plot_ped = pl_select_special_agent.select_slider(
                 "Highlight pedestrian", options=peds, value=(special_agent)
             )
 
@@ -474,20 +486,21 @@ def main():
                         geominY,
                         geomaxY,
                         choose_transitions,
+                        sample_trajectories,
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
             with c2:
                 with Utilities.profile("plot_agent_xy"):
                     fig = plots.plot_agent_xy(
-                        agent[:, 1], agent[:, 2], agent[:, 3], fps
+                        agent[::sample_trajectories, 1], agent[::sample_trajectories, 2], agent[:, 3], fps,
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
             with c1:
                 with Utilities.profile("plot_agent_angle"):
                     fig = plots.plot_agent_angle(
-                        plot_ped, agent[:, 1], angle_agent, fps
+                        plot_ped, agent[::sample_trajectories, 1], angle_agent[::sample_trajectories], fps,
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
@@ -495,7 +508,8 @@ def main():
                 with Utilities.profile("plot_agent_speed"):
 
                     fig = plots.plot_agent_speed(
-                        plot_ped, agent[:, 1], speed_agent, np.max(data[:, -1]), fps
+                        plot_ped, agent[::sample_trajectories, 1], speed_agent[::sample_trajectories], np.max(data[:, -1]),
+                        fps,
                     )
                     st.plotly_chart(fig, use_container_width=True)
 

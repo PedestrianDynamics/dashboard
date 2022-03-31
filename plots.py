@@ -177,7 +177,8 @@ def plot_agent_angle(pid, frames, angles, fps):
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_agent_speed(pid, frames, speed_agent, max_speed, fps):    
+def plot_agent_speed(pid, frames, speed_agent, max_speed,
+                     fps):
     fig = make_subplots(
                     rows=1, cols=1, x_title="Time / s", y_title="Speed / m/s"
                 )
@@ -224,7 +225,10 @@ def plot_agent_speed(pid, frames, speed_agent, max_speed, fps):
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, max_x, min_y, max_y, choose_transitions):
+def plot_trajectories(data, special_ped, speed, geo_walls, transitions,
+                      min_x, max_x, min_y, max_y,
+                      choose_transitions,
+                      sample_trajectories,):
     logging.info("plot trajectories")
     fig = make_subplots(rows=1, cols=1)
     peds = np.unique(data[:, 0])
@@ -233,8 +237,8 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
     for ped in peds:
         d = data[data[:, 0] == ped]
         trace_traj = go.Scatter(
-            x=d[:, 2],
-            y=d[:, 3],
+            x=d[::sample_trajectories, 2],
+            y=d[::sample_trajectories, 3],
             mode="lines",
             showlegend=False,
             name=f"Agent: {ped:0.0f}",
@@ -243,8 +247,8 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions, min_x, m
         fig.append_trace(trace_traj, row=1, col=1)
 
     trace_agent = go.Scatter(
-        x=s[:, 2],
-        y=s[:, 3],
+        x=s[::sample_trajectories, 2],
+        y=s[::sample_trajectories, 3],
         mode="markers",
         showlegend=False,
         name=f"Agent: {special_ped:0.0f}",
