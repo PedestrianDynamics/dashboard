@@ -13,6 +13,7 @@ from shapely.geometry import LineString
 from copy import deepcopy
 import plots
 import Utilities
+import doc
 
 path = Path(__file__)
 ROOT_DIR = path.parent.absolute()
@@ -108,7 +109,7 @@ def main():
     st.header(":information_source: Dashboard")
     info = st.expander("click to expand")
     with info:
-        Utilities.docs()
+        doc.docs()
 
     set_state_variables()
     st.sidebar.image("jupedsim.png", use_column_width=True)
@@ -582,7 +583,11 @@ def main():
             st.session_state.ypos = None
             st.session_state.lm = None
 
-        if choose_dprofile or choose_vprofile:
+        info = st.expander("Documentation: Profiles (click to expand)")
+        with info:
+            doc.doc_profile()
+
+        if choose_dprofile:
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
             msg = ""
 
@@ -783,6 +788,10 @@ def main():
                     st.info(msg)
 
         # todo
+        info = st.expander("Documentation: Plot curves (click to expand)")
+        with info:
+            doc.doc_plots()
+   
         choose_speed = True
         plot_options = choose_NT or choose_flow or choose_speed
         if make_plots and plot_options:
@@ -869,6 +878,11 @@ def main():
                             "Download statistics", f, file_name=file_download
                         )
 
+
+        info = st.expander("Documentation: Jam (click to expand)")
+        with info:
+            doc.doc_jam()
+       
 
 if __name__ == "__main__":
     with Utilities.profile("Main"):
