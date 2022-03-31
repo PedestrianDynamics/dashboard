@@ -215,6 +215,7 @@ def main():
                     "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
                     unsafe_allow_html=True,
                 )
+                df = 10
             else:
                 how_speed = how_speed_pl.radio(
                     "Source:", ["from trajectory", "from simulation"]
@@ -274,7 +275,7 @@ def main():
             st.markdown("### :bar_chart: Statistics")
             pl_msg = st.empty()
             frames = np.unique(data[:, 1])
-            peds = np.unique(data[:, 0])
+            peds = np.unique(data[:, 0]).astype(int)
             nagents = len(peds)
             msg = f"""
             Unit: {unit}\n
@@ -285,7 +286,7 @@ def main():
             """
             pl_msg.info(msg)
             if nagents <= 10:
-                spedial_agent = 5
+                special_agent = 5
             else:
                 special_agent = peds[10]
 
@@ -685,7 +686,7 @@ def main():
                             fig = plots.plot_timeserie(
                                 frames, density_time, fps, "Density / m / m",
                                 np.min(density_ret),
-                                np.max(density_ret),
+                                np.max(density_ret)+2,
                             )
                             st.plotly_chart(fig, use_container_width=True)
 

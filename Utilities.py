@@ -596,7 +596,7 @@ def calculate_density_frame_classic(
         Y,
         None,
         "count",
-        bins=[xbins, ybins],  expand_binnumbers=True,
+        bins=[xbins, ybins],
     )
     return np.nan_to_num(ret.statistic.T) / area
 

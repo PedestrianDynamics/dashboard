@@ -118,7 +118,7 @@ def plot_timeserie(frames, t, fps, title, miny, maxy):
     )
     fig.append_trace(trace, row=1, col=1)
     fig.update_yaxes(
-        range=[miny-0.1, maxy+2],
+        range=[miny-0.1, maxy+0.1],
     )
     fig.update_layout(hovermode="x")
     return fig
@@ -335,7 +335,6 @@ def plot_profile_and_geometry(
         vmax = np.max(data)
 
     fig, ax = plt.subplots(1, 1)
-    print(type(fig))
     im = ax.imshow(
         data,
         cmap=cmap,
