@@ -651,15 +651,18 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
                     ped_data = data[data[:, 0] == ped]
                     frame = passing_frame(ped_data, line, fps, len_line)
                     if frame >= 0:
-                        tstats[i].append(frame)
+                        tstats[i].append([ped, frame])
                         trans_used[i] = True
 
                 if trans_used[i]:
-                    tstats[i].sort()
-                    cum_num[i] = np.cumsum(np.ones(len(tstats[i])))
-                    flow = (cum_num[i][-1] - 1) / (tstats[i][-1]-tstats[i][0]) * fps
+                    tstats[i] = np.array(tstats[i])
+                    tstats[i] = tstats[i][tstats[i][:, 1].argsort()] # sort by frame
+                    arrivals = tstats[i][:, 1]
+                    cum_num[i] = np.cumsum(np.ones(len(arrivals)))
+                    flow = (cum_num[i][-1] - 1) / (arrivals[-1]-arrivals[0]) * fps
                     with profile("rolling flow: "):
-                        mean_flow, std_flow = rolling_flow(tstats[i], fps, windows=100)
+                        mean_flow, std_flow = rolling_flow(arrivals, fps, windows=100)
+                        print(type(mean_flow), type(std_flow))
                     max_len = max(max_len, cum_num[i].size)
                     msg += f"Transition {i}: length {line.length:.2f}, flow: {flow:.2f} [1/s], rolling_flow: {mean_flow:.2} +- {std_flow:.3f} [1/s],  specific flow: {flow/line.length:.2f} [1/s/m] \n \n"
                 else:
@@ -694,3 +697,13 @@ def rolling_flow(times, fps, windows=200):
     wmean = flow.rolling(windows, min_periods=minp).mean()
     wstd = flow.rolling(windows, min_periods=minp).std()
     return np.mean(wmean), np.mean(wstd)
+
+
+def peds_inside(data):
+    p_inside = []
+    frames = np.unique(data[:, 1])
+    for frame in frames:
+        d = data[data[:, 1] == frame][:, 0]
+        p_inside.append(len(d))
+
+    return p_inside

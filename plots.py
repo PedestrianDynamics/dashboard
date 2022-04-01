@@ -25,15 +25,17 @@ def show_trajectories_table(data):
               ])
     return fig
 
+
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_NT(Frames, Nums, fps):
     logging.info("plot NT-curve")
     fig = make_subplots(
         rows=1, cols=1, subplot_titles=["<b>N-T></b>"], x_title="Time / s", y_title="Number of pedestrians"
     )
-    for i, frames in Frames.items():
+    for i, _frames in Frames.items():
         nums = Nums[i]
-        if not frames:
+        frames = _frames[:, 1]
+        if not frames.size:
             continue
 
         # extend the lines to 0
@@ -62,9 +64,10 @@ def plot_flow(Frames, Nums, fps):
     fig = make_subplots(
         rows=1, cols=1, subplot_titles=["<b>Flow</b>"], x_title="Time / s", y_title="J / 1/s"
     )
-    for i, frames in Frames.items():
+    for i, _frames in Frames.items():
         nums = Nums[i]
-        if not frames:
+        frames = _frames[:, 1]
+        if not frames.size:
             continue
 
         times = np.array(frames) / fps
@@ -83,12 +86,41 @@ def plot_flow(Frames, Nums, fps):
     #st.plotly_chart(fig, use_container_width=True)
     return fig
 
+
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_time_distance(Frames, fps):
+    logging.info("plot flow-curve")
+    fig = make_subplots(
+        rows=1, cols=1, subplot_titles=["<b>Flow</b>"], x_title="Time / s", y_title="J / 1/s"
+    )
+    for i, _frames in Frames.items():
+        frames = _frames[:, 1]
+        peds = _frames[:, 0]
+        if not frames.size:
+            continue
+
+        times = np.array(frames) / fps
+        trace = go.Scatter(
+            x=np.times[0],
+            y=[0, 0],
+            mode="lines",
+            showlegend=True,
+            name=f"ID: {i}",
+            line=dict(width=3),
+        )
+        fig.append_trace(trace, row=1, col=1)
+
+    fig.update_layout(hovermode="x")
+    #st.plotly_chart(fig, use_container_width=True)
+    return fig
+
+
     
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_peds_inside(frames, peds_inside, fps):
     logging.info("plot peds inside")
     fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["<b>Discharge curve<>/b"], x_title="Time / s", y_title="Number of Pedestrians inside"
+        rows=1, cols=1, subplot_titles=["<b>Discharge curve</b>"], x_title="Time / s", y_title="Number of Pedestrians inside"
     )
     times = frames / fps
     trace = go.Scatter(
@@ -386,8 +418,9 @@ def plot_survival(Frames, fps):
     fig = make_subplots(
         rows=1, cols=1, subplot_titles=["<b>Survival function of time gaps</b>"], x_title="Delta / s", y_title=r"P(t>Delta)"
     )
-    for i, frames in Frames.items():
-        if not frames:
+    for i, _frames in Frames.items():
+        frames = _frames[:, 1]
+        if not frames.size:
             continue
 
         times = np.array(frames)/fps

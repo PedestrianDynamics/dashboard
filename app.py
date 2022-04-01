@@ -807,17 +807,14 @@ def main():
         info = st.expander("Documentation: Plot curves (click to expand)")
         with info:
             doc.doc_plots()
-   
-        choose_speed = True
-        plot_options = choose_NT or choose_flow or choose_speed
+
+        plot_time_distance = True  # TODO set
+        plot_options = choose_NT or choose_flow or plot_time_distance
         if make_plots and plot_options:
-            # peds = np.unique(data)
             with Utilities.profile("calculate_NT_data"):
                 tstats, cum_num, trans_used, max_len = Utilities.calculate_NT_data(
                     transitions, selected_transitions, data, fps
                 )
-            # st.session_state.tstats = tstats
-            # st.session_state.cum_num = cum_num
 
         if make_plots:
             c1, c2 = st.columns((1, 1))
@@ -832,13 +829,8 @@ def main():
 
         c1, c2 = st.columns((1, 1))
         if make_plots and choose_evactime:
-            peds_inside = []
-            for frame in frames:
-                d = data[data[:, 1] == frame][:, 0]
-                peds_inside.append(len(d))
-
+            peds_inside = Utilities.peds_inside(data)
             with c1:
-                print("plot()", len(peds_inside))
                 with Utilities.profile("plot discharge curve"):
                     fig = plots.plot_peds_inside(frames, peds_inside, fps)
                     st.plotly_chart(fig, use_container_width=True)
@@ -868,26 +860,28 @@ def main():
                         tmp_stats = tstats[i]
                         tmp_cum_num = cum_num[i]
 
+                    tmp_cum_num = tmp_cum_num.reshape(len(tmp_cum_num), 1)
                     if not once:
-                        all_stats = np.vstack((tmp_stats, tmp_cum_num))
+                        print(tmp_stats.shape, tmp_cum_num.shape)                        
+                        all_stats = np.hstack((tmp_stats, tmp_cum_num))
                         once = 1
                     else:
-                        all_stats = np.vstack((all_stats, tmp_stats, tmp_cum_num))
+                        all_stats = np.hstack((all_stats, tmp_stats, tmp_cum_num))
 
                 if selected_transitions and once:
                     passed_lines = [i for i in selected_transitions if trans_used[i]]
-                    fmt = len(passed_lines) * ["%d", "%d"]
-                    all_stats = all_stats.T
+                    fmt = len(passed_lines) * ["%d", "%d", "%d"]
+                    #all_stats = all_stats.T
                     np.savetxt(
                         file_download,
                         all_stats,
                         fmt=fmt,
-                        header=np.array2string(
+                        header="line id: \n"+np.array2string(
                             np.array(passed_lines, dtype=int),
                             precision=2,
                             separator="\t",
                             suppress_small=True,
-                        ),
+                        )+"\npid arrival_frame count_arrivals",
                         comments="#",
                         delimiter="\t",
                     )
