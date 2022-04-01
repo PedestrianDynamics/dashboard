@@ -112,7 +112,7 @@ def main():
         doc.docs()
 
     set_state_variables()
-    st.sidebar.image("jupedsim.png", use_column_width=True)
+    st.sidebar.image("figs/jupedsim.png", use_column_width=True)
     gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
     repo = "https://github.com/chraibi/jupedsim-dashboard"
     repo_name = f"[![Repo]({gh})]({repo})"
@@ -287,6 +287,10 @@ def main():
             Evac-time: {np.max(frames)/fps} [s]
             """
             pl_msg.info(msg)
+            f = st.expander("Documentation: Speed (click to expand)")
+            with f:
+                doc.doc_speed()
+
             if nagents <= 10:
                 special_agent = 5
             else:

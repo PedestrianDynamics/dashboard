@@ -37,6 +37,7 @@ def doc_plots():
     $$P(t > δ)$$, also known as the survival function,
     which is an indicator of clogging in front of exits.
     """)
+    st.image("./figs/survival_function.png", caption="The survival functions w.r.t door widths. See: Fig.7 (a) in https://doi.org/10.1016/j.physa.2021.125934")
 
 
 def doc_jam():
@@ -46,7 +47,7 @@ def doc_jam():
     )
 
 
-def doc_profile():
+def doc_speed():
     st.write("""
     #### Speed
      The speed can be calculated *from simulation*: in this case
@@ -66,14 +67,20 @@ def doc_profile():
     st.write(
         r"""with $df$ a constant and $v_i(f)$ the speed of pedestrian $i$ at frame $f$."""
     )
-    st.write(
-        """
-    #### Density
-    The density can be calculated using different methods:
+
+
+def doc_profile():
+    st.write("""
+    The density and speed profiles show averaged values over time and over space.
+
+    A grid of square cells $c$ with a given size (can be defined by the slider `Grid size`) is created.
+    The values of the density and speed are then averaged over the cells over time.
+
+    Different methods can be used: `Classical`, `Gaussian` and `Weidmann`
 
     **1. Weidmann**
 
-    based on the speed (1) using the Weidmann-formula **[Weidmann1992 Eq. (15)]**:
+    Given the Weidmann-formula **[Weidmann1992 Eq. (15)]**:
     """
     )
     st.latex(
@@ -83,18 +90,19 @@ def doc_profile():
     \end{equation}
     """
     )
-    st.text("Eq. (2) can be transformed in ")
+    st.text("Eq. (1) can be transformed in ")
     st.latex(
         r"""
-    \begin{equation*}
+    \begin{equation}
     \rho_i = \Big(-\frac{1}{\gamma} \log(1 - \frac{v_i}{v^0})+ \frac{1}{\rho_{\max}}\Big)^{-1},
-    \end{equation*}
+    \end{equation}
     """
     )
     st.write("""where""")
     st.latex(
         r"""\gamma = 1.913\, m^{-2},\; \rho_{\max} = 5.4\, m^{-2}\; \;{\rm and}\; v^0 = 1.34\, m/s."""
     )
+    st.write("Based on the speed, from simulation or trajectory, and using Eq. (2) we can calculate the density $\\rho_i$ and hence,")
     st.latex(
         r"""
     \rho_c = \frac{1}{T}\sum_{t=0}^T S_c,
@@ -110,7 +118,9 @@ def doc_profile():
     """
     )
     st.latex(r"""\rho_c = \frac{1}{T}\sum_{t=0}^T G_c,""")
-    st.write("where $G_c$ the sum of all Gaussians.")
+    st.write("""where $G_c$ the sum of all Gaussians.
+    The speed is calculated from $\\rho_i$ by Eq. (1).
+    """)
     st.markdown("--------")
     st.write("#### References:")
     st.code(
