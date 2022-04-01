@@ -414,7 +414,7 @@ def main():
             )
             choose_survival = c2.checkbox(
                 "Survival",
-                help="Plot survival function (clogging)",
+                help="Plot survival function (clogging)",disabled=disable_NT_flow,
                 key="Survival",
             )
 
@@ -587,8 +587,17 @@ def main():
             st.session_state.ypos = None
             st.session_state.lm = None
 
+
         info_profile = st.expander("Documentation: Density/Speed Profiles (click to expand)")
+        c1, _, c2 = st.columns((1, 0.05, 1))
+        dprofile_pl = c1.empty()
+        vprofile_pl = c2.empty()
+        messages = st.empty()
         info_timeseries = st.expander("Documentation: Density/Speed Time Series (click to expand)")
+        c1, _, c2 = st.columns((1, 0.05, 1))
+        plot_timeseries_pl = c1.empty()
+        dtimeseries_pl = c1.empty()
+        vtimeseries_pl = c2.empty()
         with info_timeseries:
             doc.doc_timeseries()
 
@@ -599,8 +608,7 @@ def main():
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
             msg = ""
 
-            with st.spinner("Processing ..."):
-                c1, _, c2 = st.columns((1, 0.05, 1))
+            with st.spinner("Processing ..."):                
                 if choose_dprofile:
                     if choose_d_method == "Weidmann":
                         density_ret = \
@@ -700,7 +708,70 @@ def main():
                                 density_time.append(dtime[0, 0])
                     st.session_state.density = density_ret
                     msg += f"Density profile in range [{np.min(density_ret):.2f} : {np.max(density_ret):.2f}] [1/m^2]. \n"
-                    with c1:
+                    fig = plots.plot_profile_and_geometry(
+                        geominX,
+                        geomaxX,
+                        geominY,
+                        geomaxY,
+                        geometry_wall,
+                        st.session_state.xpos,
+                        st.session_state.ypos,
+                        st.session_state.lm,
+                        density_ret,
+                        interpolation,
+                        cmap=cm.jet,
+                        label=r"$\rho\; / 1/m^2$",
+                        title="Density",
+                        vmin=None,
+                        vmax=None,
+                    )
+                    dprofile_pl.pyplot(fig)
+                    if choose_timeseries:
+                        fig = plots.plot_timeserie(
+                            frames, density_time, fps, "Density / m / m",
+                            np.min(density_ret),
+                            np.max(density_ret)+2,
+                        )
+                        dtimeseries_pl.plotly_chart(fig, use_container_width=True)
+
+                if choose_vprofile:
+                    if choose_d_method == "Gaussian":
+                        speed_ret = Utilities.weidmann(st.session_state.density)
+                        if choose_timeseries:
+                            speed_time = Utilities.weidmann(np.array(density_time))
+
+                    else:
+                        speed_ret = Utilities.calculate_speed_average(
+                            geominX,
+                            geomaxX,
+                            geominY,
+                            geomaxY,
+                            dx,
+                            len(frames),
+                            data[:, 2],
+                            data[:, 3],
+                            data[:, -1]
+                        )
+                        if choose_timeseries:
+                            speed_time = []
+                            for frame in frames[::sample]:
+                                dframe = data[:, 1] == frame
+                                x = data[dframe][:, 2]
+                                y = data[dframe][:, 3]
+                                speed_agent = data[dframe][:, -1]
+                                stime = Utilities.calculate_speed_average(
+                                    st.session_state.xpos - st.session_state.lm / 2,
+                                    st.session_state.xpos + st.session_state.lm / 2,
+                                    st.session_state.ypos - st.session_state.lm / 2,
+                                    st.session_state.ypos + st.session_state.lm / 2,
+                                    st.session_state.lm,
+                                    1,
+                                    x,
+                                    y,
+                                    speed_agent,
+                                )
+                                speed_time.append(stime[0, 0])
+                        
                         fig = plots.plot_profile_and_geometry(
                             geominX,
                             geomaxX,
@@ -710,90 +781,27 @@ def main():
                             st.session_state.xpos,
                             st.session_state.ypos,
                             st.session_state.lm,
-                            density_ret,
+                            speed_ret,
                             interpolation,
-                            cmap=cm.jet,
-                            label=r"$\rho\; / 1/m^2$",
-                            title="Density",
+                            cmap=cm.jet, #.reversed(),
+                            label=r"$v\; / m/s$",
+                            title="Speed",
                             vmin=None,
                             vmax=None,
                         )
-                        st.pyplot(fig)
+                        vprofile_pl.pyplot(fig)
                         if choose_timeseries:
                             fig = plots.plot_timeserie(
-                                frames, density_time, fps, "Density / m / m",
-                                np.min(density_ret),
-                                np.max(density_ret)+2,
+                                frames, speed_time, fps, "Speed / m/s",
+                                np.min(speed_ret), np.max(speed_ret),
                             )
-                            st.plotly_chart(fig, use_container_width=True)
-
-                    if choose_vprofile:
-                        if choose_d_method == "Gaussian":
-                            speed_ret = Utilities.weidmann(st.session_state.density)
-                            if choose_timeseries:
-                                speed_time = Utilities.weidmann(np.array(density_time))
-                        else:
-                            speed_ret = Utilities.calculate_speed_average(
-                                geominX,
-                                geomaxX,
-                                geominY,
-                                geomaxY,
-                                dx,
-                                len(frames),
-                                data[:, 2],
-                                data[:, 3],
-                                data[:, -1]
-                            )
-                            if choose_timeseries:
-                                speed_time = []
-                                for frame in frames[::sample]:
-                                    dframe = data[:, 1] == frame
-                                    x = data[dframe][:, 2]
-                                    y = data[dframe][:, 3]
-                                    speed_agent = data[dframe][:, -1]
-                                    stime = Utilities.calculate_speed_average(
-                                        st.session_state.xpos - st.session_state.lm / 2,
-                                        st.session_state.xpos + st.session_state.lm / 2,
-                                        st.session_state.ypos - st.session_state.lm / 2,
-                                        st.session_state.ypos + st.session_state.lm / 2,
-                                        st.session_state.lm,
-                                        1,
-                                        x,
-                                        y,
-                                        speed_agent,
-                                    )
-                                    speed_time.append(stime[0, 0])
-
-                        with c2:
-                            fig = plots.plot_profile_and_geometry(
-                                geominX,
-                                geomaxX,
-                                geominY,
-                                geomaxY,
-                                geometry_wall,
-                                st.session_state.xpos,
-                                st.session_state.ypos,
-                                st.session_state.lm,
-                                speed_ret,
-                                interpolation,
-                                cmap=cm.jet, #.reversed(),
-                                label=r"$v\; / m/s$",
-                                title="Speed",
-                                vmin=None,
-                                vmax=None,
-                            )
-                            st.pyplot(fig)
-                            if choose_timeseries:
-                                fig = plots.plot_timeserie(
-                                    frames, speed_time, fps, "Speed / m/s",
-                                    np.min(speed_ret), np.max(speed_ret),
-                                )
-                                st.plotly_chart(fig, use_container_width=True)
-
+                            vtimeseries_pl.plotly_chart(fig, use_container_width=True)
+                            
                         speed = data[:, -1]
                         msg += f"Speed profile in range [{np.min(speed_ret):.2f} : {np.max(speed_ret):.2f}] [m/s]. "
                         msg += f"Speed trajectory in range [{np.min(speed):.2f} : {np.max(speed):.2f}] [m/s]. "
-                    st.info(msg)
+
+                    messages.info(msg)
 
         # todo
         info = st.expander("Documentation: Plot curves (click to expand)")
@@ -830,8 +838,10 @@ def main():
                 peds_inside.append(len(d))
 
             with c1:
-                fig = plots.plot_peds_inside(frames, peds_inside, fps)
-                st.plotly_chart(fig, use_container_width=True)
+                print("plot()", len(peds_inside))
+                with Utilities.profile("plot discharge curve"):
+                    fig = plots.plot_peds_inside(frames, peds_inside, fps)
+                    st.plotly_chart(fig, use_container_width=True)
 
         if make_plots and choose_survival:
             with c2:

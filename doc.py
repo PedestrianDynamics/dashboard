@@ -10,11 +10,11 @@ def doc_plots():
 
     These lines are extracted from the geometry file.
     
-    ### N-T
+    #### N-T
     For each line, calculate the cumulative number of pedestrians
     ($N$) passing the line at time ($T$).
 
-    ### Flow
+    #### Flow
     For each line, calculate the flow ($J$) versus time ($T$).
     Given $N$ pedestrians have passed the line in a time duration of $T$, then the flow is calculates as:
     """)
@@ -27,10 +27,10 @@ def doc_plots():
     )
 
     st.write("""
-    ### Occupation
+    #### Occupation
     This `discharge curve` shows the number of pedestrians inside the scenario versus time.
 
-    ### Survival
+    #### Survival
     The time lapses $\delta$ between two consecutive agents passing a line are calculated.
     The value of $\delta$ reflects the sustained time of clogs interrupting the flow.
     This curve shows the probability distribution function
@@ -90,7 +90,7 @@ def doc_profile():
 
     Different methods can be used: `Classical`, `Gaussian` and `Weidmann`
 
-    **1. Weidmann**
+    #### Weidmann
 
     Given the Weidmann-formula **[Weidmann1992 Eq. (15)]**:
     """
@@ -121,11 +121,11 @@ def doc_profile():
     """
     )
     st.write("where $S_c$ is the sum of $\\rho_i$ in $c$ and $T$ the evcuation time.")
-    st.write("""**2. Classical**  """)
+    st.write("""#### Classical  """)
     st.latex(r"""\rho_c = \frac{1}{T}\sum_{t=0}^T \frac{N_c}{A_c},""")
     st.write("where $A_c$  the area of cell $c$ and $N_c$ the number of agents in $c$.")
     st.write(
-    """**3. Gaussian**  
+    """#### Gaussian  
     for every pedestrian $i$ a Gaussian distribution is calculated, then
     """
     )

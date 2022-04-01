@@ -29,7 +29,7 @@ def show_trajectories_table(data):
 def plot_NT(Frames, Nums, fps):
     logging.info("plot NT-curve")
     fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["N-T"], x_title="Time / s", y_title="Number of pedestrians"
+        rows=1, cols=1, subplot_titles=["<b>N-T></b>"], x_title="Time / s", y_title="Number of pedestrians"
     )
     for i, frames in Frames.items():
         nums = Nums[i]
@@ -60,7 +60,7 @@ def plot_NT(Frames, Nums, fps):
 def plot_flow(Frames, Nums, fps):
     logging.info("plot flow-curve")
     fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["Flow"], x_title="Time / s", y_title="J / 1/s"
+        rows=1, cols=1, subplot_titles=["<b>Flow</b>"], x_title="Time / s", y_title="J / 1/s"
     )
     for i, frames in Frames.items():
         nums = Nums[i]
@@ -88,7 +88,7 @@ def plot_flow(Frames, Nums, fps):
 def plot_peds_inside(frames, peds_inside, fps):
     logging.info("plot peds inside")
     fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["Discharge curve"], x_title="Time / s", y_title="Number of Pedestrians inside"
+        rows=1, cols=1, subplot_titles=["<b>Discharge curve<>/b"], x_title="Time / s", y_title="Number of Pedestrians inside"
     )
     times = frames / fps
     trace = go.Scatter(
@@ -129,7 +129,8 @@ def plot_timeserie(frames, t, fps, title, miny, maxy):
 def plot_agent_xy(frames, X, Y, fps):
     logging.info("plot agent xy")
     fig = make_subplots(specs=[[{"secondary_y": True}]],
-        rows=1, cols=1, x_title="Time / s",
+                        rows=1, cols=1, x_title="Time / s",
+                        subplot_titles=["<b>Trajectory of highlighted pedestrian</b>"],
     )
     times = frames/fps
     traceX = go.Scatter(
@@ -162,6 +163,7 @@ def plot_agent_angle(pid, frames, angles, fps):
     logging.info("plot angle")
     fig = make_subplots(
         rows=1, cols=1, x_title="Time / s", y_title=r"Angle / Degree",
+        subplot_titles=["<b>Orientation of highlighted pedestrian</b>"],
     )
     times = frames/fps
     trace = go.Scatter(
@@ -181,7 +183,10 @@ def plot_agent_angle(pid, frames, angles, fps):
 def plot_agent_speed(pid, frames, speed_agent, max_speed,
                      fps):
     fig = make_subplots(
-                    rows=1, cols=1, x_title="Time / s", y_title="Speed / m/s"
+        rows=1, cols=1,
+        x_title="Time / s",
+        y_title="Speed / m/s",
+        subplot_titles=["<b>Speed of highlighted pedestrian</b>"],
                 )
     threshold = 0.5  # according to DIN19009-2
     logging.info(f"plot agent speed {pid}")
@@ -231,7 +236,7 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions,
                       choose_transitions,
                       sample_trajectories,):
     logging.info("plot trajectories")
-    fig = make_subplots(rows=1, cols=1)
+    fig = make_subplots(rows=1, cols=1, subplot_titles=["<b>Trajectories</b>"])
     peds = np.unique(data[:, 0])
     s = data[data[:, 0] == special_ped]
     sc = 1-speed/np.max(speed)
@@ -379,7 +384,7 @@ def plot_square(ax, xpos, ypos, lm):
 def plot_survival(Frames, fps):
     logging.info("plot survival function")
     fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["Survival function of time gaps"], x_title="Delta / s", y_title=r"P(t>Delta)"
+        rows=1, cols=1, subplot_titles=["<b>Survival function of time gaps</b>"], x_title="Delta / s", y_title=r"P(t>Delta)"
     )
     for i, frames in Frames.items():
         if not frames:
