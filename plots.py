@@ -68,7 +68,7 @@ def plot_flow(Frames, Nums, fps):
             continue
 
         times = np.array(frames) / fps
-        J = nums / times
+        J = (nums-1) / times
         trace = go.Scatter(
             x=np.hstack(([0, times[0]], times)),
             y=np.hstack(([0, 0], J)),
