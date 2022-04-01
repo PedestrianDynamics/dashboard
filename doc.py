@@ -68,6 +68,18 @@ def doc_speed():
         r"""with $df$ a constant and $v_i(f)$ the speed of pedestrian $i$ at frame $f$."""
     )
 
+def doc_timeseries():
+    st.write("""
+    Time series of the density and the speed are calculated within the measurement area (a square).
+    When the option **Profiles** is activated, you can define measurement are by:
+    - $x$-position of the center
+    - $y$-position of the center
+    - side length of the square
+
+    Depending on the frames per seconds of the trajectories, it might be better to increase the sampling rate
+    (`sample`) to speed up rendering the plots.
+    """)
+
 
 def doc_profile():
     st.write("""
@@ -132,13 +144,10 @@ def doc_profile():
 def docs():
     st.write(
         """
-    This app performs some basic measurements on data simulated by jpscore.
+        Show statistics and make plots extracted from [jpscore](https://github.com/jupedsim/jpscore)-simulations and [experimental data](https://ped.fz-juelich.de/db/).
 
-     ### Flow
-     Flow and NT-curves are calculated at transitions and measurement lines.
-
-     Measurement lines `area_L` can be added as defined in
-     https://www.jupedsim.org/jpsreport_inifile#measurement-area
+        The main goal of this app is to extract **fast** as much information and insight
+        from a trajectory file as possible.
         """
     )
     

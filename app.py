@@ -587,8 +587,12 @@ def main():
             st.session_state.ypos = None
             st.session_state.lm = None
 
-        info = st.expander("Documentation: Profiles (click to expand)")
-        with info:
+        info_profile = st.expander("Documentation: Density/Speed Profiles (click to expand)")
+        info_timeseries = st.expander("Documentation: Density/Speed Time Series (click to expand)")
+        with info_timeseries:
+            doc.doc_timeseries()
+
+        with info_profile:
             doc.doc_profile()
 
         if choose_dprofile:
