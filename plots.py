@@ -7,31 +7,37 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
 import matplotlib
 from Utilities import survival
+from shapely.geometry import LineString, Point
+
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def show_trajectories_table(data):
-    headerColor = 'grey'
+    headerColor = "grey"
     fig = go.Figure(
-        data=[go.Table
-              (header=dict(
-                  values=['<b>ID</b>', '<b>Frame</b>', '<b>X</b>', '<b>Y</b>'],
-                  fill_color=headerColor,
-                  font=dict(color='white', size=12),
-              ),
-               cells=dict(
-                   values=[data[:, 0], data[:, 1], data[:, 2], data[:, 3]],
-               )
-               )
-              ])
+        data=[
+            go.Table(
+                header=dict(
+                    values=["<b>ID</b>", "<b>Frame</b>", "<b>X</b>", "<b>Y</b>"],
+                    fill_color=headerColor,
+                    font=dict(color="white", size=12),
+                ),
+                cells=dict(
+                    values=[data[:, 0], data[:, 1], data[:, 2], data[:, 3]],
+                ),
+            )
+        ]
+    )
     return fig
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_NT(Frames, Nums, fps):
     logging.info("plot NT-curve")
-    fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["<b>N-T></b>"], x_title="Time / s", y_title="Number of pedestrians"
-    )
+    # fig = make_subplots(
+    #     rows=1, cols=1, subplot_titles=["<b>N-T</b>"], x_title="Time / s", y_title="Number of pedestrians"
+    # )
+    maxx = -1
+    traces = []
     for i, _frames in Frames.items():
         nums = Nums[i]
         frames = _frames[:, 1]
@@ -42,6 +48,8 @@ def plot_NT(Frames, Nums, fps):
         if frames[0] > 0:
             frames = np.hstack(([0], frames))
             nums = np.hstack(([0], nums))
+            if maxx < np.max(frames):
+                maxx = np.max(frames)
 
         trace = go.Scatter(
             x=np.array(frames) / fps,
@@ -51,27 +59,39 @@ def plot_NT(Frames, Nums, fps):
             name=f"ID: {i}",
             line=dict(width=3),
         )
-        fig.append_trace(trace, row=1, col=1)
+        traces.append(trace)
+        # fig.append_trace(trace, row=1, col=1)
 
-    fig.update_layout(hovermode="x")
-    #st.plotly_chart(fig, use_container_width=True)
-    return fig
+    # fig.update_layout(hovermode="x")
+    # fig.update_xaxes(
+    #     range=[0, maxx/fps + 2],
+    # )
+
+    return traces
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_flow(Frames, Nums, fps):
     logging.info("plot flow-curve")
     fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["<b>Flow</b>"], x_title="Time / s", y_title="J / 1/s"
+        rows=1,
+        cols=1,
+        subplot_titles=["<b>Flow</b>"],
+        x_title="Time / s",
+        y_title="J / 1/s",
     )
+    maxx = -1
     for i, _frames in Frames.items():
         nums = Nums[i]
         frames = _frames[:, 1]
         if not frames.size:
             continue
 
+        if maxx < np.max(frames):
+            maxx = np.max(frames)
+
         times = np.array(frames) / fps
-        J = (nums-1) / times
+        J = (nums - 1) / times
         trace = go.Scatter(
             x=np.hstack(([0, times[0]], times)),
             y=np.hstack(([0, 0], J)),
@@ -83,52 +103,89 @@ def plot_flow(Frames, Nums, fps):
         fig.append_trace(trace, row=1, col=1)
 
     fig.update_layout(hovermode="x")
-    #st.plotly_chart(fig, use_container_width=True)
+    fig.update_xaxes(
+        range=[0, maxx / fps + 2],
+    )
+    # st.plotly_chart(fig, use_container_width=True)
     return fig
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_time_distance(Frames, fps):
-    logging.info("plot flow-curve")
-    fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["<b>Flow</b>"], x_title="Time / s", y_title="J / 1/s"
-    )
-    for i, _frames in Frames.items():
-        frames = _frames[:, 1]
-        peds = _frames[:, 0]
-        if not frames.size:
-            continue
+def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
+    logging.info("plot time_distance curve")
+    peds = _frames[:, 0]
+    frames = _frames[:, 1]
+    peds = peds[:num_peds]
 
-        times = np.array(frames) / fps
+    fig = make_subplots(
+        rows=1,
+        cols=1,
+        subplot_titles=[
+            f"<b>Distance-Time for Transition {i} with {num_peds} pedestrians</b>"
+        ],
+        x_title="Distance to entrance / m",
+        y_title="Time to entrance / s",
+    )
+
+    for p, toframe in zip(peds, frames):
+        ff = data[np.logical_and(data[:, 1] <= toframe, data[:, 0] == p)]
+        xx = []
+        yy = []
+        for (frame, x, y) in ff[::sample, 1:4]:
+            pos = Point(x, y)
+            dx = pos.distance(line)
+            dt = (toframe - frame) / fps
+            xx.append(dx)
+            yy.append(dt)
+
         trace = go.Scatter(
-            x=np.times[0],
-            y=[0, 0],
-            mode="lines",
-            showlegend=True,
-            name=f"ID: {i}",
-            line=dict(width=3),
+            x=xx[0:1],
+            y=yy[0:1],
+            mode="markers",
+            name=f"Agent: {p:.0f}",
+            showlegend=False,
+            marker=dict(
+                size=5,
+                color="gray",
+                line=dict(
+                    color="LightSkyBlue",
+                    width=2,
+                ),
+            ),
         )
         fig.append_trace(trace, row=1, col=1)
 
-    fig.update_layout(hovermode="x")
-    #st.plotly_chart(fig, use_container_width=True)
+        trace = go.Scatter(
+            x=xx,
+            y=yy,
+            mode="lines",
+            name=f"Agent: {p:.0f}",
+            showlegend=False,
+            line=dict(width=0.3, color="gray"),
+        )
+
+        fig.append_trace(trace, row=1, col=1)
+
     return fig
 
 
-    
-@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_peds_inside(frames, peds_inside, fps):
     logging.info("plot peds inside")
     fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["<b>Discharge curve</b>"], x_title="Time / s", y_title="Number of Pedestrians inside"
+        rows=1,
+        cols=1,
+        subplot_titles=["N-T"],
+        x_title="Time / s",
+        y_title="Number of Pedestrians inside",
     )
     times = frames / fps
     trace = go.Scatter(
         x=times,
         y=peds_inside,
         mode="lines",
-        showlegend=False,
-        line=dict(width=3, color='royalblue'),
+        name="<b>Discharge curve</b>",
+        showlegend=True,
+        line=dict(width=3, color="royalblue"),
     )
     fig.append_trace(trace, row=1, col=1)
     fig.update_layout(hovermode="x")
@@ -138,20 +195,18 @@ def plot_peds_inside(frames, peds_inside, fps):
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_timeserie(frames, t, fps, title, miny, maxy):
     logging.info("plot timeseries")
-    fig = make_subplots(
-        rows=1, cols=1, x_title="Time / s", y_title=title
-    )
+    fig = make_subplots(rows=1, cols=1, x_title="Time / s", y_title=title)
     times = frames / fps
     trace = go.Scatter(
         x=times,
         y=t,
         mode="lines",
         showlegend=False,
-        line=dict(width=3, color='royalblue'),
+        line=dict(width=3, color="royalblue"),
     )
     fig.append_trace(trace, row=1, col=1)
     fig.update_yaxes(
-        range=[miny-0.1, maxy+0.1],
+        range=[miny - 0.1, maxy + 0.1],
     )
     fig.update_layout(hovermode="x")
     return fig
@@ -160,32 +215,48 @@ def plot_timeserie(frames, t, fps, title, miny, maxy):
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_agent_xy(frames, X, Y, fps):
     logging.info("plot agent xy")
-    fig = make_subplots(specs=[[{"secondary_y": True}]],
-                        rows=1, cols=1, x_title="Time / s",
-                        subplot_titles=["<b>Trajectory of highlighted pedestrian</b>"],
+    fig = make_subplots(
+        specs=[[{"secondary_y": True}]],
+        rows=1,
+        cols=1,
+        x_title="Time / s",
+        subplot_titles=["<b>Trajectory of highlighted pedestrian</b>"],
     )
-    times = frames/fps
+    times = frames / fps
     traceX = go.Scatter(
         x=times,
         y=X,
         mode="lines",
         showlegend=True,
-        name='X',
-        line=dict(width=3, color='firebrick'),
+        name="X",
+        line=dict(width=3, color="firebrick"),
     )
     traceY = go.Scatter(
         x=times,
         y=Y,
         mode="lines",
-        name='Y',
+        name="Y",
         showlegend=True,
-        line=dict(width=3, color='royalblue'),
+        line=dict(width=3, color="royalblue"),
     )
-    fig.add_trace(traceX, row=1, col=1, secondary_y=False,)
-    fig.add_trace(traceY, row=1, col=1, secondary_y=True,)
+    fig.add_trace(
+        traceX,
+        row=1,
+        col=1,
+        secondary_y=False,
+    )
+    fig.add_trace(
+        traceY,
+        row=1,
+        col=1,
+        secondary_y=True,
+    )
     # Set y-axes titles
     fig.update_yaxes(title_text="X", secondary_y=False)
-    fig.update_yaxes(title_text="Y", secondary_y=True,)
+    fig.update_yaxes(
+        title_text="Y",
+        secondary_y=True,
+    )
     fig.update_layout(hovermode="x")
     return fig
 
@@ -194,17 +265,20 @@ def plot_agent_xy(frames, X, Y, fps):
 def plot_agent_angle(pid, frames, angles, fps):
     logging.info("plot angle")
     fig = make_subplots(
-        rows=1, cols=1, x_title="Time / s", y_title=r"Angle / Degree",
+        rows=1,
+        cols=1,
+        x_title="Time / s",
+        y_title=r"Angle / Degree",
         subplot_titles=["<b>Orientation of highlighted pedestrian</b>"],
     )
-    times = frames/fps
+    times = frames / fps
     trace = go.Scatter(
         x=times,
         y=angles,
         mode="lines",
         showlegend=False,
         name=f"Agent: {pid:.0f}",
-        line=dict(width=3, color='royalblue'),
+        line=dict(width=3, color="royalblue"),
     )
     fig.append_trace(trace, row=1, col=1)
     fig.update_layout(hovermode="x")
@@ -212,19 +286,19 @@ def plot_agent_angle(pid, frames, angles, fps):
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_agent_speed(pid, frames, speed_agent, max_speed,
-                     fps):
+def plot_agent_speed(pid, frames, speed_agent, max_speed, fps):
     fig = make_subplots(
-        rows=1, cols=1,
+        rows=1,
+        cols=1,
         x_title="Time / s",
         y_title="Speed / m/s",
         subplot_titles=["<b>Speed of highlighted pedestrian</b>"],
-                )
+    )
     threshold = 0.5  # according to DIN19009-2
     logging.info(f"plot agent speed {pid}")
     m = np.copy(speed_agent)
     times = frames / fps
-    tt = np.ones(len(speed_agent))*threshold
+    tt = np.ones(len(speed_agent)) * threshold
     cc = np.isclose(m, tt, rtol=0.04)
     m[~cc] = None
     trace = go.Scatter(
@@ -233,8 +307,8 @@ def plot_agent_speed(pid, frames, speed_agent, max_speed,
         mode="lines",
         showlegend=False,
         name=f"Agent: {pid:.0f}",
-        line=dict(width=3, color='royalblue'),
-        stackgroup='one'
+        line=dict(width=3, color="royalblue"),
+        stackgroup="one",
     )
     trace_threshold = go.Scatter(
         x=[times[0], times[-1]],
@@ -242,7 +316,7 @@ def plot_agent_speed(pid, frames, speed_agent, max_speed,
         mode="lines",
         showlegend=True,
         name="Jam threshold",
-        line=dict(width=4, dash='dash', color="gray"),
+        line=dict(width=4, dash="dash", color="gray"),
     )
     tracem = go.Scatter(
         x=times,
@@ -250,7 +324,7 @@ def plot_agent_speed(pid, frames, speed_agent, max_speed,
         mode="markers",
         showlegend=False,
         name="Jam speed",
-        marker=dict(size=5,  color="red"),
+        marker=dict(size=5, color="red"),
     )
     fig.append_trace(trace, row=1, col=1)
     fig.append_trace(trace_threshold, row=1, col=1)
@@ -263,15 +337,24 @@ def plot_agent_speed(pid, frames, speed_agent, max_speed,
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_trajectories(data, special_ped, speed, geo_walls, transitions,
-                      min_x, max_x, min_y, max_y,
-                      choose_transitions,
-                      sample_trajectories,):
+def plot_trajectories(
+    data,
+    special_ped,
+    speed,
+    geo_walls,
+    transitions,
+    min_x,
+    max_x,
+    min_y,
+    max_y,
+    choose_transitions,
+    sample_trajectories,
+):
     logging.info("plot trajectories")
     fig = make_subplots(rows=1, cols=1, subplot_titles=["<b>Trajectories</b>"])
     peds = np.unique(data[:, 0])
     s = data[data[:, 0] == special_ped]
-    sc = 1-speed/np.max(speed)
+    sc = 1 - speed / np.max(speed)
     for ped in peds:
         d = data[data[:, 0] == ped]
         trace_traj = go.Scatter(
@@ -290,7 +373,7 @@ def plot_trajectories(data, special_ped, speed, geo_walls, transitions,
         mode="markers",
         showlegend=False,
         name=f"Agent: {special_ped:0.0f}",
-        marker=dict(size=5, color=sc, colorscale='Jet'),
+        marker=dict(size=5, color=sc, colorscale="Jet"),
         line=dict(color="firebrick", width=4),
     )
     fig.append_trace(trace_agent, row=1, col=1)
@@ -348,7 +431,9 @@ def plot_geometry(ax, _geometry_wall):
         ax.plot(_geometry_wall[gw][:, 0], _geometry_wall[gw][:, 1], color="white", lw=2)
 
 
-@st.cache(suppress_st_warning=True, hash_funcs={matplotlib.figure.Figure: lambda _: None})
+@st.cache(
+    suppress_st_warning=True, hash_funcs={matplotlib.figure.Figure: lambda _: None}
+)
 def plot_profile_and_geometry(
     geominX,
     geomaxX,
@@ -399,16 +484,20 @@ def plot_profile_and_geometry(
 
 
 def plot_square(ax, xpos, ypos, lm):
-    x = [xpos - lm/2,
-         xpos - lm/2,
-         xpos + lm/2,
-         xpos + lm/2,
-         xpos - lm/2, ]
-    y = [ypos - lm/2,
-         ypos + lm/2,
-         ypos + lm/2,
-         ypos - lm/2,
-         ypos - lm/2,]
+    x = [
+        xpos - lm / 2,
+        xpos - lm / 2,
+        xpos + lm / 2,
+        xpos + lm / 2,
+        xpos - lm / 2,
+    ]
+    y = [
+        ypos - lm / 2,
+        ypos + lm / 2,
+        ypos + lm / 2,
+        ypos - lm / 2,
+        ypos - lm / 2,
+    ]
     ax.plot(x, y, color="gray", lw=2)
 
 
@@ -416,14 +505,18 @@ def plot_square(ax, xpos, ypos, lm):
 def plot_survival(Frames, fps):
     logging.info("plot survival function")
     fig = make_subplots(
-        rows=1, cols=1, subplot_titles=["<b>Survival function of time gaps</b>"], x_title="Delta / s", y_title=r"P(t>Delta)"
+        rows=1,
+        cols=1,
+        subplot_titles=["<b>Survival function of time gaps</b>"],
+        x_title="Delta / s",
+        y_title=r"P(t>Delta)",
     )
     for i, _frames in Frames.items():
         frames = _frames[:, 1]
         if not frames.size:
             continue
 
-        times = np.array(frames)/fps
+        times = np.array(frames) / fps
         y, dif = survival(times)
         trace = go.Scatter(
             x=dif,
@@ -441,7 +534,7 @@ def plot_survival(Frames, fps):
     )
     fig.update_xaxes(
         type="log",
-        #range=[-1, 1]
+        # range=[-1, 1]
     )
     fig.update_layout(hovermode="x")
     return fig

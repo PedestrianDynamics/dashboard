@@ -34,6 +34,26 @@ def inv_weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
     return 1 / x
 
 
+def get_speed_index(traj_file):
+    lines = traj_file[:500].split("\n")
+    for line in lines:
+        if line.startswith("#ID"):
+            if 'V' in line:
+                return line.split().index('V')
+
+    return -1
+
+
+def get_header(traj_file):
+    lines = traj_file[:500].split("\n")
+    for line in lines:
+        if line.startswith("#ID"):
+            if 'FR' in line:
+                return line
+
+    return "Not extracted"
+
+
 # todo: update with more rules for more files
 def get_fps(traj_file):
     fps = traj_file.split("framerate:")[-1].split("\n")[0]
@@ -98,7 +118,7 @@ def get_transitions(xml_doc, unit):
 
 
 def get_measurement_lines(xml_doc, unit):
-    """ add area_L
+    """add area_L
 
     https://www.jupedsim.org/jpsreport_inifile#measurement-area
     """
@@ -345,8 +365,9 @@ def compute_speed(data, fps, df=10):
 #     speed[: size - df] = s / df * fps
 #     speed[size - df :] = speed[size - df - 1]
 #     angle[size - df :] = angle[size - df - 1]
-    
+
 #     return speed, angle
+
 
 def compute_speed_and_angle(data, fps, df=10):
     """Calculates the speed and the angle from the trajectory points.
@@ -377,14 +398,14 @@ def compute_speed_and_angle(data, fps, df=10):
     agents = np.unique(data[:, 0]).astype(int)
     once = 1
     speeds = np.array([])
-    
+
     for agent in agents:
         ped = data[data[:, 0] == agent]
         traj = ped[:, 2:4]
         size = traj.shape[0]
         speed = np.ones(size)
         angle = np.zeros(size)
-    
+
         if size < df:
             logging.warning(
                 f"""The number of frames used to calculate the speed {df}
@@ -395,16 +416,16 @@ def compute_speed_and_angle(data, fps, df=10):
         delta = traj[df:, :] - traj[: size - df, :]
         delta_x = delta[:, 0]
         delta_y = delta[:, 1]
-    
+
         delta_square = np.square(delta)
         delta_x_square = delta_square[:, 0]
         delta_y_square = delta_square[:, 1]
         angle[: size - df] = np.arctan2(delta_y, delta_x) * 180 / np.pi
-    
+
         s = np.sqrt(delta_x_square + delta_y_square)
         speed[: size - df] = s / df * fps
         speed[size - df :] = speed[size - df - 1]
-        angle[size - df :] = angle[size - df - 1]        
+        angle[size - df :] = angle[size - df - 1]
         ped = np.hstack((ped, angle.reshape(size, 1)))
         ped = np.hstack((ped, speed.reshape(size, 1)))
         if once:
@@ -414,11 +435,10 @@ def compute_speed_and_angle(data, fps, df=10):
             data2 = np.vstack((data2, ped))
 
     return data2
-        
-def compute_agent_speed_and_angle(agent, fps, df=10):
-    """Calculates the speed and the angle from the trajectory points.
 
-    """
+
+def compute_agent_speed_and_angle(agent, fps, df=10):
+    """Calculates the speed and the angle from the trajectory points."""
 
     traj = agent[:, 2:4]
     size = traj.shape[0]
@@ -442,9 +462,8 @@ def compute_agent_speed_and_angle(agent, fps, df=10):
     speed[: size - df] = s / df * fps
     speed[size - df :] = speed[size - df - 1]
     angle[size - df :] = angle[size - df - 1]
-    
-    return speed, angle
 
+    return speed, angle
 
 
 def calculate_speed_average(
@@ -460,7 +479,7 @@ def calculate_speed_average(
         "mean",
         bins=[xbins, ybins],
     )
-    return np.nan_to_num(ret.statistic.T) #/ nframes
+    return np.nan_to_num(ret.statistic.T)
 
 
 def calculate_density_average_weidmann(
@@ -477,7 +496,7 @@ def calculate_density_average_weidmann(
         "mean",
         bins=[xbins, ybins],
     )
-    return np.nan_to_num(ret.statistic.T) #/ nframes
+    return np.nan_to_num(ret.statistic.T)  # / nframes
 
 
 def calculate_density_average_classic(
@@ -498,12 +517,11 @@ def calculate_density_average_classic(
         "count",
         bins=[xbins, ybins],
     )
+
     return np.nan_to_num(ret.statistic.T) / nframes / area
 
 
-def calculate_density_frame_classic(
-    geominX, geomaxX, geominY, geomaxY, dx, X, Y
-):
+def calculate_density_frame_classic(geominX, geomaxX, geominY, geomaxY, dx, X, Y):
     """Calculate classical method
 
     Density = mean_time(N/A_i)
@@ -583,7 +601,7 @@ def consecutive_chunks(data):
     # input array([ 1,  2,  3,  4, 10, 11, 12, 15])
     # output array([3, 2])
     consecutive = np.diff(data[:, 1])
-    condition = (consecutive == 1)
+    condition = consecutive == 1
     if condition[0]:
         condition = np.concatenate([[False], condition])
 
@@ -592,7 +610,9 @@ def consecutive_chunks(data):
     return chunks
 
 
-def jam_waiting_time(peds: np.array, jam_data: np.array, jam_min_duration: int, fps: int):
+def jam_waiting_time(
+    peds: np.array, jam_data: np.array, jam_min_duration: int, fps: int
+):
     waiting_times = []
     for ped in peds:
         jam_data_ped = jam_data[jam_data[:, 0] == ped]
@@ -601,13 +621,11 @@ def jam_waiting_time(peds: np.array, jam_data: np.array, jam_min_duration: int, 
         if max_waiting_time >= jam_min_duration:
             waiting_times.append([ped, max_waiting_time])
 
-    return waiting_times/fps
+    return waiting_times / fps
 
 
 def jam_lifetime(jam_data: np.array, jam_min_agents: int, fps: int):
-    """Lifespane of a Jam and how many pedestrian in chunck
-
-    """
+    """Lifespane of a Jam and how many pedestrian in chunck"""
     jam_frames = jam_data[:, 1]
     lifetime = []
     # frame, num peds in jam. Using only the first,
@@ -616,7 +634,7 @@ def jam_lifetime(jam_data: np.array, jam_min_agents: int, fps: int):
         d = jam_data[jam_data[:, 1] == frame]
         num_ped_in_jam = len(d[:, 0])
         if num_ped_in_jam > jam_min_agents:
-            lifetime.append([frame/fps, num_ped_in_jam])
+            lifetime.append([frame / fps, num_ped_in_jam])
 
         clifetime = consecutive_chunks(np.array(lifetime)[:, 0])
 
@@ -624,7 +642,7 @@ def jam_lifetime(jam_data: np.array, jam_min_agents: int, fps: int):
 
 
 def calculate_NT_data(transitions, selected_transitions, data, fps):
-    """ Frame and cumulative number of pedestrian passing transitions.
+    """Frame and cumulative number of pedestrian passing transitions.
 
     return:
     Frame
@@ -656,44 +674,51 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
 
                 if trans_used[i]:
                     tstats[i] = np.array(tstats[i])
-                    tstats[i] = tstats[i][tstats[i][:, 1].argsort()] # sort by frame
+                    tstats[i] = tstats[i][tstats[i][:, 1].argsort()]  # sort by frame
                     arrivals = tstats[i][:, 1]
                     cum_num[i] = np.cumsum(np.ones(len(arrivals)))
-                    flow = (cum_num[i][-1] - 1) / (arrivals[-1]-arrivals[0]) * fps
+                    flow = (cum_num[i][-1] - 1) / (arrivals[-1] - arrivals[0]) * fps
                     with profile("rolling flow: "):
                         mean_flow, std_flow = rolling_flow(arrivals, fps, windows=100)
-                        print(type(mean_flow), type(std_flow))
+
                     max_len = max(max_len, cum_num[i].size)
                     msg += f"Transition {i}: length {line.length:.2f}, flow: {flow:.2f} [1/s], rolling_flow: {mean_flow:.2} +- {std_flow:.3f} [1/s],  specific flow: {flow/line.length:.2f} [1/s/m] \n \n"
                 else:
-                    msg += f"Transition {i}: length {line.length:.2f}, flow: 0 [1/s] \n \n"
+                    msg += (
+                        f"Transition {i}: length {line.length:.2f}, flow: 0 [1/s] \n \n"
+                    )
 
-    if selected_transitions:
-        st.info(msg)
-
-    return tstats, cum_num, trans_used, max_len
+    return tstats, cum_num, trans_used, max_len, msg
 
 
-# empirical CDF P(x<=X)
+#  empirical CDF P(x<=X)
 def CDF(x, times):
-    return float(len(times[times <= x]))/len(times)
+    return float(len(times[times <= x])) / len(times)
 
 
 def survival(times):
     diff = np.diff(times)
     diff = np.sort(diff)
-    vF = np.vectorize(CDF, excluded=['times'])
-    y_diff = 1-vF(x=diff, times=diff)
+    vF = np.vectorize(CDF, excluded=["times"])
+    y_diff = 1 - vF(x=diff, times=diff)
     return y_diff, diff
 
 
 def rolling_flow(times, fps, windows=200):
     times = np.sort(times)
     serie = pd.Series(times)
-    minp = 100;  #windows = 200 #int(len(times)/10);
+    minp = 100
+    # windows = 200 #int(len(times)/10);
     minp = min(minp, windows)
-    flow = fps*(windows-1)/(serie.rolling(windows, min_periods=minp).max()  - serie.rolling(windows, min_periods=minp).min())
-    flow = flow[~np.isnan(flow)] # remove NaN
+    flow = (
+        fps
+        * (windows - 1)
+        / (
+            serie.rolling(windows, min_periods=minp).max()
+            - serie.rolling(windows, min_periods=minp).min()
+        )
+    )
+    flow = flow[~np.isnan(flow)]  # remove NaN
     wmean = flow.rolling(windows, min_periods=minp).mean()
     wstd = flow.rolling(windows, min_periods=minp).std()
     return np.mean(wmean), np.mean(wstd)

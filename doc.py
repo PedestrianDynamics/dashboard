@@ -27,9 +27,15 @@ def doc_plots():
     )
 
     st.write("""
-    #### Occupation
-    This `discharge curve` shows the number of pedestrians inside the scenario versus time.
+    #### Distance-Time
+    Relation between time and distance to entrance.
+    For each person, the Euclidean distance between the current position and the **first** selected entrance
+    is calculated.
+    The time to entrance is given by the time the person needs to arrive at the entrance.
+    """)
+    st.image("./figs/distance-time.png", caption="Relation between time and distance to entrance. Fig.6 in https://doi.org/10.1371/journal.pone.0177328.g006")
 
+    st.write("""
     #### Survival
     The time lapses $\delta$ between two consecutive agents passing a line are calculated.
     The value of $\delta$ reflects the sustained time of clogs interrupting the flow.
@@ -37,7 +43,7 @@ def doc_plots():
     $$P(t > δ)$$, also known as the survival function,
     which is an indicator of clogging in front of exits.
     """)
-    st.image("./figs/survival_function.png", caption="The survival functions w.r.t door widths. See: Fig.7 (a) in https://doi.org/10.1016/j.physa.2021.125934")
+    st.image("./figs/survival_function.png", caption="The survival functions w.r.t door widths. Fig.7 (a) in https://doi.org/10.1016/j.physa.2021.125934")
 
 
 def doc_jam():
@@ -125,13 +131,15 @@ def doc_profile():
     st.latex(r"""\rho_c = \frac{1}{T}\sum_{t=0}^T \frac{N_c}{A_c},""")
     st.write("where $A_c$  the area of cell $c$ and $N_c$ the number of agents in $c$.")
     st.write(
-    """#### Gaussian  
-    for every pedestrian $i$ a Gaussian distribution is calculated, then
+    """#### Gaussian
+
+For every pedestrian $i$ a Gaussian distribution is calculated, then
     """
     )
     st.latex(r"""\rho_c = \frac{1}{T}\sum_{t=0}^T G_c,""")
     st.write("""where $G_c$ the sum of all Gaussians.
-    The speed is calculated from $\\rho_i$ by Eq. (1).
+
+The speed is calculated from $\\rho_i$ by Eq. (1).
     """)
     st.markdown("--------")
     st.write("#### References:")
