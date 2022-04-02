@@ -85,7 +85,6 @@ def set_state_variables():
     if "speed_index" not in st.session_state:
         st.session_state.speed_index = -1
 
-
     if "header_traj" not in st.session_state:
         st.session_state.header_traj = ""
 
@@ -418,25 +417,31 @@ def main():
         NT_form = st.sidebar.form("plot-NT")
         with NT_form:
             choose_NT = c1.checkbox(
-                "N-T", help="Plot N-t curve", key="NT", disabled=disable_NT_flow
+                "N-T",
+                value = True,
+                help="Plot N-t curve", key="NT", disabled=disable_NT_flow
             )
             choose_flow = c2.checkbox(
-                "Flow", help="Plot flow curve", key="Flow", disabled=disable_NT_flow
+                "Flow",
+                value = True,
+                help="Plot flow curve", key="Flow", disabled=disable_NT_flow
             )
             choose_time_distance = c1.checkbox(
                 "T-D",
+                value = True,
                 help="Plot Time-Distance to the fist selected entrance",
                 key="EvacT",
             )
             choose_survival = c2.checkbox(
                 "Survival",
+                value = True,
                 help="Plot survival function (clogging)",
                 disabled=disable_NT_flow,
                 key="Survival",
             )
             num_peds_TD = c1.number_input(
                 "number T-D",
-                min_value=1,
+                min_value=1,                
                 max_value=len(peds),
                 value=int(0.3 * len(peds)),
                 step=1,
@@ -460,7 +465,7 @@ def main():
         make_plots = NT_form.form_submit_button(label="🚦plot")
         # ----- Jam
         st.sidebar.header("Jam")
-        st.sidebar.slider(
+        jam_speed = st.sidebar.slider(
             "Min jam speed",
             0.1,
             1.0,
@@ -468,7 +473,7 @@ def main():
             help="Agent slower that this speed is in jam",
             key="jVmin",
         )
-        st.sidebar.slider(
+        min_jam_time = st.sidebar.slider(
             "Min jam duration",
             1,
             300,
@@ -476,10 +481,10 @@ def main():
             help="A jam last at least that long",
             key="jTmin",
         )
-        st.sidebar.slider(
+        min_jam_agents = st.sidebar.slider(
             "Min agents in jam",
             2,
-            50,
+            200,
             20,
             help="A jam has at least so many agents",
             key="jNmin",
@@ -990,9 +995,19 @@ def main():
                         )
 
         info = st.expander("Documentation: Jam (click to expand)")
+        logging.info("calculate jam")
         with info:
             doc.doc_jam()
 
+        logging.info(f"jam speed {jam_speed}")
+        logging.info(f"min jam agents {min_jam_agents}")
+        logging.info(f"min jam time {min_jam_time}")
+        
+        jam_frames = Utilities.jam_frames(data, jam_speed)
+        lifetime, max_lifetime, ret = Utilities.jam_lifetime(data, jam_frames, min_jam_agents, fps)
+        fig = plots.plot_jam_lifetime(frames, lifetime, fps, max_lifetime, ret)
+        print("Main: ", ret)
+        st.plotly_chart(fig, use_container_width=True)
 
 if __name__ == "__main__":
     with Utilities.profile("Main"):

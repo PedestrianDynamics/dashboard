@@ -192,6 +192,73 @@ def plot_peds_inside(frames, peds_inside, fps):
     return fig
 
 
+# @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_jam_lifetime(frames, lifetime, fps, title, ret):
+    logging.info("plot timeseries")
+    fig = make_subplots(rows=1, cols=1, x_title="Time / s",
+                        y_title="Number of Agents in Jam",
+                        subplot_titles=[f"<b>Maximal Jam duration: {title:.2f} [s]</b>"],)
+
+
+
+    #fps = 1
+    xx = np.zeros((len(frames), 2))
+    xx[:, 0] = frames
+    if lifetime.size:
+        _, idx, _ = np.intersect1d(xx[:, 0], lifetime[:, 0], return_indices=True)        
+        xx[idx, 1] = lifetime[:, 1]
+        
+        
+    times = xx[:, 0]/fps
+
+
+
+    trace1 = go.Scatter(
+        x=xx[0:, 0]/fps,
+        y=xx[0:, 1],
+        mode="lines",
+        showlegend=False,
+        name="Jam",
+        hoverinfo='skip',
+        line=dict(width=3, color="royalblue"),
+    )
+
+    
+    for i in range(ret.shape[0]):
+        From = int(ret[i, 0])
+        To = int(ret[i, 1])
+        print(From, To)
+        
+        
+        trace2 = go.Scatter(
+            x=lifetime[From:To, 0]/fps,
+            y=lifetime[From:To, 1],
+            mode="lines",
+            showlegend=False,
+            name="Jam",
+            line=dict(width=3, color="red"),
+            stackgroup="one",
+        )
+        fig.append_trace(trace2, row=1, col=1)
+    
+    fig.append_trace(trace1, row=1, col=1)
+    
+    miny = np.min(xx[:, 1])
+    maxy = np.max(xx[:, 1])
+    minx = np.min(times)
+    maxx = np.max(times)
+
+    # fig.update_yaxes(
+    #     range=[miny - 0.1, maxy + 0.1],
+    # )
+    # fig.update_xaxes(
+    #     range=[minx - 0.1, maxx + 0.1],
+    # )
+    fig.update_layout(hovermode="x")
+    return fig
+
+
+        
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_timeserie(frames, t, fps, title, miny, maxy):
     logging.info("plot timeseries")

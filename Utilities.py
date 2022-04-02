@@ -39,7 +39,7 @@ def get_speed_index(traj_file):
     for line in lines:
         if line.startswith("#ID"):
             if 'V' in line:
-                return line.split().index('V')
+                return int(line.split().index('V'))
 
     return -1
 
@@ -593,52 +593,104 @@ def calculate_density_average_gauss(
     return rho_matrix
 
 
-def jam(data, speed, jam_speed):
-    return data[speed < jam_speed]
+def jam_frames(data, jam_speed):
+    """Definition of jam
+
+    return data in jam
+    """
+
+    jam_data = data[data[:, st.session_state.speed_index] <= jam_speed]
+    return np.unique(jam_data[:, 1])
 
 
-def consecutive_chunks(data):
+def consecutive_chunks(data1d):
     # input array([ 1,  2,  3,  4, 10, 11, 12, 15])
     # output array([3, 2])
-    consecutive = np.diff(data[:, 1])
+    # diff err by 5 frames
+    frame_margin = 5
+    data1d = np.hstack(([0], data1d, [0]))
+    print("data")
+    print(data1d)
+    consecutive = np.diff(data1d)
+    
     condition = consecutive == 1
+
+    if not condition.any():
+        return np.array([]), np.array([])
+
     if condition[0]:
         condition = np.concatenate([[False], condition])
 
     idx = np.where(~condition)[0]
     chunks = np.ediff1d(idx) - 1
-    return chunks
+    
+    print(data1d[idx])
+    #--
+    ret = []
+    idx = idx-1
+    print("idx", idx)
+    for i, e in enumerate(idx):
+        From = e + 1
+        if i < len(idx)-1:
+            #print(i)
+            To = idx[i+1]
+            print(f"From = {From}, To = {To} ({To-From-np.max(chunks)}), Max = {np.max(chunks)}")
+            cond = np.abs(To - From - np.max(chunks)) <=frame_margin
+            if From < To and cond:
+                ret.append([From+1, To+1])
+    
+    logging.info(f"Jam chunks {chunks}. Ret: {ret}, M = {np.max(chunks)}")
+    return chunks, np.array(ret)
 
 
 def jam_waiting_time(
     peds: np.array, jam_data: np.array, jam_min_duration: int, fps: int
 ):
+    """Return a list of pid and its max_time in jam
+
+    return a 2D array [ped, waiting_time]
+    """
     waiting_times = []
     for ped in peds:
         jam_data_ped = jam_data[jam_data[:, 0] == ped]
-        jam_times = consecutive_chunks(jam_data_ped)
+        jam_times = consecutive_chunks(jam_data_ped[:, 1])
         max_waiting_time = np.max(jam_times)
         if max_waiting_time >= jam_min_duration:
-            waiting_times.append([ped, max_waiting_time])
+            waiting_times.append([ped, max_waiting_time/fps])
 
-    return waiting_times / fps
+    return np.array(waiting_times)
 
 
-def jam_lifetime(jam_data: np.array, jam_min_agents: int, fps: int):
+def jam_lifetime(data: np.array, jam_frames, jam_min_agents: int, fps: int):
     """Lifespane of a Jam and how many pedestrian in chunck"""
-    jam_frames = jam_data[:, 1]
+    
+    #frames = data[:, 1]
     lifetime = []
     # frame, num peds in jam. Using only the first,
     # since I dont know yet how to use the second
+    # Ignore the first frames, where agents start from 0 (so in jam)
     for frame in jam_frames:
-        d = jam_data[jam_data[:, 1] == frame]
-        num_ped_in_jam = len(d[:, 0])
-        if num_ped_in_jam > jam_min_agents:
-            lifetime.append([frame / fps, num_ped_in_jam])
+        if frame in jam_frames:
+            d = data[data[:, 1] == frame]
+            num_ped_in_jam = len(d[:, 0])
+            if num_ped_in_jam >= jam_min_agents:
+                lifetime.append([frame, num_ped_in_jam])
 
-        clifetime = consecutive_chunks(np.array(lifetime)[:, 0])
+    lifetime = np.array(lifetime)
+    
+    if not lifetime.size:
+        return np.array([]), 0, np.array([])
 
-    return clifetime
+    clifetime, ret = consecutive_chunks(np.array(lifetime)[:, 0])
+    print("clifetime ", clifetime)
+    if not clifetime.size:  # one big chunk
+        clifetime = lifetime[:, 0]
+        mx_lt = (np.max(clifetime)-np.min(clifetime))/fps
+    else:
+        mx_lt = np.max(clifetime)/fps
+
+    print("F lifetime", lifetime[:10, :], lifetime.shape)
+    return lifetime, mx_lt, ret
 
 
 def calculate_NT_data(transitions, selected_transitions, data, fps):
