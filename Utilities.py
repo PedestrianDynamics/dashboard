@@ -1,13 +1,14 @@
+import contextlib
+import time
+from collections import defaultdict
+
 import lovely_logger as logging
 import numpy as np
+import pandas as pd
 import streamlit as st
 from pandas import read_csv
 from scipy import stats
 from shapely.geometry import LineString, Point
-from collections import defaultdict
-import contextlib
-import time
-import pandas as pd
 
 
 @contextlib.contextmanager
@@ -38,8 +39,8 @@ def get_speed_index(traj_file):
     lines = traj_file[:500].split("\n")
     for line in lines:
         if line.startswith("#ID"):
-            if 'V' in line:
-                return int(line.split().index('V'))
+            if "V" in line:
+                return int(line.split().index("V"))
 
     return -1
 
@@ -48,7 +49,7 @@ def get_header(traj_file):
     lines = traj_file[:500].split("\n")
     for line in lines:
         if line.startswith("#ID"):
-            if 'FR' in line:
+            if "FR" in line:
                 return line
 
     return "Not extracted"
@@ -131,7 +132,7 @@ def get_measurement_lines(xml_doc, unit):
     measurement_lines = {}
     for _, t_elem in enumerate(xml_doc.getElementsByTagName("area_L")):
         Id = t_elem.getAttribute("id")
-        print("Measurement", Id)
+        logging.info(f"Measurement {Id}")
         n_vertex = 2
         vertex_array = np.zeros((n_vertex, 2))
         vertex_array[0, 0] = (
@@ -147,11 +148,13 @@ def get_measurement_lines(xml_doc, unit):
             t_elem.getElementsByTagName("end")[0].attributes["py"].value
         )
         measurement_lines[Id] = vertex_array / cm2m
-        print(vertex_array)
+        logging.info(f"vertex: {vertex_array}")
     return measurement_lines
 
 
-def passing_frame(ped_data: np.array, line: LineString, fps: int, l: float) -> int:
+def passing_frame(
+    ped_data: np.array, line: LineString, fps: int, max_distance: float
+) -> int:
     """Return frame of first time ped enters the line buffer
 
     Enlarge the line by eps, a constant that is dependent on fps
@@ -160,13 +163,14 @@ def passing_frame(ped_data: np.array, line: LineString, fps: int, l: float) -> i
     :param ped_data: trajectories of ped
     :param line: transition
     :param fps: fps
+    : param max_distance: an arbitrary distance to the line
 
     :returns: frame of entrance. Return negative number if ped did not pass trans
 
     """
     eps = 1 / fps * 1.3
     line_buffer = line.buffer(eps)
-    p = ped_data[np.abs(ped_data[:, 2] - line.centroid.x) < l]
+    p = ped_data[np.abs(ped_data[:, 2] - line.centroid.x) < max_distance]
     for (frame, x, y) in p[:, 1:4]:
         if Point(x, y).within(line_buffer):
             return frame
@@ -603,16 +607,16 @@ def jam_frames(data, jam_speed):
     return np.unique(jam_data[:, 1])
 
 
-def consecutive_chunks(data1d):
+def consecutive_chunks(data1d, fps, frame_margin):
     # input array([ 1,  2,  3,  4, 10, 11, 12, 15])
     # output array([3, 2])
-    # diff err by 5 frames
-    frame_margin = 5
+    # diff err by 5 frames        
+
     data1d = np.hstack(([0], data1d, [0]))
-    print("data")
-    print(data1d)
-    consecutive = np.diff(data1d)
-    
+    # print("data")
+    # print(data1d)
+    consecutive = np.diff(data1d, 1)
+
     condition = consecutive == 1
 
     if not condition.any():
@@ -623,28 +627,28 @@ def consecutive_chunks(data1d):
 
     idx = np.where(~condition)[0]
     chunks = np.ediff1d(idx) - 1
-    
-    print(data1d[idx])
-    #--
+
+    # print(data1d[idx])
+    # --
     ret = []
-    idx = idx-1
-    print("idx", idx)
+    idx = idx - 1
+    # print("idx", idx)
     for i, e in enumerate(idx):
         From = e + 1
-        if i < len(idx)-1:
-            #print(i)
-            To = idx[i+1]
-            print(f"From = {From}, To = {To} ({To-From-np.max(chunks)}), Max = {np.max(chunks)}")
-            cond = np.abs(To - From - np.max(chunks)) <=frame_margin
+        if i < len(idx) - 1:
+            # print(i)
+            To = idx[i + 1]
+            # print(f"From = {From}, To = {To} ({To-From-np.max(chunks)}), Max = {np.max(chunks)}")
+            cond = np.abs(To - From - np.max(chunks)) <= frame_margin
             if From < To and cond:
-                ret.append([From+1, To+1])
-    
-    logging.info(f"Jam chunks {chunks}. Ret: {ret}, M = {np.max(chunks)}")
+                ret.append([From, To + 1])
+
+    logging.info(f"Jam chunks {chunks}. From-To: {ret}, Max = {np.max(chunks)}")
     return chunks, np.array(ret)
 
 
 def jam_waiting_time(
-    peds: np.array, jam_data: np.array, jam_min_duration: int, fps: int
+        peds: np.array, jam_data: np.array, jam_min_duration: int, fps: int, precision
 ):
     """Return a list of pid and its max_time in jam
 
@@ -653,18 +657,18 @@ def jam_waiting_time(
     waiting_times = []
     for ped in peds:
         jam_data_ped = jam_data[jam_data[:, 0] == ped]
-        jam_times = consecutive_chunks(jam_data_ped[:, 1])
+        jam_times = consecutive_chunks(jam_data_ped[:, 1], fps, precision)
         max_waiting_time = np.max(jam_times)
         if max_waiting_time >= jam_min_duration:
-            waiting_times.append([ped, max_waiting_time/fps])
+            waiting_times.append([ped, max_waiting_time / fps])
 
     return np.array(waiting_times)
 
 
-def jam_lifetime(data: np.array, jam_frames, jam_min_agents: int, fps: int):
+def jam_lifetime(data: np.array, jam_frames, jam_min_agents: int, fps: int, precision: int):
     """Lifespane of a Jam and how many pedestrian in chunck"""
-    
-    #frames = data[:, 1]
+
+    # frames = data[:, 1]
     lifetime = []
     # frame, num peds in jam. Using only the first,
     # since I dont know yet how to use the second
@@ -677,20 +681,20 @@ def jam_lifetime(data: np.array, jam_frames, jam_min_agents: int, fps: int):
                 lifetime.append([frame, num_ped_in_jam])
 
     lifetime = np.array(lifetime)
-    
+
     if not lifetime.size:
-        return np.array([]), 0, np.array([])
+        return np.array([]), np.array([]), 0, np.array([])
 
-    clifetime, ret = consecutive_chunks(np.array(lifetime)[:, 0])
-    print("clifetime ", clifetime)
-    if not clifetime.size:  # one big chunk
-        clifetime = lifetime[:, 0]
-        mx_lt = (np.max(clifetime)-np.min(clifetime))/fps
+    chuncks, ret = consecutive_chunks(np.array(lifetime)[:, 0], fps, precision)
+    # print("clifetime ", clifetime)
+    if not chuncks.size:  # one big chunk
+        chuncks = lifetime[:, 0]
+        mx_lt = (np.max(chuncks) - np.min(chuncks)) / fps
     else:
-        mx_lt = np.max(clifetime)/fps
+        mx_lt = np.max(chuncks) / fps
 
-    print("F lifetime", lifetime[:10, :], lifetime.shape)
-    return lifetime, mx_lt, ret
+    # print("F lifetime", lifetime[:10, :], lifetime.shape)
+    return lifetime, chuncks, mx_lt, ret
 
 
 def calculate_NT_data(transitions, selected_transitions, data, fps):

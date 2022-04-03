@@ -1,13 +1,16 @@
 import lovely_logger as logging
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import plotly.express as px
 import plotly.graph_objs as go
 import streamlit as st
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
-import matplotlib
-from Utilities import survival
 from shapely.geometry import LineString, Point
+
+from Utilities import survival
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
@@ -192,57 +195,73 @@ def plot_peds_inside(frames, peds_inside, fps):
     return fig
 
 
-# @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_jam_lifetime(frames, lifetime, fps, title, ret):
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_jam_lifetime(frames, lifetime, fps, title, ret, min_agents_jam):
+    logging.info("plot jam_lifetime")
     logging.info("plot timeseries")
-    fig = make_subplots(rows=1, cols=1, x_title="Time / s",
-                        y_title="Number of Agents in Jam",
-                        subplot_titles=[f"<b>Maximal Jam duration: {title:.2f} [s]</b>"],)
+    fig = make_subplots(
+        rows=1,
+        cols=1,
+        x_title="Time / s",
+        y_title="Number of Agents in Jam",
+        subplot_titles=[f"<b>Maximal Jam duration: {title:.2f} [s]</b>"],
+    )
 
-
-
-    #fps = 1
     xx = np.zeros((len(frames), 2))
     xx[:, 0] = frames
     if lifetime.size:
-        _, idx, _ = np.intersect1d(xx[:, 0], lifetime[:, 0], return_indices=True)        
+        _, idx, _ = np.intersect1d(xx[:, 0], lifetime[:, 0], return_indices=True)
         xx[idx, 1] = lifetime[:, 1]
-        
-        
-    times = xx[:, 0]/fps
 
-
-
+    times = xx[:, 0] / fps
+    # the curve over all frames
     trace1 = go.Scatter(
-        x=xx[0:, 0]/fps,
+        x=xx[0:, 0] / fps,
         y=xx[0:, 1],
         mode="lines",
         showlegend=False,
         name="Jam",
-        hoverinfo='skip',
+        # hoverinfo="skip",
         line=dict(width=3, color="royalblue"),
     )
+    # horizontal line
 
-    
+    # jam curves from to
     for i in range(ret.shape[0]):
         From = int(ret[i, 0])
         To = int(ret[i, 1])
-        print(From, To)
-        
-        
         trace2 = go.Scatter(
-            x=lifetime[From:To, 0]/fps,
+            x=lifetime[From:To, 0] / fps,
             y=lifetime[From:To, 1],
             mode="lines",
-            showlegend=False,
-            name="Jam",
+            showlegend=True,
+            name=f"Jam duration: [{From/fps:.2f}, {To/fps:.2f}] ({(To-From)/fps:.2f})[s]",
             line=dict(width=3, color="red"),
-            stackgroup="one",
+            fill="tonexty",
         )
+        trace3 = go.Scatter(
+            x=[lifetime[From, 0] / fps, lifetime[To - 1, 0] / fps],
+            y=[min_agents_jam, min_agents_jam],
+            mode="lines",
+            showlegend=False,
+            name="Min agents in jam",
+            # hoverinfo="skip",
+            line=dict(width=3, dash="dash", color="grey"),
+        )
+        fig.append_trace(trace3, row=1, col=1)
         fig.append_trace(trace2, row=1, col=1)
-    
+
+    trace4 = go.Scatter(
+        x=[xx[0, 0] / fps, xx[-1, 0] / fps],
+        y=[min_agents_jam, min_agents_jam],
+        mode="lines",
+        showlegend=True,
+        name="Min agents in jam",
+        line=dict(width=3, dash="dash", color="grey"),
+    )
     fig.append_trace(trace1, row=1, col=1)
-    
+    fig.append_trace(trace4, row=1, col=1)
+
     miny = np.min(xx[:, 1])
     maxy = np.max(xx[:, 1])
     minx = np.min(times)
@@ -257,8 +276,28 @@ def plot_jam_lifetime(frames, lifetime, fps, title, ret):
     fig.update_layout(hovermode="x")
     return fig
 
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_jam_lifetime_hist(chuncks, fps, nbins):
+    chuncks = chuncks / fps
+    df = pd.DataFrame(
+        chuncks,
+        columns=[
+            "chuncks",
+        ],
+    )
+    hist = px.histogram(
+        df,
+        x="chuncks",
+        marginal="rug",
+        hover_data=df.columns,
+        labels={"chuncks": "Time"},
+        text_auto=True,
+        nbins=nbins,
+    )
+    hist.update_layout(bargap=0.2)
+    return hist
 
-        
+
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_timeserie(frames, t, fps, title, miny, maxy):
     logging.info("plot timeseries")

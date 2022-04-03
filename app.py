@@ -1,21 +1,21 @@
 import datetime as dt
 import os
 from collections import defaultdict
+from copy import deepcopy
 from io import StringIO
 from pathlib import Path
 from xml.dom.minidom import parseString
-import timeit
+
 import lovely_logger as logging
 import numpy as np
+import plotly.graph_objs as go
 import streamlit as st
 from matplotlib import cm
 from shapely.geometry import LineString
-from copy import deepcopy
+
+import doc
 import plots
 import Utilities
-import doc
-import plotly.graph_objs as go
-
 
 path = Path(__file__)
 ROOT_DIR = path.parent.absolute()
@@ -250,7 +250,7 @@ def main():
                     speed_index = Utilities.get_speed_index(string_data)
                     header_traj = Utilities.get_header(string_data)
                     logging.info(f"Speed index: {speed_index}")
-                    if speed_index == -1:  #data.shape[1] < 10:  # extend data
+                    if speed_index == -1:  # data.shape[1] < 10:  # extend data
                         data = Utilities.compute_speed_and_angle(
                             data, fps, st.session_state.df
                         )
@@ -418,30 +418,34 @@ def main():
         with NT_form:
             choose_NT = c1.checkbox(
                 "N-T",
-                value = True,
-                help="Plot N-t curve", key="NT", disabled=disable_NT_flow
+                value=True,
+                help="Plot N-t curve",
+                key="NT",
+                disabled=disable_NT_flow,
             )
             choose_flow = c2.checkbox(
                 "Flow",
-                value = True,
-                help="Plot flow curve", key="Flow", disabled=disable_NT_flow
+                value=True,
+                help="Plot flow curve",
+                key="Flow",
+                disabled=disable_NT_flow,
             )
             choose_time_distance = c1.checkbox(
                 "T-D",
-                value = True,
+                value=True,
                 help="Plot Time-Distance to the fist selected entrance",
                 key="EvacT",
             )
             choose_survival = c2.checkbox(
                 "Survival",
-                value = True,
+                value=True,
                 help="Plot survival function (clogging)",
                 disabled=disable_NT_flow,
                 key="Survival",
             )
             num_peds_TD = c1.number_input(
                 "number T-D",
-                min_value=1,                
+                min_value=1,
                 max_value=len(peds),
                 value=int(0.3 * len(peds)),
                 step=1,
@@ -464,21 +468,27 @@ def main():
         )
         make_plots = NT_form.form_submit_button(label="🚦plot")
         # ----- Jam
-        st.sidebar.header("Jam")
+        st.sidebar.header("🐌 Jam")
+        choose_jam_duration = st.sidebar.checkbox(
+            "Jam duration",
+            value=True,
+            help="Plot change of the number of pedestrian in jam versus time",
+            key="jam_duration",
+        )
         jam_speed = st.sidebar.slider(
-            "Min jam speed",
+            "Min jam speed [m/s]",
             0.1,
             1.0,
             0.5,
-            help="Agent slower that this speed is in jam",
+            help="An agent slower that this speed is in jam",
             key="jVmin",
         )
         min_jam_time = st.sidebar.slider(
-            "Min jam duration",
+            "Min jam duration [s]",
             1,
             300,
             60,
-            help="A jam last at least that long",
+            help="A jam lasts at least that long",
             key="jTmin",
         )
         min_jam_agents = st.sidebar.slider(
@@ -678,7 +688,9 @@ def main():
                                 dframe = data[:, 1] == frame
                                 x = data[dframe][:, 2]
                                 y = data[dframe][:, 3]
-                                speed_agent = data[dframe][:, st.session_state.speed_index]
+                                speed_agent = data[dframe][
+                                    :, st.session_state.speed_index
+                                ]
                                 dtime = Utilities.calculate_density_average_weidmann(
                                     st.session_state.xpos - st.session_state.lm / 2,
                                     st.session_state.xpos + st.session_state.lm / 2,
@@ -727,12 +739,12 @@ def main():
 
                     elif choose_d_method == "Classical":
                         xbins = np.arange(geominX, geomaxX + dx, dx)
-                        ybins = np.arange(geominY, geomaxY + dx, dx)                        
-                        density_ret = np.zeros((len(ybins)-1, len(xbins)-1))
+                        ybins = np.arange(geominY, geomaxY + dx, dx)
+                        density_ret = np.zeros((len(ybins) - 1, len(xbins) - 1))
                         # for frame in frames[::sample]:
                         #     dframe = data[:, 1] == frame
                         #     x = data[dframe][:, 2]
-                        #     y = data[dframe][:, 3]                                
+                        #     y = data[dframe][:, 3]
                         #     res = Utilities.calculate_density_average_classic(
                         #         geominX,
                         #         geomaxX,
@@ -764,7 +776,7 @@ def main():
                             for frame in frames[::sample]:
                                 dframe = data[:, 1] == frame
                                 x = data[dframe][:, 2]
-                                y = data[dframe][:, 3]                           
+                                y = data[dframe][:, 3]
                                 dtime = Utilities.calculate_density_frame_classic(
                                     st.session_state.xpos - st.session_state.lm / 2,
                                     st.session_state.xpos + st.session_state.lm / 2,
@@ -830,7 +842,9 @@ def main():
                                 dframe = data[:, 1] == frame
                                 x = data[dframe][:, 2]
                                 y = data[dframe][:, 3]
-                                speed_agent = data[dframe][:, st.session_state.speed_index]
+                                speed_agent = data[dframe][
+                                    :, st.session_state.speed_index
+                                ]
                                 stime = Utilities.calculate_speed_average(
                                     st.session_state.xpos - st.session_state.lm / 2,
                                     st.session_state.xpos + st.session_state.lm / 2,
@@ -995,19 +1009,38 @@ def main():
                         )
 
         info = st.expander("Documentation: Jam (click to expand)")
-        logging.info("calculate jam")
         with info:
             doc.doc_jam()
 
+        logging.info("calculate jam")
         logging.info(f"jam speed {jam_speed}")
         logging.info(f"min jam agents {min_jam_agents}")
         logging.info(f"min jam time {min_jam_time}")
-        
-        jam_frames = Utilities.jam_frames(data, jam_speed)
-        lifetime, max_lifetime, ret = Utilities.jam_lifetime(data, jam_frames, min_jam_agents, fps)
-        fig = plots.plot_jam_lifetime(frames, lifetime, fps, max_lifetime, ret)
-        print("Main: ", ret)
-        st.plotly_chart(fig, use_container_width=True)
+        if choose_jam_duration:
+            c1, c2 = st.columns((1, 1))
+            pl2 = c1.empty()
+            pl = c2.empty()
+            
+            precision = c1.slider(
+                "Precision",
+                0,
+                int(10 * fps),
+                help="Condition on the length of jam durations (in frame)",
+            )
+            nbins = c2.slider("nbins", 5, 40, value=10, help="Number of bins")
+           
+            jam_frames = Utilities.jam_frames(data, jam_speed)
+            lifetime, chuncks, max_lifetime, from_to = Utilities.jam_lifetime(
+                data, jam_frames, min_jam_agents, fps, precision
+            )
+            fig1 = plots.plot_jam_lifetime(
+                frames, lifetime, fps, max_lifetime, from_to, min_jam_agents
+            )
+            hist = plots.plot_jam_lifetime_hist(chuncks, fps, nbins)
+                        
+            pl2.plotly_chart(fig1, use_container_width=True)
+            pl.plotly_chart(hist, use_container_width=True)
+                
 
 if __name__ == "__main__":
     with Utilities.profile("Main"):
