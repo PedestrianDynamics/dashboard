@@ -648,13 +648,17 @@ def consecutive_chunks(data1d, fps, frame_margin):
 
 
 def jam_waiting_time(
-        peds: np.array, jam_data: np.array, jam_min_duration: int, fps: int, precision
+        jam_data: np.array,
+        jam_min_duration: int,
+        fps: int,
+        precision
 ):
     """Return a list of pid and its max_time in jam
 
     return a 2D array [ped, waiting_time]
     """
     waiting_times = []
+    peds = np.unique(jam_data[:, 0]).astype(int)
     for ped in peds:
         jam_data_ped = jam_data[jam_data[:, 0] == ped]
         jam_times = consecutive_chunks(jam_data_ped[:, 1], fps, precision)
@@ -665,7 +669,11 @@ def jam_waiting_time(
     return np.array(waiting_times)
 
 
-def jam_lifetime(data: np.array, jam_frames, jam_min_agents: int, fps: int, precision: int):
+def jam_lifetime(data: np.array,
+                 jam_frames,
+                 jam_min_agents: int,
+                 fps: int,
+                 precision: int):
     """Lifespane of a Jam and how many pedestrian in chunck"""
 
     # frames = data[:, 1]
