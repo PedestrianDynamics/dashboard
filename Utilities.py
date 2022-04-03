@@ -648,7 +648,8 @@ def consecutive_chunks(data1d, fps, frame_margin):
 
 
 def jam_waiting_time(
-        jam_data: np.array,
+        data: np.array,
+        jam_speed: float,
         jam_min_duration: int,
         fps: int,
         precision
@@ -658,13 +659,18 @@ def jam_waiting_time(
     return a 2D array [ped, waiting_time]
     """
     waiting_times = []
-    peds = np.unique(jam_data[:, 0]).astype(int)
+    peds = np.unique(data[:, 0]).astype(int)
     for ped in peds:
-        jam_data_ped = jam_data[jam_data[:, 0] == ped]
-        jam_times = consecutive_chunks(jam_data_ped[:, 1], fps, precision)
-        max_waiting_time = np.max(jam_times)
+        data_ped = data[data[:, 0] == ped]        
+        frames_in_jam = jam_frames(data_ped, jam_speed)
+        jam_times, _ = consecutive_chunks(frames_in_jam, fps, precision)
+        
+        if not jam_times.size:
+            continue
+
+        max_waiting_time = np.max(jam_times)/fps
         if max_waiting_time >= jam_min_duration:
-            waiting_times.append([ped, max_waiting_time / fps])
+            waiting_times.append([ped, max_waiting_time])
 
     return np.array(waiting_times)
 
@@ -682,11 +688,10 @@ def jam_lifetime(data: np.array,
     # since I dont know yet how to use the second
     # Ignore the first frames, where agents start from 0 (so in jam)
     for frame in jam_frames:
-        if frame in jam_frames:
-            d = data[data[:, 1] == frame]
-            num_ped_in_jam = len(d[:, 0])
-            if num_ped_in_jam >= jam_min_agents:
-                lifetime.append([frame, num_ped_in_jam])
+        d = data[data[:, 1] == frame]
+        num_ped_in_jam = len(d[:, 0])
+        if num_ped_in_jam >= jam_min_agents:
+            lifetime.append([frame, num_ped_in_jam])
 
     lifetime = np.array(lifetime)
 

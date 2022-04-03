@@ -204,7 +204,7 @@ def plot_jam_lifetime(frames, lifetime, fps, title, ret, min_agents_jam):
         cols=1,
         x_title="Time / s",
         y_title="Number of Agents in Jam",
-        subplot_titles=[f"<b>Maximal Jam duration: {title:.2f} [s]</b>"],
+        subplot_titles=[f"<b>Maximal Jam Lifetime: {title:.2f} [s]</b>"],
     )
 
     xx = np.zeros((len(frames), 2))
@@ -235,7 +235,7 @@ def plot_jam_lifetime(frames, lifetime, fps, title, ret, min_agents_jam):
             y=lifetime[From:To, 1],
             mode="lines",
             showlegend=True,
-            name=f"Jam duration: [{From/fps:.2f}, {To/fps:.2f}] ({(To-From)/fps:.2f})[s]",
+            name=f"Lifetime: [{From/fps:.2f}, {To/fps:.2f}] ({(To-From)/fps:.2f})[s]",
             line=dict(width=3, color="red"),
             fill="tonexty",
         )
@@ -276,6 +276,32 @@ def plot_jam_lifetime(frames, lifetime, fps, title, ret, min_agents_jam):
     fig.update_layout(hovermode="x")
     return fig
 
+def plot_jam_waiting_hist(waiting_time, fps, nbins):
+    df = pd.DataFrame(
+        waiting_time,
+        columns=[
+            "waiting",
+        ],
+    )
+    if waiting_time.size:
+        maxt = np.max(waiting_time)
+    else:
+        maxt = 0
+    
+    hist = px.histogram(
+        df,
+        x="waiting",
+        marginal="rug",
+        hover_data=df.columns,
+        labels={"waiting": "Waiting time"},
+        text_auto=True,
+        nbins=nbins,
+        title=f'<b>Maximal waiting time: {maxt:.2f} [s]</b>',
+    )
+    hist.update_layout(bargap=0.2)
+    return hist
+
+
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_jam_lifetime_hist(chuncks, fps, nbins):
     chuncks = chuncks / fps
@@ -293,6 +319,7 @@ def plot_jam_lifetime_hist(chuncks, fps, nbins):
         labels={"chuncks": "Time"},
         text_auto=True,
         nbins=nbins,
+        title='<b>Distribution of Jam all Lifetimes</b>',
     )
     hist.update_layout(bargap=0.2)
     return hist
