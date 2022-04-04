@@ -33,7 +33,7 @@ def show_trajectories_table(data):
     return fig
 
 
-@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+@st.cache(suppress_st_warning=True, allow_output_mutation=True, hash_funcs={go.Figure: lambda _: None})
 def plot_NT(Frames, Nums, fps):
     logging.info("plot NT-curve")
     # fig = make_subplots(

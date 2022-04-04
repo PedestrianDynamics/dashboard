@@ -1011,7 +1011,11 @@ def main():
         if make_plots:
             if choose_NT:
                 T = dt.datetime.now()
-                n = trajectory_file.name.split(".txt")[0]
+                if traj_from_upload:
+                    n = trajectory_file.name.split(".txt")[0]
+                else:
+                    n = trajectory_file_d.split(".txt")[0]
+
                 file_download = f"{n}_{T.year}-{T.month:02}-{T.day:02}_{T.hour:02}-{T.minute:02}-{T.second:02}.txt"
                 once = 0  # don't download if file is empty
                 for i in selected_transitions:

@@ -46,12 +46,20 @@ Therefore, define in the geometry transitions, such that the pedestrian fully pa
 
 ## Todo
 
-- [ ] Congestion (histogram)
+- [x] Congestion (histogram)
 - [X] split file Utilities into plot-functions and utilities 
 - [X] Number of agents in geometry over time
-- [ ] Social distancing analysis (Qiancheng's paper)
 - [X] Use forms to avoid running everything at once!
 - [ ] Density profiles slider: from and to frames
-- [ ] survival function
+- [x] survival function
+- [x] Choose between example data
 - [X] Density time series in squares (l x l):
     -  sliders l, x, y
+- [ ] for faster plots check:
+  - https://plotly.com/python/datashader/ 
+  - https://datashader.org 
+  - https://datashader.org/user_guide/Trajectories.html
+  
+- [ ] Radio buttons to choose  between two different modes: Report vs Interactive
+- [ ] Social distancing analysis (Qiancheng's paper)
+
