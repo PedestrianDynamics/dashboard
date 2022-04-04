@@ -22,6 +22,11 @@ examples = {
         "https://fz-juelich.sciebo.de/s/GgvVjc81lzmhTgv/download",
         "https://fz-juelich.sciebo.de/s/NikHJ6TIHCwSoUM/download",
     ],
+    "Multi-Rooms (sim)": [
+        "Multi-Rooms",
+        "https://fz-juelich.sciebo.de/s/7kwrnAzcv5m7ii2/download",
+        "https://fz-juelich.sciebo.de/s/VSPgE6Kcfp8qDIa/download",
+    ],
     "Bottleneck (sim)": [
         "bottleneck",
         "https://fz-juelich.sciebo.de/s/HldXLySEfEDMdZo/download",
