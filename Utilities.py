@@ -12,24 +12,52 @@ from pandas import read_csv
 from scipy import stats
 from shapely.geometry import LineString, Point
 
+# name
+# trajectory
+# geometry
+
 examples = {
-    "Corner (experiment)": [
+    "HC-BUW (sim)": [
+        "HC_BUW",
+        "https://fz-juelich.sciebo.de/s/GgvVjc81lzmhTgv/download",
+        "https://fz-juelich.sciebo.de/s/NikHJ6TIHCwSoUM/download",
+    ],
+    "Bottleneck (sim)": [
+        "bottleneck",
+        "https://fz-juelich.sciebo.de/s/HldXLySEfEDMdZo/download",
+        "https://fz-juelich.sciebo.de/s/FqiSFGr6FajfYLD/download",
+    ],
+    "eo-300-300-300_combined (exp)": [
         "jps_eo-300-300-300_combined_MB",
         "https://fz-juelich.sciebo.de/s/BfNxMk1qM64QqYj/download",
         "https://fz-juelich.sciebo.de/s/qNVoD8RZ8UentBB/download",
     ],
-    "Bottleneck (simulation)": [
-        "bottleneck",
-        "https://fz-juelich.sciebo.de/s/HldXLySEfEDMdZo/download",
-        "https://fz-juelich.sciebo.de/s/FqiSFGr6FajfYLD/download",
+    "CROSSING_120_A_1 (exp)": [
+        "CROSSING_120_A_1",
+        "https://fz-juelich.sciebo.de/s/X3WTuExdj2HXRVx/download",
+        "https://fz-juelich.sciebo.de/s/11Cz0bQWZCv23eI/download",
+    ],
+    "CROSSING_120_C_1 (exp)": [
+        "CROSSING_120_C_1",
+        "https://fz-juelich.sciebo.de/s/vrkGlCDKVTIz8Ch/download",
+        "https://fz-juelich.sciebo.de/s/11Cz0bQWZCv23eI/download",
+    ],
+    "WDG_09 (exp)": [
+        "WDG_09",
+        "https://fz-juelich.sciebo.de/s/oTG7vRCcQyYJ08q/download",
+        "https://fz-juelich.sciebo.de/s/lDuCQlJkwh9Of1C/download",
+        "",
+    ],
+    "mo11_combine_MB (exp)": [
+        "mo11_combine_MB",
+        "https://fz-juelich.sciebo.de/s/ckzZLnRJCKKgAnZ/download",
+        "https://fz-juelich.sciebo.de/s/kgXUEyu95FTQlFC/download",
     ],
 }
 
 
 def selected_traj_geo(text):
-    """Returns a list of trajectory and geometry files
-
-    """
+    """Returns a list of trajectory and geometry files"""
     if text in examples.keys():
         return examples[text]
     else:
@@ -42,7 +70,7 @@ def download(url: str, filename: str):
     r = requests.get(url, stream=True)
     if r.ok:
         logging.info(f"saving to {filename}")
-        with open(filename, 'wb') as f:
+        with open(filename, "wb") as f:
             for chunk in r.iter_content(chunk_size=1024 * 8):
                 if chunk:
                     f.write(chunk)
@@ -52,7 +80,6 @@ def download(url: str, filename: str):
         logging.warning(f"Download failed: status code {r.status_code}\n{r.text}")
 
 
-    
 @contextlib.contextmanager
 def profile(name):
     start_time = time.time()
@@ -73,7 +100,7 @@ def inv_weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
     v0 = np.max(v)
     v[v > v0] = v0
     s = 1 - v / v0
-    #np.log(s, where=np.logical_not(zero_mask))
+    # np.log(s, where=np.logical_not(zero_mask))
     x = -1 / gamma * np.log(s, out=np.zeros_like(s), where=(s != 0)) + 1 / rho_max
     return 1 / x
 
@@ -364,7 +391,11 @@ def compute_speed(data, fps, df=10):
         speed = np.ones(size)
         if size < df:
             logging.warning(
-                f"""The number of frames used to calculate the speed {df}
+                f"""Compute_speed: The number of frames used to calculate the speed {df}
+                exceeds the total amount of frames ({size}) in this trajectory."""
+            )
+            st.error(
+                f"""Compute_speed: The number of frames used to calculate the speed {df}
                 exceeds the total amount of frames ({size}) in this trajectory."""
             )
             st.stop()
@@ -455,24 +486,28 @@ def compute_speed_and_angle(data, fps, df=10):
 
         if size < df:
             logging.warning(
-                f"""The number of frames used to calculate the speed {df}
-                exceeds the total amount of frames ({size}) in this trajectory."""
+                f"""Compute_speed_and_angle() The number of frames used to calculate the speed {df}
+                exceeds the total amount of frames ({size}) for pedestrian {agent}"""
             )
-            st.stop()
+            st.error(
+                f"""Compute_speed_and_angle() The number of frames used to calculate the speed {df}
+                exceeds the total amount of frames ({size}) for pedestrian {agent}"""
+            )
+        else:
+            delta = traj[df:, :] - traj[: size - df, :]
+            delta_x = delta[:, 0]
+            delta_y = delta[:, 1]
 
-        delta = traj[df:, :] - traj[: size - df, :]
-        delta_x = delta[:, 0]
-        delta_y = delta[:, 1]
+            delta_square = np.square(delta)
+            delta_x_square = delta_square[:, 0]
+            delta_y_square = delta_square[:, 1]
+            angle[: size - df] = np.arctan2(delta_y, delta_x) * 180 / np.pi
 
-        delta_square = np.square(delta)
-        delta_x_square = delta_square[:, 0]
-        delta_y_square = delta_square[:, 1]
-        angle[: size - df] = np.arctan2(delta_y, delta_x) * 180 / np.pi
+            s = np.sqrt(delta_x_square + delta_y_square)
+            speed[: size - df] = s / df * fps
+            speed[size - df :] = speed[size - df - 1]
+            angle[size - df :] = angle[size - df - 1]
 
-        s = np.sqrt(delta_x_square + delta_y_square)
-        speed[: size - df] = s / df * fps
-        speed[size - df :] = speed[size - df - 1]
-        angle[size - df :] = angle[size - df - 1]
         ped = np.hstack((ped, angle.reshape(size, 1)))
         ped = np.hstack((ped, speed.reshape(size, 1)))
         if once:
@@ -653,7 +688,7 @@ def jam_frames(data, jam_speed):
 def consecutive_chunks(data1d, fps, frame_margin):
     # input array([ 1,  2,  3,  4, 10, 11, 12, 15])
     # output array([3, 2])
-    # diff err by 5 frames        
+    # diff err by 5 frames
 
     data1d = np.hstack(([0], data1d, [0]))
     # print("data")
@@ -691,11 +726,7 @@ def consecutive_chunks(data1d, fps, frame_margin):
 
 
 def jam_waiting_time(
-        data: np.array,
-        jam_speed: float,
-        jam_min_duration: int,
-        fps: int,
-        precision
+    data: np.array, jam_speed: float, jam_min_duration: int, fps: int, precision
 ):
     """Return a list of pid and its max_time in jam
 
@@ -704,25 +735,23 @@ def jam_waiting_time(
     waiting_times = []
     peds = np.unique(data[:, 0]).astype(int)
     for ped in peds:
-        data_ped = data[data[:, 0] == ped]        
+        data_ped = data[data[:, 0] == ped]
         frames_in_jam = jam_frames(data_ped, jam_speed)
         jam_times, _ = consecutive_chunks(frames_in_jam, fps, precision)
-        
+
         if not jam_times.size:
             continue
 
-        max_waiting_time = np.max(jam_times)/fps
+        max_waiting_time = np.max(jam_times) / fps
         if max_waiting_time >= jam_min_duration:
             waiting_times.append([ped, max_waiting_time])
 
     return np.array(waiting_times)
 
 
-def jam_lifetime(data: np.array,
-                 jam_frames,
-                 jam_min_agents: int,
-                 fps: int,
-                 precision: int):
+def jam_lifetime(
+    data: np.array, jam_frames, jam_min_agents: int, fps: int, precision: int
+):
     """Lifespane of a Jam and how many pedestrian in chunck"""
 
     lifetime = []

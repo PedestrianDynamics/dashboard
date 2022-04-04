@@ -54,10 +54,10 @@ def set_state_variables():
         st.session_state.old_data = ""
 
     if "data" not in st.session_state:
-        st.session_state.data = []
+        st.session_state.data = np.array([])
 
     if "orig_data" not in st.session_state:
-        st.session_state.orig_data = []
+        st.session_state.orig_data = np.array([])
 
     if "geometry_data" not in st.session_state:
         st.session_state.geometry_data = ""
@@ -128,10 +128,10 @@ def main():
     gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
     repo = "https://github.com/chraibi/jupedsim-dashboard"
     repo_name = f"[![Repo]({gh})]({repo})"
-    st.sidebar.markdown(repo_name, unsafe_allow_html=True)
+    st.sidebar.markdown(repo_name, unsafe_allow_html=True)    
     from_examples = st.sidebar.selectbox(
         "📂 Select example",
-        ("None", "Corner (experiment)", "Bottleneck (simulation)"),
+        ["None"] + list(Utilities.examples.keys()),
         help="Select example. If files are uploaded (below), then this selection is invalidated",
     )
 
@@ -248,6 +248,7 @@ def main():
                 new_data = True
                 logging.info("Loading new trajectory data")
             else:
+                logging.info("Trajectory data existing")
                 new_data = False
 
             if Utilities.detect_jpscore(string_data):
@@ -308,9 +309,13 @@ def main():
                     unit = st.session_state.unit
                     speed_index = st.session_state.speed_index
                     header_traj = st.session_state.header_traj
+                    logging.info(
+                        f"Seceond init of trajectories {st.session_state.data.shape}"
+                    )
 
             with h:
                 with Utilities.profile("show_table"):
+                    logging.info(f"show table with {data.shape}")
                     fig = plots.show_trajectories_table(data[:10, 0:5])
                     st.plotly_chart(fig, use_container_width=True)
 
@@ -486,6 +491,7 @@ def main():
                 value=True,
                 help="Plot Time-Distance to the fist selected entrance",
                 key="EvacT",
+                disabled=disable_NT_flow,
             )
             choose_survival = c2.checkbox(
                 "Survival",
@@ -550,13 +556,6 @@ def main():
             help="A jam has at least so many agents",
             key="jNmin",
         )
-
-        if disable_NT_flow:
-            st.sidebar.info(
-                "N-T and Flow plots are disabled, \
-            because no transitions!"
-            )
-
         if how_speed == "from simulation":
             logging.info("speed by simulation")
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
@@ -1108,7 +1107,7 @@ def main():
                 wtimes = np.array([])
             else:
                 wtimes = waiting_time[:, 1]
-            print(wtimes)
+
             ## plots
             fig1 = plots.plot_jam_lifetime(
                 frames, lifetime, fps, max_lifetime, from_to, min_jam_agents
