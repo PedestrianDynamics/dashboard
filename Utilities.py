@@ -1,16 +1,58 @@
 import contextlib
+import os
 import time
 from collections import defaultdict
 
 import lovely_logger as logging
 import numpy as np
 import pandas as pd
+import requests
 import streamlit as st
 from pandas import read_csv
 from scipy import stats
 from shapely.geometry import LineString, Point
 
+examples = {
+    "Corner (experiment)": [
+        "jps_eo-300-300-300_combined_MB",
+        "https://fz-juelich.sciebo.de/s/BfNxMk1qM64QqYj/download",
+        "https://fz-juelich.sciebo.de/s/qNVoD8RZ8UentBB/download",
+    ],
+    "Bottleneck (simulation)": [
+        "bottleneck",
+        "https://fz-juelich.sciebo.de/s/HldXLySEfEDMdZo/download",
+        "https://fz-juelich.sciebo.de/s/FqiSFGr6FajfYLD/download",
+    ],
+}
 
+
+def selected_traj_geo(text):
+    """Returns a list of trajectory and geometry files
+
+    """
+    if text in examples.keys():
+        return examples[text]
+    else:
+        logging.warning(f"Could not find {text}")
+        logging.info(f"Available examples are {examples}")
+        return []
+
+
+def download(url: str, filename: str):
+    r = requests.get(url, stream=True)
+    if r.ok:
+        logging.info(f"saving to {filename}")
+        with open(filename, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024 * 8):
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
+                    os.fsync(f.fileno())
+    else:  # HTTP status code 4XX/5XX
+        logging.warning(f"Download failed: status code {r.status_code}\n{r.text}")
+
+
+    
 @contextlib.contextmanager
 def profile(name):
     start_time = time.time()

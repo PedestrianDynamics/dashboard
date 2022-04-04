@@ -4,11 +4,12 @@ from collections import defaultdict
 from copy import deepcopy
 from io import StringIO
 from pathlib import Path
-from xml.dom.minidom import parseString
+from xml.dom.minidom import parseString, parse
 
 import lovely_logger as logging
 import numpy as np
-import plotly.graph_objs as go
+
+# import plotly.graph_objs as go
 import streamlit as st
 from matplotlib import cm
 from shapely.geometry import LineString
@@ -112,6 +113,9 @@ def set_state_variables():
     if "lm" not in st.session_state:
         st.session_state.lm = 0
 
+    if "example_downloaded" not in st.session_state:
+        st.session_state.example_downloaded = {}
+
 
 def main():
     st.header(":information_source: Dashboard")
@@ -125,12 +129,19 @@ def main():
     repo = "https://github.com/chraibi/jupedsim-dashboard"
     repo_name = f"[![Repo]({gh})]({repo})"
     st.sidebar.markdown(repo_name, unsafe_allow_html=True)
+    from_examples = st.sidebar.selectbox(
+        "📂 Select example",
+        ("None", "Corner (experiment)", "Bottleneck (simulation)"),
+        help="Select example. If files are uploaded (below), then this selection is invalidated",
+    )
+
     c1, c2 = st.sidebar.columns((1, 1))
     trajectory_file = c1.file_uploader(
-        "📙 Trajectory file ",
+        "🚶 🚶‍♀️ Trajectory file ",
         type=["txt"],
         help="Load trajectory file",
     )
+
     # st.sidebar.markdown("-------")
     geometry_file = c2.file_uploader(
         "🏠 Geometry file ",
@@ -202,14 +213,36 @@ def main():
     c1, c2 = st.sidebar.columns((1, 1))
     msg_status = st.empty()
     disable_NT_flow = False
-    if trajectory_file and geometry_file:
-        logging.info(f">> {trajectory_file.name}")
-        logging.info(f">> {geometry_file.name}")
-        try:
+    if (trajectory_file and geometry_file) or from_examples != "None":
+        traj_from_upload = True
+        if not trajectory_file and not geometry_file:
+            traj_from_upload = False
+            selection = Utilities.selected_traj_geo(from_examples)
+            name_selection = selection[0]
+            trajectory_file_d = name_selection + ".txt"
+            geometry_file_d = name_selection + ".xml"
+            if name_selection not in st.session_state.example_downloaded:
+                st.session_state.example_downloaded[name_selection] = True
+                logging.info(f"Downloading selected {from_examples}")
+                Utilities.download(selection[1], trajectory_file_d)
+                Utilities.download(selection[2], geometry_file_d)
+            else:
+                logging.info(f"Using selected {from_examples}")
 
-            h = st.expander("Head of Trajectories (first 4 columns)", expanded=True)
-            stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
-            string_data = stringio.read()
+        else:
+            logging.info(f">> {trajectory_file}")
+            logging.info(f">> {geometry_file}")
+
+        try:
+            logging.info(f"Trajectory from upload: {traj_from_upload}")
+            h = st.expander("Head of Trajectories (first 4 columns)", expanded=False)
+            if traj_from_upload:
+                stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
+                string_data = stringio.read()
+            else:
+                with open(trajectory_file_d, encoding="utf-8") as f:
+                    string_data = f.read()
+
             if string_data != st.session_state.old_data:
                 st.session_state.old_data = string_data
                 new_data = True
@@ -241,10 +274,15 @@ def main():
                     10,
                     help="how many frames to consider for calculating the speed",
                 )
+
             if new_data:
                 with Utilities.profile("Load trajectories"):
                     logging.info("Load trajectories ..")
-                    data = Utilities.read_trajectory(trajectory_file)
+                    if not traj_from_upload:
+                        data = Utilities.read_trajectory(trajectory_file_d)
+                    else:
+                        data = Utilities.read_trajectory(trajectory_file)
+
                     st.session_state.orig_data = np.copy(data)
                     fps = Utilities.get_fps(string_data)
                     speed_index = Utilities.get_speed_index(string_data)
@@ -328,7 +366,7 @@ def main():
                 max_value=np.max(peds),
                 value=special_agent,
                 step=10,
-                help="Choose a pedestrian by id"
+                help="Choose a pedestrian by id",
             )
 
             logging.info(f"fps = {fps}")
@@ -340,23 +378,31 @@ def main():
             st.stop()
 
         try:
-            parse_geometry_file = Utilities.get_geometry_file(string_data)
-            logging.info(f"Geometry: <{geometry_file.name}>")
-            # Read Geometry file
-            if parse_geometry_file != geometry_file.name:
-                st.error(
-                    f"Mismatched geometry files. Parsed {parse_geometry_file}. Uploaded {geometry_file.name}"
-                )
-                st.stop()
+            if traj_from_upload:
+                parse_geometry_file = Utilities.get_geometry_file(string_data)
+                logging.info(f"Geometry: <{geometry_file.name}>")
+                # Read Geometry file
+                if parse_geometry_file != geometry_file.name:
+                    st.error(
+                        f"Mismatched geometry files. Parsed {parse_geometry_file}. Uploaded {geometry_file.name}"
+                    )
+                    st.stop()
 
-            geo_stringio = StringIO(geometry_file.getvalue().decode("utf-8"))
-            geo_string_data = geo_stringio.read()
+                geo_stringio = StringIO(geometry_file.getvalue().decode("utf-8"))
+                geo_string_data = geo_stringio.read()
+            else:
+                with open(geometry_file_d, encoding="utf-8") as geometry_file_obj:
+                    geo_string_data = geometry_file_obj.read()
+
             if geo_string_data != st.session_state.geometry_data:
                 with Utilities.profile("Load geometry:"):
-                    new_geometry = True
+                    # new_geometry = True
                     st.session_state.geometry_data = geo_string_data
-                    # file_data = geometry_file.read()
-                    geo_xml = parseString(geometry_file.getvalue())
+                    if traj_from_upload:
+                        geo_xml = parseString(geometry_file.getvalue())
+                    else:
+                        geo_xml = parse(geometry_file_d)
+
                     logging.info("Geometry parsed successfully")
                     geometry_wall = Utilities.read_subroom_walls(geo_xml, unit="m")
                     logging.info("Got geometry walls successfully")
@@ -1025,38 +1071,39 @@ def main():
             c1, c2 = st.columns((1, 1))
             pl2 = c1.empty()
             pl = c2.empty()
-            
+
             precision = c1.slider(
                 "Precision",
                 0,
                 int(10 * fps),
                 help="Condition on the length of jam durations (in frame)",
             )
-            nbins = c2.slider("Number of bins", 5, 40, value=10, help="Number of bins", key="lifetime")
-            
+            nbins = c2.slider(
+                "Number of bins", 5, 40, value=10, help="Number of bins", key="lifetime"
+            )
+
             pl3 = c1.empty()
             pl4 = c1.empty()
-            nbins2 = pl4.slider("Number of bins", 5, 40, value=10, help="Number of bins", key="waiting")
+            nbins2 = pl4.slider(
+                "Number of bins", 5, 40, value=10, help="Number of bins", key="waiting"
+            )
 
             ##  lifetime
             jam_frames = Utilities.jam_frames(data, jam_speed)
             lifetime, chuncks, max_lifetime, from_to = Utilities.jam_lifetime(
                 data, jam_frames[10:], min_jam_agents, fps, precision
-            ) # remove the first frames, cause in simulation people stand
+            )  # remove the first frames, cause in simulation people stand
 
             ## duration
             logging.info(f"waiting time with {min_jam_time}")
             waiting_time = Utilities.jam_waiting_time(
-                data,
-                jam_speed,
-                min_jam_time,
-                fps,
-                precision)
+                data, jam_speed, min_jam_time, fps, precision
+            )
 
             if not waiting_time.size:
                 wtimes = np.array([])
             else:
-                wtimes = waiting_time[:,1]
+                wtimes = waiting_time[:, 1]
             print(wtimes)
             ## plots
             fig1 = plots.plot_jam_lifetime(
@@ -1068,6 +1115,7 @@ def main():
             # --
             hist = plots.plot_jam_waiting_hist(wtimes, fps, nbins2)
             pl3.plotly_chart(hist, use_container_width=True)
+
 
 if __name__ == "__main__":
     with Utilities.profile("Main"):
