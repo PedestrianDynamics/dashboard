@@ -31,6 +31,7 @@ def inv_weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
     v0 = np.max(v)
     v[v > v0] = v0
     s = 1 - v / v0
+    #np.log(s, where=np.logical_not(zero_mask))
     x = -1 / gamma * np.log(s, out=np.zeros_like(s), where=(s != 0)) + 1 / rho_max
     return 1 / x
 
@@ -682,16 +683,17 @@ def jam_lifetime(data: np.array,
                  precision: int):
     """Lifespane of a Jam and how many pedestrian in chunck"""
 
-    # frames = data[:, 1]
     lifetime = []
+    all_frames = np.unique(data[:, 1]).astype(int)
     # frame, num peds in jam. Using only the first,
     # since I dont know yet how to use the second
     # Ignore the first frames, where agents start from 0 (so in jam)
-    for frame in jam_frames:
-        d = data[data[:, 1] == frame]
-        num_ped_in_jam = len(d[:, 0])
-        if num_ped_in_jam >= jam_min_agents:
-            lifetime.append([frame, num_ped_in_jam])
+    for frame in all_frames:
+        if frame in jam_frames:
+            d = data[data[:, 1] == frame]
+            num_ped_in_jam = len(d[:, 0])
+            if num_ped_in_jam >= jam_min_agents:
+                lifetime.append([frame, num_ped_in_jam])
 
     lifetime = np.array(lifetime)
 

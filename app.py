@@ -1037,11 +1037,13 @@ def main():
             pl3 = c1.empty()
             pl4 = c1.empty()
             nbins2 = pl4.slider("Number of bins", 5, 40, value=10, help="Number of bins", key="waiting")
+
             ##  lifetime
             jam_frames = Utilities.jam_frames(data, jam_speed)
             lifetime, chuncks, max_lifetime, from_to = Utilities.jam_lifetime(
-                data, jam_frames, min_jam_agents, fps, precision
-            )
+                data, jam_frames[10:], min_jam_agents, fps, precision
+            ) # remove the first frames, cause in simulation people stand
+
             ## duration
             logging.info(f"waiting time with {min_jam_time}")
             waiting_time = Utilities.jam_waiting_time(
@@ -1051,7 +1053,7 @@ def main():
                 fps,
                 precision)
 
-            if not waiting_time.size :
+            if not waiting_time.size:
                 wtimes = np.array([])
             else:
                 wtimes = waiting_time[:,1]
@@ -1060,9 +1062,7 @@ def main():
             fig1 = plots.plot_jam_lifetime(
                 frames, lifetime, fps, max_lifetime, from_to, min_jam_agents
             )
-            
             hist = plots.plot_jam_lifetime_hist(chuncks, fps, nbins)
-                        
             pl2.plotly_chart(fig1, use_container_width=True)
             pl.plotly_chart(hist, use_container_width=True)
             # --

@@ -48,7 +48,74 @@ def doc_plots():
 
 def doc_jam():
     st.write("""
-    Work in progress
+    A pedestrian $i$ is defined as *congested* if its speed at time $t$
+    is below a certain threshold $\hat v$: $v_i(t)<\hat v$.  
+    Hence, the set of *congested* pedestrians is defined as
+    """
+    )
+    st.latex(
+    r"""
+    \begin{equation}
+    C(t) = \{i |\; v_i(t) < \hat v \}.
+    \end{equation}
+    """
+    )
+    st.info("""
+    Therefore, we define **jam** as a state, where at least
+    $\hat n$ pedestrians are *congested* for a certain amount of time $\hat t$.
+    """)
+    
+    
+    st.write("""
+    To quantify the characteristics of a jammed state we define the following
+    quantities:
+    
+    #### Maximal waiting time
+
+    The maximal waiting time of congested pedestrians is defined
+    as the longest time spent in jam
+    """)
+    
+    st.latex(
+    r"""
+    \begin{equation}
+    T_{w} = \max_i  \{\Delta t = t_{i,2}  - t_{i,1} |\; \Delta t > \hat t,  v(t_{i_1}) < \hat v\; {\rm and}\; v(t_{i_2}) > \hat v \}, 
+    \end{equation}
+    """
+    )
+    st.write("""where $\hat t$ is the minimal jam duration.""")
+    st.write("""
+    ####  Lifetime of jam
+    Considering a minimal number of pedestrians in jam $\hat n$, and the set of congested pedestrians Eq. (1), the longest time period of a jam is
+    """)
+    st.latex(
+        r"""
+        \begin{equation}
+        T_l = \max_{\Delta t}\{\Delta t = t_{i,2}  - t_{i,1} |\; C(t_{i_1}) > \hat n\; {\rm and}\; C(t_{i_2}) < \hat n \}.
+        \end{equation}
+        """
+    )
+    st.write("""
+    ####  Size of jam
+    The number of pedestrians in jam during its lifetime is the mean value of the number of congested pedestrians:    
+    """)
+    st.latex(
+        r"""
+        \begin{equation}
+        \mu \{|C(t) |\;  t \in I\},
+        \end{equation}
+        """
+    )
+    st.write("""where $I$ is the time interval corresponding
+    to the lifetime of time. See Eq. (3).""")
+
+    st.write("""
+    #### Summary of jam parameters
+    | Variable    | Notation |
+    |--------------|-----------|
+    |**Min Jam Speed**  | $\hat v$|
+    |**Min Jam Duration** | $\hat t$|
+    |**Min Agents in Jam** | $\hat n$|
     """
     )
 

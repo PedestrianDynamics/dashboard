@@ -198,13 +198,23 @@ def plot_peds_inside(frames, peds_inside, fps):
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_jam_lifetime(frames, lifetime, fps, title, ret, min_agents_jam):
     logging.info("plot jam_lifetime")
-    logging.info("plot timeseries")
+    max_avg = 0
+    max_std = 0
+    for i in range(ret.shape[0]):
+        From = int(ret[i, 0])
+        To = int(ret[i, 1])
+        number_agents = np.mean(lifetime[From:To, 1])
+        if number_agents > max_avg:
+            max_avg = number_agents
+            max_std = np.std(lifetime[From:To, 1])
+
+    title = f"<b>Maximal Jam Lifetime: {title:.2f} [s]. Size of Jam: {max_avg:.0f} (+- {max_std:.0f})</b>"
     fig = make_subplots(
         rows=1,
         cols=1,
         x_title="Time / s",
         y_title="Number of Agents in Jam",
-        subplot_titles=[f"<b>Maximal Jam Lifetime: {title:.2f} [s]</b>"],
+        subplot_titles=[title],
     )
 
     xx = np.zeros((len(frames), 2))
@@ -319,7 +329,7 @@ def plot_jam_lifetime_hist(chuncks, fps, nbins):
         labels={"chuncks": "Time"},
         text_auto=True,
         nbins=nbins,
-        title='<b>Distribution of Jam all Lifetimes</b>',
+        title='<b>Distribution of all Jam Lifetimes</b>',
     )
     hist.update_layout(bargap=0.2)
     return hist
@@ -327,7 +337,7 @@ def plot_jam_lifetime_hist(chuncks, fps, nbins):
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_timeserie(frames, t, fps, title, miny, maxy):
-    logging.info("plot timeseries")
+    logging.info(f"plot timeseries: {title}")
     fig = make_subplots(rows=1, cols=1, x_title="Time / s", y_title=title)
     times = frames / fps
     trace = go.Scatter(
