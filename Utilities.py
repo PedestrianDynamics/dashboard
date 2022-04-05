@@ -27,38 +27,43 @@ examples = {
         "https://fz-juelich.sciebo.de/s/HldXLySEfEDMdZo/download",
         "https://fz-juelich.sciebo.de/s/FqiSFGr6FajfYLD/download",
     ],
-        "HC-BUW (sim)": [
+    "HC-BUW (sim)": [
         "HC_BUW",
         "https://fz-juelich.sciebo.de/s/GgvVjc81lzmhTgv/download",
         "https://fz-juelich.sciebo.de/s/NikHJ6TIHCwSoUM/download",
     ],
-    "eo-300-300-300_combined (exp)": [
+    "Bottleneck BUW (exp)": [
+        "030_c_56_h0",
+        "https://fz-juelich.sciebo.de/s/AsrA465S3wNDNlo/download",
+        "https://fz-juelich.sciebo.de/s/rVdksQ7yUngiUmw/download",
+    ],
+    "Corner (exp)": [
         "jps_eo-300-300-300_combined_MB",
         "https://fz-juelich.sciebo.de/s/BfNxMk1qM64QqYj/download",
         "https://fz-juelich.sciebo.de/s/qNVoD8RZ8UentBB/download",
     ],
-    "WDG_09 (exp)": [
+    "Bottleneck WDG (exp)": [
         "WDG_09",
         "https://fz-juelich.sciebo.de/s/oTG7vRCcQyYJ08q/download",
         "https://fz-juelich.sciebo.de/s/lDuCQlJkwh9Of1C/download",
         "",
     ],
-    "CROSSING_90_a_10 (exp)": [
+    "Crossing 90 (exp)": [
         "CROSSING_90_a_10",
         "https://fz-juelich.sciebo.de/s/gLfaofmZCNtf5Vx/download",
         "https://fz-juelich.sciebo.de/s/f960CoXb26FKpkw/download",
     ],
-    "CROSSING_120_A_1 (exp)": [
+    "Crossing 120 (exp)": [
         "CROSSING_120_A_1",
         "https://fz-juelich.sciebo.de/s/X3WTuExdj2HXRVx/download",
         "https://fz-juelich.sciebo.de/s/11Cz0bQWZCv23eI/download",
     ],
-    "CROSSING_120_C_1 (exp)": [
+    "Crossing 120  (exp)": [
         "CROSSING_120_C_1",
         "https://fz-juelich.sciebo.de/s/vrkGlCDKVTIz8Ch/download",
         "https://fz-juelich.sciebo.de/s/11Cz0bQWZCv23eI/download",
     ],
-    "mo11_combine_MB (exp)": [
+    "Stadium Entrance (exp)": [
         "mo11_combine_MB",
         "https://fz-juelich.sciebo.de/s/ckzZLnRJCKKgAnZ/download",
         "https://fz-juelich.sciebo.de/s/kgXUEyu95FTQlFC/download",

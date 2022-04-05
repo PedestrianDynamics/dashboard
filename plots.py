@@ -115,7 +115,7 @@ def plot_flow(Frames, Nums, fps):
 
 #@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
-    frames_initial_speed_mean = 5 * fps # in Adrian2020a 4 s
+    frames_initial_speed_mean = 4 * fps  # Adrian2020a 4 s
     logging.info("plot time_distance curve")
     peds = _frames[:, 0].astype(int)
     frames = _frames[:, 1]
@@ -173,7 +173,7 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
             cmax=1,
             cmin=0,
             colorbar=dict(
-                title="Speed / m/s"),
+                title="Initial speed / m/s"),
             colorscale="Jet",),
     )
     fig.append_trace(trace_start, row=1, col=1)
