@@ -400,6 +400,10 @@ def plot_agent_xy(frames, X, Y, fps):
         title_text="Y",
         secondary_y=True,
     )
+    fig.update_yaxes(
+        scaleanchor="x",
+        scaleratio=1,
+  )
     fig.update_layout(hovermode="x")
     return fig
 
