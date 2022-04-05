@@ -158,7 +158,7 @@ def main():
     )
     if choose_trajectories:
         choose_transitions = c2.checkbox(
-            "Transitions", help="Show transittions", key="Tran"
+            "Transitions", help="Show transittions", value=True, key="Tran"
         )
 
     pl_select_special_agent = st.sidebar.empty()
@@ -190,6 +190,10 @@ def main():
     methods = ["nearest", "gaussian", "sinc", "bicubic", "mitchell", "bilinear"]
     interpolation = st.sidebar.radio(
         "Interpolation", methods, help="Interpolation method for imshow()"
+    )
+    st.write(
+        "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+        unsafe_allow_html=True,
     )
     if choose_dprofile:
         st.sidebar.markdown("-------")
@@ -1062,7 +1066,7 @@ def main():
                             separator="\t",
                             suppress_small=True,
                         )
-                        +f"\nframerate: {fps:.0f}"
+                        + f"\nframerate: {fps:.0f}"
                         + "\npid arrival_frame count_arrivals",
                         comments="#",
                         delimiter="\t",
