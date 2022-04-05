@@ -113,13 +113,13 @@ def plot_flow(Frames, Nums, fps):
     return fig
 
 
-@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+#@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
+    frames_initial_speed_mean = 5 * fps # in Adrian2020a 4 s
     logging.info("plot time_distance curve")
-    peds = _frames[:, 0]
+    peds = _frames[:, 0].astype(int)
     frames = _frames[:, 1]
     peds = peds[:num_peds]
-
     fig = make_subplots(
         rows=1,
         cols=1,
@@ -130,8 +130,14 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
         y_title="Time to entrance / s",
     )
 
+    xstart = []
+    ystart = []
+    colors = []
     for p, toframe in zip(peds, frames):
         ff = data[np.logical_and(data[:, 1] <= toframe, data[:, 0] == p)]
+        speed = np.mean(ff[:frames_initial_speed_mean,  st.session_state.speed_index])
+        sc = speed
+        print(sc)
         xx = []
         yy = []
         for (frame, x, y) in ff[::sample, 1:4]:
@@ -141,33 +147,36 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
             xx.append(dx)
             yy.append(dt)
 
-        trace = go.Scatter(
-            x=xx[0:1],
-            y=yy[0:1],
-            mode="markers",
-            name=f"Agent: {p:.0f}",
-            showlegend=False,
-            marker=dict(
-                size=5,
-                color="gray",
-                line=dict(
-                    color="LightSkyBlue",
-                    width=2,
-                ),
-            ),
-        )
-        fig.append_trace(trace, row=1, col=1)
-
+        xstart.append(xx[0])
+        ystart.append(yy[0])
+        colors.append(sc)
+        
         trace = go.Scatter(
             x=xx,
             y=yy,
             mode="lines",
             name=f"Agent: {p:.0f}",
             showlegend=False,
-            line=dict(width=0.3, color="gray"),
+            line=dict(width=0.3, color="black"),
         )
-
         fig.append_trace(trace, row=1, col=1)
+
+    trace_start = go.Scatter(
+        x=xstart,
+        y=ystart,
+        mode="markers",
+        name=f"Agent: {p:.0f}",
+        showlegend=False,
+        marker=dict(
+            size=5,
+            color=colors,
+            cmax=1,
+            cmin=0,
+            colorbar=dict(
+                title="Speed / m/s"),
+            colorscale="Jet",),
+    )
+    fig.append_trace(trace_start, row=1, col=1)
 
     return fig
 
@@ -501,7 +510,7 @@ def plot_trajectories(
     fig = make_subplots(rows=1, cols=1, subplot_titles=["<b>Trajectories</b>"])
     peds = np.unique(data[:, 0])
     s = data[data[:, 0] == special_ped]
-    sc = 1 - speed / np.max(speed)
+    sc = speed / np.max(speed)
     for ped in peds:
         d = data[data[:, 0] == ped]
         trace_traj = go.Scatter(
@@ -520,8 +529,14 @@ def plot_trajectories(
         mode="markers",
         showlegend=False,
         name=f"Agent: {special_ped:0.0f}",
-        marker=dict(size=5, color=sc, colorscale="Jet"),
-        line=dict(color="firebrick", width=4),
+        marker=dict(size=5,
+                    cmax=1,
+                    cmin=0,
+                    colorbar=dict(
+                        title="Speed / m/s"),
+                    color=sc,
+                    colorscale="Jet"),
+        #line=dict(color="firebrick", width=4),
     )
     fig.append_trace(trace_agent, row=1, col=1)
     for gw in geo_walls.keys():

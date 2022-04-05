@@ -493,7 +493,7 @@ def main():
             choose_time_distance = c1.checkbox(
                 "T-D",
                 value=True,
-                help="Plot Time-Distance to the fist selected entrance",
+                help="Plot Time-Distance to the first selected entrance",
                 key="EvacT",
                 disabled=disable_NT_flow,
             )
@@ -956,7 +956,8 @@ def main():
         with info:
             doc.doc_plots()
 
-        plot_options = choose_NT or choose_flow or choose_time_distance
+        plot_options = choose_NT or choose_flow or choose_time_distance or choose_survival
+        # all these options need to calculate N-T-Data
         if make_plots and plot_options:
             with Utilities.profile("calculate_NT_data"):
                 tstats, cum_num, trans_used, max_len, msg = Utilities.calculate_NT_data(
@@ -972,10 +973,10 @@ def main():
                 if choose_NT:
                     peds_inside = Utilities.peds_inside(data)
                     fig = plots.plot_peds_inside(frames, peds_inside, fps)
-                if tstats:
-                    traces = plots.plot_NT(tstats, cum_num, fps)
-                    for trace in traces:
-                        fig.append_trace(trace, row=1, col=1)
+                    if tstats:
+                        traces = plots.plot_NT(tstats, cum_num, fps)
+                        for trace in traces:
+                            fig.append_trace(trace, row=1, col=1)
 
                     st.plotly_chart(fig, use_container_width=True)
             with c2:
