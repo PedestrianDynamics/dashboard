@@ -1055,13 +1055,14 @@ def main():
                         file_download,
                         all_stats,
                         fmt=fmt,
-                        header="line id: \n"
+                        header="line ids: \n"
                         + np.array2string(
                             np.array(passed_lines, dtype=int),
                             precision=2,
                             separator="\t",
                             suppress_small=True,
                         )
+                        +f"\nframerate: {fps:.0f}"
                         + "\npid arrival_frame count_arrivals",
                         comments="#",
                         delimiter="\t",
