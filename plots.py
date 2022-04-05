@@ -566,6 +566,10 @@ def plot_trajectories(
     fig.update_xaxes(
         range=[min_x - eps, max_x + eps],
     )
+    fig.update_yaxes(
+        scaleanchor = "x",
+        scaleratio = 1,
+  )
     return fig
 
 
