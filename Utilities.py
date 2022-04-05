@@ -452,37 +452,6 @@ def compute_speed(data, fps, df=10):
     return speeds
 
 
-# def compute_agent_speed_and_angle(agent, fps, df=10):
-#     """Calculates the speed and the angle from the trajectory points.
-
-#     """
-
-#     traj = agent[:, 2:4]
-#     size = traj.shape[0]
-#     speed = np.ones(size)
-#     angle = np.zeros(size)
-#     if size < df:
-#         logging.warning(
-#             f"""The number of frames used to calculate the speed {df}
-#             exceeds the total amount of frames ({size}) in this trajectory."""
-#         )
-#         st.stop()
-
-#     delta = traj[df:, :] - traj[: size - df, :]
-#     delta_x = delta[:, 0]
-#     delta_y = delta[:, 1]
-#     delta_square = np.square(delta)
-#     delta_x_square = delta_square[:, 0]
-#     delta_y_square = delta_square[:, 1]
-#     angle[: size - df] = np.arctan2(delta_y, delta_x) * 180 / np.pi
-#     s = np.sqrt(delta_x_square + delta_y_square)
-#     speed[: size - df] = s / df * fps
-#     speed[size - df :] = speed[size - df - 1]
-#     angle[size - df :] = angle[size - df - 1]
-
-#     return speed, angle
-
-
 def compute_speed_and_angle(data, fps, df=10):
     """Calculates the speed and the angle from the trajectory points.
 
@@ -554,34 +523,6 @@ def compute_speed_and_angle(data, fps, df=10):
 
     return data2
 
-
-def compute_agent_speed_and_angle(agent, fps, df=10):
-    """Calculates the speed and the angle from the trajectory points."""
-
-    traj = agent[:, 2:4]
-    size = traj.shape[0]
-    speed = np.ones(size)
-    angle = np.zeros(size)
-    if size < df:
-        logging.warning(
-            f"""The number of frames used to calculate the speed {df}
-            exceeds the total amount of frames ({size}) in this trajectory."""
-        )
-        st.stop()
-
-    delta = traj[df:, :] - traj[: size - df, :]
-    delta_x = delta[:, 0]
-    delta_y = delta[:, 1]
-    delta_square = np.square(delta)
-    delta_x_square = delta_square[:, 0]
-    delta_y_square = delta_square[:, 1]
-    angle[: size - df] = np.arctan2(delta_y, delta_x) * 180 / np.pi
-    s = np.sqrt(delta_x_square + delta_y_square)
-    speed[: size - df] = s / df * fps
-    speed[size - df :] = speed[size - df - 1]
-    angle[size - df :] = angle[size - df - 1]
-
-    return speed, angle
 
 
 def calculate_speed_average(
@@ -757,7 +698,7 @@ def consecutive_chunks(data1d, fps, frame_margin):
             if From < To and cond:
                 ret.append([From, To + 1])
 
-    logging.info(f"Jam chunks {chunks}. From-To: {ret}, Max = {np.max(chunks)}")
+    #logging.info(f"Jam chunks {chunks}. From-To: {ret}, Max = {np.max(chunks)}")
     return chunks, np.array(ret)
 
 
