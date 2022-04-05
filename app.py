@@ -13,7 +13,7 @@ import numpy as np
 import streamlit as st
 from matplotlib import cm
 from shapely.geometry import LineString
-
+import timeit
 import doc
 import plots
 import Utilities
@@ -105,19 +105,20 @@ def set_state_variables():
         st.session_state.df = 12
 
     if "xpos" not in st.session_state:
-        st.session_state.xpos = 0
+        st.session_state.xpos = None
 
     if "ypos" not in st.session_state:
-        st.session_state.ypos = 0
+        st.session_state.ypos = None
 
     if "lm" not in st.session_state:
-        st.session_state.lm = 0
+        st.session_state.lm = None
 
     if "example_downloaded" not in st.session_state:
         st.session_state.example_downloaded = {}
 
 
 def main():
+    time_start = timeit.default_timer()
     st.header(":information_source: Dashboard")
     info = st.expander("click to expand")
     with info:
@@ -140,14 +141,14 @@ def main():
         "🚶 🚶‍♀️ Trajectory file ",
         type=["txt"],
         help="Load trajectory file",
-    )
-
+    )    
     # st.sidebar.markdown("-------")
     geometry_file = c2.file_uploader(
         "🏠 Geometry file ",
         type=["xml"],
         help="Load geometry file",
     )
+    time_msg = st.sidebar.empty()
     st.sidebar.markdown("-------")
     unit_pl = st.sidebar.empty()
     st.sidebar.header("📉 Plot")
@@ -213,7 +214,7 @@ def main():
     c1, c2 = st.sidebar.columns((1, 1))
     msg_status = st.empty()
     disable_NT_flow = False
-    if (trajectory_file and geometry_file) or from_examples != "None":
+    if (trajectory_file and geometry_file) or from_examples != "None":        
         traj_from_upload = True
         if not trajectory_file and not geometry_file:
             traj_from_upload = False
@@ -377,7 +378,7 @@ def main():
             logging.info(f"fps = {fps}")
         except Exception as e:
             msg_status.error(
-                f"""Can't parse trajectory file.
+                f"""Problem by initialising the trajectory data.
                 Error: {e}"""
             )
             st.stop()
@@ -429,6 +430,9 @@ def main():
                     st.session_state.geomaxY = geomaxY
                     st.session_state.transitions = deepcopy(transitions)
                     st.session_state.geometry_wall = deepcopy(geometry_wall)
+                    st.session_state.xpos = None
+                    st.session_state.ypos = None
+                    st.session_state.lm = None
                     logging.info(
                         f"GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geomaxY:.2f})"
                     )
@@ -451,7 +455,7 @@ def main():
 
         except Exception as e:
             msg_status.error(
-                f"""Can't parse geometry file.
+                f"""Problem by initialising the geometry data.
                 Error: {e}"""
             )
             st.stop()
@@ -527,8 +531,8 @@ def main():
         # ----- Jam
         st.sidebar.header("🐌 Jam")
         choose_jam_duration = st.sidebar.checkbox(
-            "Jam duration",
-            value=True,
+            "Show",
+            value=False,
             help="Plot change of the number of pedestrian in jam versus time",
             key="jam_duration",
         )
@@ -544,7 +548,7 @@ def main():
             "Min jam duration [s]",
             1,
             300,
-            60,
+            1,
             help="A jam lasts at least that long",
             key="jTmin",
         )
@@ -631,16 +635,21 @@ def main():
 
         # choose_dprofile =
         choose_vprofile = True  # todo: not sure is I want to keep this option
-        if st.session_state.transitions:
-            v = [x for x in transitions.values()]
-            t = v[0]
-            xm = np.sum(t[:, 0]) / 2
-            ym = np.sum(t[:, 1]) / 2
-        else:
-            xm = 0.5 * (geominX + geomaxX)
-            ym = 0.5 * (geominY + geomaxY)
-
         if choose_timeseries:
+            if st.session_state.xpos is not None:  # no need to check ypos and lm
+                xm = st.session_state.xpos
+                ym = st.session_state.ypos
+                lm = st.session_state.lm
+            else:
+                if st.session_state.transitions:
+                    v = [x for x in transitions.values()]
+                    t = v[0]
+                    xm = np.sum(t[:, 0]) / 2
+                    ym = np.sum(t[:, 1]) / 2
+                else:
+                    xm = 0.5 * (geominX + geomaxX)
+                    ym = 0.5 * (geominY + geomaxY)
+
             xpos = posx_pl.number_input(
                 "x-position of measurement area",
                 min_value=float(geominX),
@@ -668,7 +677,6 @@ def main():
                 format="%.1f",
                 help="Length of the side of the measurement square.",
             )
-
             sample = sample_pl.number_input(
                 "sample",
                 min_value=1,
@@ -1118,6 +1126,10 @@ def main():
             # --
             hist = plots.plot_jam_waiting_hist(wtimes, fps, nbins2)
             pl3.plotly_chart(hist, use_container_width=True)
+
+    time_end = timeit.default_timer()
+    msg_time = Utilities.get_time(time_end - time_start)
+    time_msg.info(f":clock8: Finished in {msg_time}")
 
 
 if __name__ == "__main__":
