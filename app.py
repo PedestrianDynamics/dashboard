@@ -1074,11 +1074,12 @@ def main():
         with info:
             doc.doc_jam()
 
-        logging.info("calculate jam")
-        logging.info(f"jam speed {jam_speed}")
-        logging.info(f"min jam agents {min_jam_agents}")
-        logging.info(f"min jam time {min_jam_time}")
         if choose_jam_duration:
+            logging.info("calculate jam")
+            logging.info(f"jam speed {jam_speed}")
+            logging.info(f"min jam agents {min_jam_agents}")
+            logging.info(f"min jam time {min_jam_time}")
+        
             c1, c2 = st.columns((1, 1))
             pl2 = c1.empty()
             pl = c2.empty()
@@ -1101,31 +1102,34 @@ def main():
 
             ##  lifetime
             jam_frames = Utilities.jam_frames(data, jam_speed)
-            lifetime, chuncks, max_lifetime, from_to = Utilities.jam_lifetime(
-                data, jam_frames[10:], min_jam_agents, fps, precision
-            )  # remove the first frames, cause in simulation people stand
+            with Utilities.profile("jam_lifetime"):
+                lifetime, chuncks, max_lifetime, from_to = Utilities.jam_lifetime(
+                    data, jam_frames[10:], min_jam_agents, fps, precision
+                )  # remove the first frames, cause in simulation people stand
 
             ## duration
             logging.info(f"waiting time with {min_jam_time}")
-            waiting_time = Utilities.jam_waiting_time(
-                data, jam_speed, min_jam_time, fps, precision
-            )
+            with Utilities.profile("jam_waiting_time"):
+                waiting_time = Utilities.jam_waiting_time(
+                    data, jam_speed, min_jam_time, fps, precision
+                )
 
             if not waiting_time.size:
                 wtimes = np.array([])
             else:
                 wtimes = waiting_time[:, 1]
 
-            ## plots
-            fig1 = plots.plot_jam_lifetime(
-                frames, lifetime, fps, max_lifetime, from_to, min_jam_agents
-            )
-            hist = plots.plot_jam_lifetime_hist(chuncks, fps, nbins)
-            pl2.plotly_chart(fig1, use_container_width=True)
-            pl.plotly_chart(hist, use_container_width=True)
-            # --
-            hist = plots.plot_jam_waiting_hist(wtimes, fps, nbins2)
-            pl3.plotly_chart(hist, use_container_width=True)
+            with Utilities.profile("Rendering Jam figures"):
+                ## plots
+                fig1 = plots.plot_jam_lifetime(
+                    frames, lifetime, fps, max_lifetime, from_to, min_jam_agents
+                )
+                hist = plots.plot_jam_lifetime_hist(chuncks, fps, nbins)
+                pl2.plotly_chart(fig1, use_container_width=True)
+                pl.plotly_chart(hist, use_container_width=True)
+                # --
+                hist = plots.plot_jam_waiting_hist(wtimes, fps, nbins2)
+                pl3.plotly_chart(hist, use_container_width=True)
 
     time_end = timeit.default_timer()
     msg_time = Utilities.get_time(time_end - time_start)

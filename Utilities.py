@@ -109,7 +109,7 @@ def profile(name):
     start_time = time.time()
     yield  # <-- your code will execute here
     total_time = time.time() - start_time
-    print("%s: %.4f ms" % (name, total_time * 1000.0))
+    logging.info(f"{name}: {total_time * 1000.0:.4f} ms")
 
 
 def weidmann(rho, v0=1.34, rho_max=5.4, gamma=1.913):
