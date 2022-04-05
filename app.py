@@ -151,8 +151,9 @@ def main():
     time_msg = st.sidebar.empty()
     st.sidebar.markdown("-------")
     unit_pl = st.sidebar.empty()
-    st.sidebar.header("📉 Plot")
-    c1, c2 = st.sidebar.columns((1, 1))
+    st.sidebar.header("📉 Plot trajectories")
+    px = st.sidebar.expander("Options")
+    c1, c2 = px.columns((1, 1))
     choose_trajectories = c1.checkbox(
         "Trajectories", help="Plot trajectories", key="Traj"
     )
@@ -161,64 +162,99 @@ def main():
             "Transitions", help="Show transittions", value=True, key="Tran"
         )
 
-    pl_select_special_agent = st.sidebar.empty()
-    pl_sample_trajectories = st.sidebar.empty()
-
-    st.sidebar.markdown("-------")
+    pl_select_special_agent = px.empty()
+    pl_sample_trajectories = px.empty()
+    # ---------------------------------
     st.sidebar.header("🔵 Speed")
-    how_speed_pl = st.sidebar.empty()
-    df_pl = st.sidebar.empty()
-    st.sidebar.markdown("-------")
+    sx = st.sidebar.expander("Options")
+    #how_speed_pl = sx.empty()
+    #df_pl = sx.empty()
+    # ---------------------------------
     st.sidebar.header("🔴 Profiles")
-    c1, c2 = st.sidebar.columns((1, 1))
+    prfx = st.sidebar.expander("Options")
+    c1, c2 = prfx.columns((1, 1))
     choose_dprofile = c1.checkbox(
-        "Show", help="Plot density and speed profiles", key="dProfile"
+        "▶️ Show", help="Plot density and speed profiles", key="dProfile"
     )
     # choose_vprofile = c2.checkbox("Speed", help="Plot speed profile", key="vProfile")
-    choose_d_method = st.sidebar.radio(
+    choose_d_method = prfx.radio(
         "Density method",
         ["Classical", "Gaussian", "Weidmann"],
         help="""
         How to calculate average of density over time and space""",
     )
+    prfx.write(
+         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+         unsafe_allow_html=True,
+    )
     if choose_d_method == "Gaussian":
-        width = st.sidebar.slider(
+        width = prfx.slider(
             "Width", 0.05, 1.0, 0.6, help="Width of Gaussian function"
         )
 
-    dx = st.sidebar.slider("Grid size", 0.1, 4.0, 1.0, help="Space discretization")
+    dx = prfx.slider("Grid size", 0.1, 4.0, 1.0, step=0.2, help="Space discretization")
     methods = ["nearest", "gaussian", "sinc", "bicubic", "mitchell", "bilinear"]
-    interpolation = st.sidebar.radio(
+    interpolation = prfx.radio(
         "Interpolation", methods, help="Interpolation method for imshow()"
     )
-    st.write(
-        "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
-        unsafe_allow_html=True,
-    )
+    # prfx.write(
+    #      "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+    #      unsafe_allow_html=True,
+    # )
     if choose_dprofile:
-        st.sidebar.markdown("-------")
-        st.sidebar.header("📈 Timeseries (slow)")
-        c1, c2 = st.sidebar.columns((1, 1))
-
-        choose_timeseries = st.sidebar.checkbox(
-            "🚦Plot", help="Plot density and speed timeseries", key="timeseries"
+        st.sidebar.header("📈 Density and speed timeseries")
+        svp = st.sidebar.expander("Options")
+        choose_timeseries = svp.checkbox(
+            "▶️ Show", help="Plot density and speed timeseries", key="timeseries"
         )
-
+        c1, c2 = svp.columns((1, 1))
+        posx_pl = svp.empty()
+        posy_pl = svp.empty()
+        side_pl = svp.empty()
+        sample_pl = svp.empty()
     else:
         choose_timeseries = False
 
-    c1, c2 = st.sidebar.columns((1, 1))
-    posx_pl = c1.empty()
-    posy_pl = c2.empty()
-    side_pl = c1.empty()
-    sample_pl = c2.empty()
+    st.sidebar.header("📊 Summary curves")
+    pc = st.sidebar.expander("Options")
+    c1, c2 = pc.columns((1, 1))
+    # ----- Jam
+    st.sidebar.header("🐌 Jam")
+    jp = st.sidebar.expander("Options")
+    choose_jam_duration = jp.checkbox(
+        "▶️ Show",
+        value=False,
+        help="Plot change of the number of pedestrian in jam versus time",
+        key="jam_duration",
+    )
+    jam_speed = jp.slider(
+        "Min jam speed / m/s",
+        0.1,
+        1.0,
+        0.5,
+        help="An agent slower that this speed is in jam",
+        key="jVmin",
+    )
+    min_jam_time = jp.slider(
+        "Min jam duration / s",
+        1,
+        180,
+        1,
+        help="A jam lasts at least that long",
+        key="jTmin",
+    )
+    min_jam_agents = jp.slider(
+        "Min agents in jam",
+        2,
+        200,
+        20,
+        help="A jam has at least so many agents",
+        key="jNmin",
+    )
 
-    st.sidebar.markdown("-------")
-    st.sidebar.header("📊 Plot curves")
-    c1, c2 = st.sidebar.columns((1, 1))
     msg_status = st.empty()
     disable_NT_flow = False
-    if (trajectory_file and geometry_file) or from_examples != "None":        
+    if (trajectory_file and geometry_file) or from_examples != "None":
         traj_from_upload = True
         if not trajectory_file and not geometry_file:
             traj_from_upload = False
@@ -257,8 +293,8 @@ def main():
                 new_data = False
 
             if Utilities.detect_jpscore(string_data):
-                how_speed = how_speed_pl.radio(
-                    "Source:", ["from simulation", "from trajectory"]
+                how_speed = sx.radio(
+                    "source", ["from simulation", "from trajectory"]
                 )
                 st.write(
                     "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
@@ -266,14 +302,8 @@ def main():
                 )
                 df = 10
             else:
-                how_speed = how_speed_pl.radio(
-                    "Source:", ["from trajectory", "from simulation"]
-                )
-                st.write(
-                    "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
-                    unsafe_allow_html=True,
-                )
-                df = df_pl.slider(
+                how_speed = "from experiment"
+                df = sx.slider(
                     "df",
                     2,
                     50,
@@ -336,8 +366,8 @@ def main():
                 )
                 st.sidebar.markdown("-------")
 
-            st.markdown("### :bar_chart: Statistics")
-            pl_msg = st.empty()
+            st.markdown("### :bar_chart: Summary of the data")
+            stats_msg = st.empty()
             frames = np.unique(data[:, 1])
             peds = np.unique(data[:, 0]).astype(int)
             nagents = len(peds)
@@ -349,7 +379,7 @@ def main():
             Agents: {nagents}\n
             Evac-time: {np.max(frames)/fps} [s]
             """
-            pl_msg.info(msg)
+            stats_msg.info(msg)
             f = st.expander("Documentation: Speed (click to expand)")
             with f:
                 doc.doc_speed()
@@ -478,7 +508,7 @@ def main():
                 f"CM GeometrySize: X: ({geominX:.2f},{geomaxX:.2f}), Y: ({geominY:.2f},{geomaxY:.2f})"
             )
 
-        NT_form = st.sidebar.form("plot-NT")
+        NT_form = pc.form("plot-NT")
         with NT_form:
             choose_NT = c1.checkbox(
                 "N-T",
@@ -508,16 +538,16 @@ def main():
                 disabled=disable_NT_flow,
                 key="Survival",
             )
-            num_peds_TD = c1.number_input(
-                "number T-D",
+            num_peds_TD = pc.number_input(
+                "number pedestrians",
                 min_value=1,
                 max_value=len(peds),
                 value=int(0.3 * len(peds)),
                 step=1,
                 help="number of pedestrians to show in T-D",
             )
-            sample_TD = c2.number_input(
-                "sample T-D",
+            sample_TD = pc.number_input(
+                "sample",
                 min_value=1,
                 max_value=int(0.1 * len(frames)),
                 value=int(0.01 * len(frames)),
@@ -531,39 +561,7 @@ def main():
             default,
             help="Transition to calculate N-T. Can select multiple transitions",
         )
-        make_plots = NT_form.form_submit_button(label="🚦plot")
-        # ----- Jam
-        st.sidebar.header("🐌 Jam")
-        choose_jam_duration = st.sidebar.checkbox(
-            "Show",
-            value=False,
-            help="Plot change of the number of pedestrian in jam versus time",
-            key="jam_duration",
-        )
-        jam_speed = st.sidebar.slider(
-            "Min jam speed [m/s]",
-            0.1,
-            1.0,
-            0.5,
-            help="An agent slower that this speed is in jam",
-            key="jVmin",
-        )
-        min_jam_time = st.sidebar.slider(
-            "Min jam duration [s]",
-            1,
-            300,
-            1,
-            help="A jam lasts at least that long",
-            key="jTmin",
-        )
-        min_jam_agents = st.sidebar.slider(
-            "Min agents in jam",
-            2,
-            200,
-            20,
-            help="A jam has at least so many agents",
-            key="jNmin",
-        )
+        make_plots = NT_form.form_submit_button(label="▶️ Show")
         if how_speed == "from simulation":
             logging.info("speed by simulation")
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
@@ -639,7 +637,7 @@ def main():
 
         # choose_dprofile =
         choose_vprofile = True  # todo: not sure is I want to keep this option
-        if choose_timeseries:
+        if choose_dprofile:
             if st.session_state.xpos is not None:  # no need to check ypos and lm
                 xm = st.session_state.xpos
                 ym = st.session_state.ypos
