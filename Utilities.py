@@ -17,11 +17,6 @@ from shapely.geometry import LineString, Point
 # geometry
 
 examples = {
-    "HC-BUW (sim)": [
-        "HC_BUW",
-        "https://fz-juelich.sciebo.de/s/GgvVjc81lzmhTgv/download",
-        "https://fz-juelich.sciebo.de/s/NikHJ6TIHCwSoUM/download",
-    ],
     "Multi-Rooms (sim)": [
         "Multi-Rooms",
         "https://fz-juelich.sciebo.de/s/7kwrnAzcv5m7ii2/download",
@@ -32,10 +27,26 @@ examples = {
         "https://fz-juelich.sciebo.de/s/HldXLySEfEDMdZo/download",
         "https://fz-juelich.sciebo.de/s/FqiSFGr6FajfYLD/download",
     ],
+        "HC-BUW (sim)": [
+        "HC_BUW",
+        "https://fz-juelich.sciebo.de/s/GgvVjc81lzmhTgv/download",
+        "https://fz-juelich.sciebo.de/s/NikHJ6TIHCwSoUM/download",
+    ],
     "eo-300-300-300_combined (exp)": [
         "jps_eo-300-300-300_combined_MB",
         "https://fz-juelich.sciebo.de/s/BfNxMk1qM64QqYj/download",
         "https://fz-juelich.sciebo.de/s/qNVoD8RZ8UentBB/download",
+    ],
+    "WDG_09 (exp)": [
+        "WDG_09",
+        "https://fz-juelich.sciebo.de/s/oTG7vRCcQyYJ08q/download",
+        "https://fz-juelich.sciebo.de/s/lDuCQlJkwh9Of1C/download",
+        "",
+    ],
+    "CROSSING_90_a_10 (exp)": [
+        "CROSSING_90_a_10",
+        "https://fz-juelich.sciebo.de/s/gLfaofmZCNtf5Vx/download",
+        "https://fz-juelich.sciebo.de/s/f960CoXb26FKpkw/download",
     ],
     "CROSSING_120_A_1 (exp)": [
         "CROSSING_120_A_1",
@@ -47,18 +58,26 @@ examples = {
         "https://fz-juelich.sciebo.de/s/vrkGlCDKVTIz8Ch/download",
         "https://fz-juelich.sciebo.de/s/11Cz0bQWZCv23eI/download",
     ],
-    "WDG_09 (exp)": [
-        "WDG_09",
-        "https://fz-juelich.sciebo.de/s/oTG7vRCcQyYJ08q/download",
-        "https://fz-juelich.sciebo.de/s/lDuCQlJkwh9Of1C/download",
-        "",
-    ],
     "mo11_combine_MB (exp)": [
         "mo11_combine_MB",
         "https://fz-juelich.sciebo.de/s/ckzZLnRJCKKgAnZ/download",
         "https://fz-juelich.sciebo.de/s/kgXUEyu95FTQlFC/download",
     ],
 }
+
+
+def get_time(t):
+    """Time in min sec
+
+    :param t: Run time
+    :type t: float
+    :returns: str
+
+    """
+
+    minutes = t // 60
+    seconds = t % 60
+    return f"""{minutes:.0f} min:{seconds:.0f} sec"""
 
 
 def selected_traj_geo(text):
@@ -204,10 +223,17 @@ def get_measurement_lines(xml_doc, unit):
     else:
         cm2m = 1
 
+    fake_id = 1000
     measurement_lines = {}
     for _, t_elem in enumerate(xml_doc.getElementsByTagName("area_L")):
         Id = t_elem.getAttribute("id")
-        logging.info(f"Measurement {Id}")
+        logging.info(f"Measurement id = <{Id}>")
+        if Id == "":
+            st.warning(f"Got Measurement line with no Id. Setting id = {fake_id}")
+            logging.info(f"Got Measurement line with no Id. Setting id = {fake_id}")
+            Id = fake_id
+            fake_id += 1
+
         n_vertex = 2
         vertex_array = np.zeros((n_vertex, 2))
         vertex_array[0, 0] = (
