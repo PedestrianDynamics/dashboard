@@ -8,7 +8,7 @@ from xml.dom.minidom import parseString, parse
 
 import lovely_logger as logging
 import numpy as np
-
+import plotly.express as PX
 # import plotly.graph_objs as go
 import streamlit as st
 from matplotlib import cm
@@ -155,7 +155,7 @@ def main():
     px = st.sidebar.expander("Options")
     c1, c2 = px.columns((1, 1))
     choose_trajectories = c1.checkbox(
-        "Trajectories", help="Plot trajectories", key="Traj"
+        "Trajectories", help="Plot trajectories", key="Traj", value=True,
     )
     if choose_trajectories:
         choose_transitions = c2.checkbox(
@@ -170,7 +170,7 @@ def main():
     #how_speed_pl = sx.empty()
     #df_pl = sx.empty()
     # ---------------------------------
-    st.sidebar.header("🔴 Profiles")
+    st.sidebar.header("🔴 Heatmaps")
     prfx = st.sidebar.expander("Options")
     c1, c2 = prfx.columns((1, 1))
     choose_dprofile = c1.checkbox(
@@ -193,9 +193,10 @@ def main():
         )
 
     dx = prfx.slider("Grid size", 0.1, 4.0, 1.0, step=0.2, help="Space discretization")
-    methods = ["nearest", "gaussian", "sinc", "bicubic", "mitchell", "bilinear"]
+    # methods = ["nearest", "gaussian", "sinc", "bicubic", "mitchell", "bilinear"]
+    methods = ["false", "fast", "best"]
     interpolation = prfx.radio(
-        "Interpolation", methods, help="Interpolation method for imshow()"
+        "Interpolation", methods, help="Smoothen the heatmaps"
     )
     # prfx.write(
     #      "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
@@ -345,7 +346,7 @@ def main():
                     speed_index = st.session_state.speed_index
                     header_traj = st.session_state.header_traj
                     logging.info(
-                        f"Seceond init of trajectories {st.session_state.data.shape}"
+                        f"Second init of trajectories {st.session_state.data.shape}"
                     )
 
             with h:
@@ -399,7 +400,8 @@ def main():
                 (the lower the slower)",
                 key="sample_traj",
             )
-
+            # hack. I dont know why this is sometimes float
+            sample_trajectories = int(sample_trajectories)
             plot_ped = pl_select_special_agent.number_input(
                 "Highlight pedestrian",
                 min_value=np.min(peds),
@@ -729,6 +731,8 @@ def main():
 
             with st.spinner("Processing ..."):
                 if choose_dprofile:
+                    xbins = np.arange(geominX, geomaxX + dx, dx)
+                    ybins = np.arange(geominY, geomaxY + dx, dx)
                     if choose_d_method == "Weidmann":
                         density_ret = Utilities.calculate_density_average_weidmann(
                             geominX,
@@ -798,28 +802,7 @@ def main():
                                     density_time.append(dtime[0, 0])
 
                     elif choose_d_method == "Classical":
-                        xbins = np.arange(geominX, geomaxX + dx, dx)
-                        ybins = np.arange(geominY, geomaxY + dx, dx)
                         density_ret = np.zeros((len(ybins) - 1, len(xbins) - 1))
-                        # for frame in frames[::sample]:
-                        #     dframe = data[:, 1] == frame
-                        #     x = data[dframe][:, 2]
-                        #     y = data[dframe][:, 3]
-                        #     res = Utilities.calculate_density_average_classic(
-                        #         geominX,
-                        #         geomaxX,
-                        #         geominY,
-                        #         geomaxY,
-                        #         dx,
-                        #         1,
-                        #         x,
-                        #         y)
-                        #     density_ret += res
-
-                        # print("max d unnormed", np.max(density_ret))
-                        # print("l=", len(frames[::sample]))
-                        # density_ret /= float(len(frames[::sample]))
-                        # print("max d", np.max(density_ret))
                         density_ret = Utilities.calculate_density_average_classic(
                             geominX,
                             geomaxX,
@@ -849,32 +832,31 @@ def main():
                                 density_time.append(dtime[0, 0])
                     st.session_state.density = density_ret
                     msg += f"Density profile in range [{np.min(density_ret):.2f} : {np.max(density_ret):.2f}] [1/m^2]. \n"
-                    fig = plots.plot_profile_and_geometry(
-                        geominX,
-                        geomaxX,
-                        geominY,
-                        geomaxY,
+                    fig = plots.plot_profile_and_geometry2(
+                        xbins,
+                        ybins,
                         geometry_wall,
                         st.session_state.xpos,
                         st.session_state.ypos,
                         st.session_state.lm,
                         density_ret,
                         interpolation,
-                        cmap=cm.jet,
-                        label=r"$\rho\; / 1/m^2$",
+                        label=r"1/m/m",
                         title="Density",
                         vmin=None,
                         vmax=None,
                     )
-                    dprofile_pl.pyplot(fig)
+                    #dprofile_pl.pyplot(fig)
+                    dprofile_pl.plotly_chart(fig, use_container_width=True)
                     if choose_timeseries:
                         fig = plots.plot_timeserie(
                             frames,
                             density_time,
                             fps,
                             "Density / m / m",
-                            np.min(density_ret),
-                            np.max(density_ret) + 2,
+                            np.min(density_time),
+                            np.max(density_time) + 2,
+                            np.max(density_ret)
                         )
                         dtimeseries_pl.plotly_chart(fig, use_container_width=True)
 
@@ -918,31 +900,29 @@ def main():
                                 )
                                 speed_time.append(stime[0, 0])
 
-                    fig = plots.plot_profile_and_geometry(
-                        geominX,
-                        geomaxX,
-                        geominY,
-                        geomaxY,
+                    fig = plots.plot_profile_and_geometry2(
+                        xbins,
+                        ybins,
                         geometry_wall,
                         st.session_state.xpos,
                         st.session_state.ypos,
                         st.session_state.lm,
                         speed_ret,
                         interpolation,
-                        cmap=cm.jet,  # .reversed(),
-                        label=r"$v\; / m/s$",
+                        label=r"v / m/s",
                         title="Speed",
                         vmin=None,
                         vmax=None,
                     )
-                    vprofile_pl.pyplot(fig)
+                    vprofile_pl.plotly_chart(fig, use_container_width=True)
                     if choose_timeseries:
                         fig = plots.plot_timeserie(
                             frames,
                             speed_time,
                             fps,
                             "Speed / m/s",
-                            np.min(speed_ret),
+                            np.min(speed_time),
+                            np.max(speed_time),
                             np.max(speed_ret),
                         )
                         vtimeseries_pl.plotly_chart(fig, use_container_width=True)

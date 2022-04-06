@@ -137,7 +137,6 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
         ff = data[np.logical_and(data[:, 1] <= toframe, data[:, 0] == p)]
         speed = np.mean(ff[:frames_initial_speed_mean,  st.session_state.speed_index])
         sc = speed
-        print(sc)
         xx = []
         yy = []
         for (frame, x, y) in ff[::sample, 1:4]:
@@ -150,7 +149,7 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
         xstart.append(xx[0])
         ystart.append(yy[0])
         colors.append(sc)
-        
+
         trace = go.Scatter(
             x=xx,
             y=yy,
@@ -345,17 +344,32 @@ def plot_jam_lifetime_hist(chuncks, fps, nbins):
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_timeserie(frames, t, fps, title, miny, maxy):
+def plot_timeserie(frames, t, fps, title, miny, maxy, liney=None):
     logging.info(f"plot timeseries: {title}")
     fig = make_subplots(rows=1, cols=1, x_title="Time / s", y_title=title)
     times = frames / fps
     trace = go.Scatter(
         x=times,
         y=t,
+        name="",
         mode="lines",
         showlegend=False,
         line=dict(width=3, color="royalblue"),
     )
+    # plot line
+    if liney is not None:
+        trace1 = go.Scatter(
+            x=[times[0], times[len(t)]],
+            y=[liney, liney],
+            name=f"Max Profile {title}",
+            mode="lines",
+            showlegend=True,
+            line=dict(width=3, dash="dash", color="gray"),
+        )
+        fig.append_trace(trace1, row=1, col=1)
+        if liney > maxy:
+            maxy = liney
+
     fig.append_trace(trace, row=1, col=1)
     fig.update_yaxes(
         range=[miny - 0.1, maxy + 0.1],
@@ -595,6 +609,84 @@ def plot_trajectories(
 def plot_geometry(ax, _geometry_wall):
     for gw in _geometry_wall.keys():
         ax.plot(_geometry_wall[gw][:, 0], _geometry_wall[gw][:, 1], color="white", lw=2)
+
+
+
+@st.cache(
+    suppress_st_warning=True, hash_funcs={matplotlib.figure.Figure: lambda _: None}
+)
+def plot_profile_and_geometry2(
+        xbins,
+        ybins,
+        geometry_wall,
+        xpos,
+        ypos,
+        lm,
+        data,
+        interpolation,
+        label,
+        title,
+        vmin=None,
+        vmax=None,
+):
+    """Plot profile + geometry for 3D data
+
+
+    if vmin or vmax is None, extract values from <data>
+    """
+    logging.info("plot_profile and geometry 2")
+    if vmin is None or vmax is None:
+        vmin = np.min(data)
+        vmax = np.max(data)
+
+    if interpolation == "false":
+        interpolation = False
+
+    fig = make_subplots(rows=1, cols=1,
+                        subplot_titles=([f'<b>{title}</b>']))
+
+    heatmap = go.Heatmap(
+        x=xbins,
+        y=ybins,
+        z=data,
+        zmin=vmin,
+        zmax=vmax,
+        name=title,
+        connectgaps=False,
+        zsmooth=interpolation,
+        hovertemplate="%{z:.2f}<br> x: %{x:.2f}<br> y: %{y:.2f}",
+        colorbar=dict(
+            title=f"{label}"),
+        colorscale="Jet",
+    )
+    fig.add_trace(heatmap)
+    #    Geometry walls
+    for gw in geometry_wall.keys():
+        line = go.Scatter(
+            x=geometry_wall[gw][:, 0],
+            y=geometry_wall[gw][:, 1],
+            mode="lines",
+            name="wall",
+            showlegend=False,
+            line=dict(
+                width=3,
+                color="white",
+            )
+        )
+        fig.add_trace(line)
+        
+    # Measurement square
+    fig.add_shape(
+        x0=xpos-lm/2, x1=xpos+lm/2, y0=ypos-lm/2, y1=ypos+lm/2,
+        xref='x', yref='y',
+        line=dict(color="gray", width=4),
+        type='rect',
+    )
+    fig.update_yaxes(
+        scaleanchor="x",
+        scaleratio=1,
+    )
+    return fig
 
 
 @st.cache(
