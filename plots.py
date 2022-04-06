@@ -352,6 +352,7 @@ def plot_timeserie(frames, t, fps, title, miny, maxy, liney=None):
         x=times,
         y=t,
         name="",
+        fill="tozeroy",
         mode="lines",
         showlegend=False,
         line=dict(width=3, color="royalblue"),
@@ -362,7 +363,7 @@ def plot_timeserie(frames, t, fps, title, miny, maxy, liney=None):
             x=[times[0], times[len(t)]],
             y=[liney, liney],
             name=f"Max Profile {title}",
-            mode="lines",
+            mode="lines", 
             showlegend=True,
             line=dict(width=3, dash="dash", color="gray"),
         )
@@ -447,6 +448,7 @@ def plot_agent_angle(pid, frames, angles, fps):
         y=angles,
         mode="lines",
         showlegend=False,
+        fill="tozeroy",
         name=f"Agent: {pid:.0f}",
         line=dict(width=3, color="royalblue"),
     )

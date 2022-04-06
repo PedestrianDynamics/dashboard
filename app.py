@@ -1050,7 +1050,7 @@ def main():
                         delimiter="\t",
                     )
                     with open(file_download, encoding="utf-8") as f:
-                        st.sidebar.download_button(
+                        pc.download_button(
                             "Download statistics", f, file_name=file_download
                         )
 
