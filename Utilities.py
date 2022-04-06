@@ -96,8 +96,9 @@ def selected_traj_geo(text):
 
 
 def download(url: str, filename: str):
-    r = requests.get(url, stream=True)
-    if r.ok:
+
+    try:
+        r = requests.get(url, stream=True)
         logging.info(f"saving to {filename}")
         with open(filename, "wb") as f:
             for chunk in r.iter_content(chunk_size=1024 * 8):
@@ -105,8 +106,12 @@ def download(url: str, filename: str):
                     f.write(chunk)
                     f.flush()
                     os.fsync(f.fileno())
-    else:  # HTTP status code 4XX/5XX
-        logging.warning(f"Download failed: status code {r.status_code}\n{r.text}")
+
+    except Exception as e:
+        st.error(
+            f"""Download of file {filename} failed.\n
+            Error: {e}"""
+        )
 
 
 @contextlib.contextmanager

@@ -274,6 +274,17 @@ def main():
         else:
             logging.info(f">> {trajectory_file}")
             logging.info(f">> {geometry_file}")
+            if trajectory_file is None:
+                st.error(
+                    "No trajectory file uploaded yet!"
+                )
+                st.stop()
+
+            if geometry_file is None:
+                st.error(
+                    "No geometry file uploaded yet!"
+                )
+                st.stop()
 
         try:
             logging.info(f"Trajectory from upload: {traj_from_upload}")
