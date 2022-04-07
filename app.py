@@ -717,25 +717,36 @@ def main():
             st.session_state.lm = None
 
         info_profile = st.expander(
-            "Documentation: Density/Speed Profiles (click to expand)"
+            "Documentation: Density/Speed maps (click to expand)"
         )
-        c1, _, c2 = st.columns((1, 0.05, 1))
+        messages = st.empty()
+        c1, c2 = st.columns((1, 1))
         dprofile_pl = c1.empty()
         vprofile_pl = c2.empty()
-        messages = st.empty()
+        
+        info_rset = st.expander(
+            "Documentation: RSET maps (click to expand)"
+        )
+        c1, c2 = st.columns((1, 1))
+        rset_pl = c2.empty()
+        rset2_pl = c1.empty()
         info_timeseries = st.expander(
             "Documentation: Density/Speed Time Series (click to expand)"
         )
-        c1, _, c2 = st.columns((1, 0.05, 1))
-        plot_timeseries_pl = c1.empty()
+        c1, c2 = st.columns((1, 1))
+        #plot_timeseries_pl = c1.empty()
         dtimeseries_pl = c1.empty()
         vtimeseries_pl = c2.empty()
+
         with info_timeseries:
             doc.doc_timeseries()
 
         with info_profile:
             doc.doc_profile()
 
+        with info_rset:
+            doc.doc_RSET()
+            
         if choose_dprofile:
             Utilities.check_shape_and_stop(data.shape[1], how_speed)
             msg = ""
@@ -857,7 +868,6 @@ def main():
                         vmin=None,
                         vmax=None,
                     )
-                    #dprofile_pl.pyplot(fig)
                     dprofile_pl.plotly_chart(fig, use_container_width=True)
                     if choose_timeseries:
                         fig = plots.plot_timeserie(
@@ -944,6 +954,48 @@ def main():
 
                     messages.info(msg)
 
+            # RSET
+            rset_max = Utilities.calculate_RSET(geominX, geomaxX, geominY, geomaxY, dx,
+                                                data[:, 2],
+                                                data[:, 3],
+                                                data[:, 1]/fps,
+                                                "max")
+            # rset_min = Utilities.calculate_RSET(geominX, geomaxX, geominY, geomaxY, dx,
+            #                                     data[:, 2],
+            #                                     data[:, 3],
+            #                                     data[:, 1]/fps,
+            #                                     "min")
+            # fig = plots.plot_profile_and_geometry2(
+            #     xbins,
+            #     ybins,
+            #     geometry_wall,
+            #     None, None, None,
+            #     rset_min,
+            #     interpolation,
+            #     label=r"first arrival time / s",
+            #     title="RSET min",
+            #     vmin=None,
+            #     vmax=None,
+            # )
+            # rset_pl.plotly_chart(fig, use_container_width=True)
+            nbins = 10
+            fig = plots.plot_RSET_hist(rset_max, nbins)
+            rset_pl.plotly_chart(fig, use_container_width=True)
+            
+            fig = plots.plot_profile_and_geometry2(
+                xbins,
+                ybins,
+                geometry_wall,
+                None, None, None,
+                rset_max,
+                interpolation,
+                label=r"time / s",
+                title=f"RSET = {np.max(rset_max):.1f} / s",
+                vmin=None,
+                vmax=None,
+            )
+            rset2_pl.plotly_chart(fig, use_container_width=True)
+            
         # todo
         info = st.expander("Documentation: Plot curves (click to expand)")
         with info:

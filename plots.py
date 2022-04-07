@@ -337,7 +337,31 @@ def plot_jam_lifetime_hist(chuncks, fps, nbins):
         labels={"chuncks": "Time"},
         text_auto=True,
         nbins=nbins,
-        title='<b>Distribution of all Jam Lifetimes</b>',
+        title='<b>Distribution of all Jam Lifetimes (in s)</b>',
+    )
+    hist.update_layout(bargap=0.2)
+    return hist
+
+
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_RSET_hist(rset, nbins):
+
+    rset = rset.flatten()
+    df = pd.DataFrame(
+        rset,
+        columns=[
+            "RSET",
+        ],
+    )
+    hist = px.histogram(
+        df,
+        x="RSET",
+        marginal="rug",
+        hover_data=df.columns,
+        labels={"RSET": "Time"},
+        text_auto=True,
+        nbins=nbins,
+        title='<b>Distribution of RSET (in s)</b>',
     )
     hist.update_layout(bargap=0.2)
     return hist
@@ -614,9 +638,7 @@ def plot_geometry(ax, _geometry_wall):
 
 
 
-@st.cache(
-    suppress_st_warning=True, hash_funcs={matplotlib.figure.Figure: lambda _: None}
-)
+@st.cache(suppress_st_warning=True, hash_funcs={matplotlib.figure.Figure: lambda _: None})
 def plot_profile_and_geometry2(
         xbins,
         ybins,
@@ -676,14 +698,16 @@ def plot_profile_and_geometry2(
             )
         )
         fig.add_trace(line)
-        
+
     # Measurement square
-    fig.add_shape(
-        x0=xpos-lm/2, x1=xpos+lm/2, y0=ypos-lm/2, y1=ypos+lm/2,
-        xref='x', yref='y',
-        line=dict(color="gray", width=4),
-        type='rect',
-    )
+    if xpos is not None:
+        fig.add_shape(
+            x0=xpos-lm/2, x1=xpos+lm/2, y0=ypos-lm/2, y1=ypos+lm/2,
+            xref='x', yref='y',
+            line=dict(color="gray", width=4),
+            type='rect',
+        )
+
     fig.update_yaxes(
         scaleanchor="x",
         scaleratio=1,

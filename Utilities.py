@@ -546,8 +546,9 @@ def calculate_speed_average(
     return np.nan_to_num(ret.statistic.T)
 
 
+
 def calculate_density_average_weidmann(
-    geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y, speed
+        geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y, speed
 ):
     """Calculate density using Weidmann(speed)"""
     density = inv_weidmann(speed)
@@ -602,6 +603,23 @@ def calculate_density_frame_classic(geominX, geomaxX, geominY, geomaxY, dx, X, Y
         bins=[xbins, ybins],
     )
     return np.nan_to_num(ret.statistic.T) / area
+
+
+def calculate_RSET(
+        geominX, geomaxX, geominY, geomaxY, dx,
+        X, Y, time, func
+):
+    """Calculate RSET according to 5.5.1 RSET Maps in Schroder2017a"""
+    xbins = np.arange(geominX, geomaxX + dx, dx)
+    ybins = np.arange(geominY, geomaxY + dx, dx)
+    ret = stats.binned_statistic_2d(
+        X,
+        Y,
+        time,
+        func,
+        bins=[xbins, ybins],
+    )
+    return np.nan_to_num(ret.statistic.T)
 
 
 def check_shape_and_stop(shape, how_speed):
