@@ -2,7 +2,8 @@ import streamlit as st
 
 
 def doc_plots():
-    st.write("""
+    st.write(
+        """
     Plot several timeseries of relevant quantities.
     Some quantities are calculated w.r.t a 2D line, which can be
     a `transition` or `area_L`.  
@@ -17,7 +18,8 @@ def doc_plots():
     #### Flow
     For each line, calculate the flow ($J$) versus time ($T$).
     Given $N$ pedestrians have passed the line in a time duration of $T$, then the flow is calculates as:
-    """)
+    """
+    )
     st.latex(
         r"""
     \begin{equation}
@@ -26,47 +28,60 @@ def doc_plots():
     """
     )
 
-    st.write("""
+    st.write(
+        """
     #### Distance-Time
     Relation between time and distance to entrance.
     For each person, the Euclidean distance between the current position and the **first** selected entrance
     is calculated.
     The time to entrance is given by the time the person needs to arrive at the entrance.
-    """)
-    st.image("./figs/distance-time.png", caption="Relation between time and distance to entrance. Fig.6 in https://doi.org/10.1371/journal.pone.0177328.g006")
+    """
+    )
+    st.image(
+        "./figs/distance-time.png",
+        caption="Relation between time and distance to entrance. Fig.6 in https://doi.org/10.1371/journal.pone.0177328.g006",
+    )
 
-    st.write("""
+    st.write(
+        """
     #### Survival
     The time lapses $\delta$ between two consecutive agents passing a line are calculated.
     The value of $\delta$ reflects the sustained time of clogs interrupting the flow.
     This curve shows the probability distribution function
     $$P(t > δ)$$, also known as the survival function,
     which is an indicator of clogging in front of exits.
-    """)
-    st.image("./figs/survival_function.png", caption="The survival functions w.r.t door widths. Fig.7 (a) in https://doi.org/10.1016/j.physa.2021.125934")
+    """
+    )
+    st.image(
+        "./figs/survival_function.png",
+        caption="The survival functions w.r.t door widths. Fig.7 (a) in https://doi.org/10.1016/j.physa.2021.125934",
+    )
 
 
 def doc_jam():
-    st.write("""
+    st.write(
+        """
     A pedestrian $i$ is defined as *congested* if its speed at time $t$
     is below a certain threshold $\hat v$: $v_i(t)<\hat v$.  
     Hence, the set of *congested* pedestrians is defined as
     """
     )
     st.latex(
-    r"""
+        r"""
     \begin{equation}
     C(t) = \{i |\; v_i(t) < \hat v \}.
     \end{equation}
     """
     )
-    st.info("""
+    st.info(
+        """
     Therefore, we define **jam** as a state, where at least
     $\hat n$ pedestrians are *congested* for a certain amount of time $\hat t$.
-    """)
-    
-    
-    st.write("""
+    """
+    )
+
+    st.write(
+        """
     To quantify the characteristics of a jammed state we define the following
     quantities:
     
@@ -74,20 +89,23 @@ def doc_jam():
 
     The maximal waiting time of congested pedestrians is defined
     as the longest time spent in jam
-    """)
-    
+    """
+    )
+
     st.latex(
-    r"""
+        r"""
     \begin{equation}
     T_{w} = \max_i  \{\Delta t = t_{i,2}  - t_{i,1} |\; \Delta t > \hat t,  v(t_{i_1}) < \hat v\; {\rm and}\; v(t_{i_2}) > \hat v \}, 
     \end{equation}
     """
     )
     st.write("""where $\hat t$ is the minimal jam duration.""")
-    st.write("""
+    st.write(
+        """
     ####  Lifetime of jam
     Considering a minimal number of pedestrians in jam $\hat n$, and the set of congested pedestrians Eq. (1), the longest time period of a jam is
-    """)
+    """
+    )
     st.latex(
         r"""
         \begin{equation}
@@ -95,10 +113,12 @@ def doc_jam():
         \end{equation}
         """
     )
-    st.write("""
+    st.write(
+        """
     ####  Size of jam
     The number of pedestrians in jam during its lifetime is the mean value of the number of congested pedestrians:    
-    """)
+    """
+    )
     st.latex(
         r"""
         \begin{equation}
@@ -106,10 +126,13 @@ def doc_jam():
         \end{equation}
         """
     )
-    st.write("""where $I$ is the time interval corresponding
-    to the lifetime of time. See Eq. (3).""")
+    st.write(
+        """where $I$ is the time interval corresponding
+    to the lifetime of time. See Eq. (3)."""
+    )
 
-    st.write("""
+    st.write(
+        """
     #### Summary of jam parameters
     | Variable    | Notation |
     |--------------|-----------|
@@ -121,7 +144,8 @@ def doc_jam():
 
 
 def doc_speed():
-    st.write("""
+    st.write(
+        """
     #### Speed
      The speed can be calculated *from simulation*: in this case
      use in the inifile the option: `<optional_output   speed=\"TRUE\">`.
@@ -141,8 +165,10 @@ def doc_speed():
         r"""with $df$ a constant and $v_i(f)$ the speed of pedestrian $i$ at frame $f$."""
     )
 
+
 def doc_timeseries():
-    st.write("""
+    st.write(
+        """
     Time series of the density and the speed are calculated within the measurement area (a square).
     When the option **Profiles** is activated, you can define measurement are by:
     - $x$-position of the center
@@ -151,11 +177,13 @@ def doc_timeseries():
 
     Depending on the frames per seconds of the trajectories, it might be better to increase the sampling rate
     (`sample`) to speed up rendering the plots.
-    """)
+    """
+    )
 
 
 def doc_profile():
-    st.write("""
+    st.write(
+        """
     The density and speed profiles show averaged values over time and over space.
 
     A grid of square cells $c$ with a given size (can be defined by the slider `Grid size`) is created.
@@ -187,7 +215,9 @@ def doc_profile():
     st.latex(
         r"""\gamma = 1.913\, m^{-2},\; \rho_{\max} = 5.4\, m^{-2}\; \;{\rm and}\; v^0 = 1.34\, m/s."""
     )
-    st.write("Based on the speed, from simulation or trajectory, and using Eq. (2) we can calculate the density $\\rho_i$ and hence,")
+    st.write(
+        "Based on the speed, from simulation or trajectory, and using Eq. (2) we can calculate the density $\\rho_i$ and hence,"
+    )
     st.latex(
         r"""
     \rho_c = \frac{1}{T}\sum_{t=0}^T S_c,
@@ -198,16 +228,18 @@ def doc_profile():
     st.latex(r"""\rho_c = \frac{1}{T}\sum_{t=0}^T \frac{N_c}{A_c},""")
     st.write("where $A_c$  the area of cell $c$ and $N_c$ the number of agents in $c$.")
     st.write(
-    """#### Gaussian
+        """#### Gaussian
 
 For every pedestrian $i$ a Gaussian distribution is calculated, then
     """
     )
     st.latex(r"""\rho_c = \frac{1}{T}\sum_{t=0}^T G_c,""")
-    st.write("""where $G_c$ the sum of all Gaussians.
+    st.write(
+        """where $G_c$ the sum of all Gaussians.
 
 The speed is calculated from $\\rho_i$ by Eq. (1).
-    """)
+    """
+    )
     st.markdown("--------")
     st.write("#### References:")
     st.code(
@@ -215,16 +247,38 @@ The speed is calculated from $\\rho_i$ by Eq. (1).
     )
 
 
-    
 def docs():
     st.write(
         """
+        This is an interactive visual tool for explorative analysis and inspection of pedestrian dynamics.
         Show statistics and make plots extracted from [jpscore](https://github.com/jupedsim/jpscore)-simulations and [experimental data](https://ped.fz-juelich.de/db/).
 
-        The main goal of this app is to extract **fast** as much information and insight
-        from a trajectory file as possible.
+        The input data are trajectories of pedestrians, that can be [jpscore](https://github.com/jupedsim/jpscore)-simulations or [experimental data](https://ped.fz-juelich.de/db/).
+
+        The following features are measured:
+        - N-T curves at lines
+        - T-D (time-distance) curves at lines . Adrian2020
+        - Flow vs time at lines
+        - Survival function at lines
+        - Discharge function
+        - Jam waiting time (Sonntag2018)
+        - Jam life span (Sonntag2018)
+        - RSET heatmaps (Schroder2017a)
+        - Density and speed heatmaps
+        - Density and speed time series
+        - Different methods for density and speed calculation
+        - Plot trajectories and individual plots
         """
     )
-    
-        
-     
+
+
+def doc_RSET():
+    st.write("""
+    RSET maps are defined in Schroeder2017 [1] are a spatial representation of the required safe egress time.
+    In a regular grid, the time for which, the cell was last occupied by a pedestrian is calculated.
+
+    These maps give insight about the location of potential jam areas.
+    More importantly they  highlight the used exits in the scenario.
+
+    [1]: Multivariate methods for life safety analysis in case of fire
+    """)
