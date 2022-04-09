@@ -8,10 +8,8 @@ from xml.dom.minidom import parseString, parse
 
 import lovely_logger as logging
 import numpy as np
-import plotly.express as PX
 # import plotly.graph_objs as go
 import streamlit as st
-from matplotlib import cm
 from shapely.geometry import LineString
 import timeit
 import doc
