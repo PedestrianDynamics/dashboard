@@ -58,7 +58,9 @@ Therefore, define in the geometry transitions, such that the pedestrian fully pa
 - [ ] Density profiles slider: from and to frames
 - [ ] Use steady state form this script https://github.com/JuPedSim/jpsreport/blob/develop/scripts/SteadyState.py 
   See also Cumulative sum algorithm https://github.com/BMClab/BMC/blob/master/functions/detect_cusum.py
-  
+- [ ] Use density plots to detect the geometry
+- [ ] LOS (green: d<0.8, yellow: d<1.6, red: d>1.6)
+- [ ] show starting positions with colors
 - [ ] N_T curves bidirectional flow
 - [ ] Accelerate calculation of N-T curves data
 - [ ] Radio buttons to choose  between two different modes: 
