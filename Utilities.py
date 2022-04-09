@@ -2,6 +2,8 @@ import contextlib
 import os
 import time
 from collections import defaultdict
+from shapely.geometry import Polygon
+from shapely.strtree import STRtree
 
 import lovely_logger as logging
 import numpy as np
@@ -280,11 +282,88 @@ def passing_frame(
 
     """
     eps = 1 / fps * 1.3
-    line_buffer = line.buffer(eps)
+    line_buffer = line.buffer(eps, cap_style=3)
     p = ped_data[np.abs(ped_data[:, 2] - line.centroid.x) < max_distance]
     for (frame, x, y) in p[:, 1:4]:
         if Point(x, y).within(line_buffer):
             return frame
+
+    return -1
+
+
+def passing_frame2(ped_data, line: LineString, fps: int, max_distance: float) -> int:
+    s = STRtree([Point(ped_data[i, 2:4]) for i in range(ped_data.shape[0])])
+    index = s.nearest_item(line)
+    # nearest_point = ped_data[index, 2:4]
+    nearest_frame = ped_data[index, 1]
+    # print("nearest: ", nearest_point, "at", nearest_frame)
+    L1 = line.coords[0]
+    L2 = line.coords[1]
+    P1 = ped_data[0, 2:4]
+    P2 = ped_data[-1, 2:4]
+    # print("Ped", P1, P2)
+    # print("Line", L1, L2)
+    sign1 = np.cross([L1, L2], [L1, P1])[1]
+    sign2 = np.cross([L1, L2], [L1, P2])[1]
+
+    if np.sign(sign1) != np.sign(sign2):
+        # crossed_line = True
+        return nearest_frame
+
+    # crossed_line = False
+    return -1
+    # print("nearest_frame", nearest_frame)
+    # print("Crossed?", crossed_line)
+
+
+def intersects(L1, L2, P1, P2) -> bool:
+    """True is P1 and P2 are on different sides from [L1, L2]
+
+                        L1
+                        x
+                        |
+                        |
+                  P1 x  |     x P2
+                        x
+                        L2
+    --> True
+    """
+
+    sign1 = np.cross(L1 - L2, L1 - P1)
+    sign2 = np.cross(L1 - L2, L1 - P2)
+    return np.sign(sign1) != np.sign(sign2)
+
+
+def passing_frame3(ped_data: np.array, line: LineString, fps: float) -> int:
+    XY = ped_data[:, 2:4]
+    L1 = np.array(line.coords[0])
+    L2 = np.array(line.coords[1])
+    P1 = XY[0]
+    P2 = XY[-1]
+    i1 = 0  # index of first element
+    i2 = len(XY) - 1  # index of last element
+    im = int(len(XY) / 2)  # index of the element in the middle
+    M = XY[im]
+    i = 0
+    if not intersects(L1, L2, P1, P2):
+        return -1
+
+    while i1 + 1 < i2 and i < 20:
+        i += 1  # to avoid endless loops! Should be removed!
+        if intersects(L1, L2, M, P2):
+            P1 = M
+            i1 = im
+        else:
+            P2 = M
+            i2 = im
+
+        im = int((i1 + i2) / 2)
+        M = XY[im]
+
+    # this is to ensure, that the pedestrian really passed *through* the line    
+    line_buffer = line.buffer(1.3/fps, cap_style=3)
+    if Point(XY[i1]).within(line_buffer):
+        return ped_data[i1, 1]
 
     return -1
 
@@ -529,7 +608,6 @@ def compute_speed_and_angle(data, fps, df=10):
     return data2
 
 
-
 def calculate_speed_average(
     geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y, speed
 ):
@@ -546,9 +624,8 @@ def calculate_speed_average(
     return np.nan_to_num(ret.statistic.T)
 
 
-
 def calculate_density_average_weidmann(
-        geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y, speed
+    geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y, speed
 ):
     """Calculate density using Weidmann(speed)"""
     density = inv_weidmann(speed)
@@ -605,10 +682,7 @@ def calculate_density_frame_classic(geominX, geomaxX, geominY, geomaxY, dx, X, Y
     return np.nan_to_num(ret.statistic.T) / area
 
 
-def calculate_RSET(
-        geominX, geomaxX, geominY, geomaxY, dx,
-        X, Y, time, func
-):
+def calculate_RSET(geominX, geomaxX, geominY, geomaxY, dx, X, Y, time, func):
     """Calculate RSET according to 5.5.1 RSET Maps in Schroder2017a"""
     xbins = np.arange(geominX, geomaxX + dx, dx)
     ybins = np.arange(geominY, geomaxY + dx, dx)
@@ -721,7 +795,7 @@ def consecutive_chunks(data1d, fps, frame_margin):
             if From < To and cond:
                 ret.append([From, To + 1])
 
-    #logging.info(f"Jam chunks {chunks}. From-To: {ret}, Max = {np.max(chunks)}")
+    # logging.info(f"Jam chunks {chunks}. From-To: {ret}, Max = {np.max(chunks)}")
     return chunks, np.array(ret)
 
 
@@ -791,7 +865,7 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
     cum_num
     trans_used
     max_len (len of longest vector)
-
+    Needed to stack arrays and save them in file
     """
     tstats = defaultdict(list)
     cum_num = {}
@@ -801,15 +875,15 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
     peds = np.unique(data[:, 0]).astype(int)
     with st.spinner("Processing ..."):
         max_len = -1
-        # longest array. Needed to stack arrays and save them in file
         for i, t in transitions.items():
             trans_used[i] = False
             if i in selected_transitions:
                 line = LineString(t)
-                len_line = line.length
+                #len_line = line.length
                 for ped in peds:
                     ped_data = data[data[:, 0] == ped]
-                    frame = passing_frame(ped_data, line, fps, len_line)
+                    #frame = passing_frame(ped_data, line, fps, len_line)
+                    frame = passing_frame3(ped_data, line, fps)
                     if frame >= 0:
                         tstats[i].append([ped, frame])
                         trans_used[i] = True
