@@ -229,14 +229,27 @@ def doc_profile():
     st.write("where $A_c$  the area of cell $c$ and $N_c$ the number of agents in $c$.")
     st.write(
         """#### Gaussian
-
-For every pedestrian $i$ a Gaussian distribution is calculated, then
+For every pedestrian $i$ the density field over the whole geometry is used. The local density $\\rho$ in the system can be defined as 
+        """)
+    st.latex(r"""
+    \begin{equation}
+    \rho(\mathbf{r;\mathbf{X}}) = \sum_{i=1}^{N} \delta(\mathbf{r}_i - \mathbf{r}), \quad \rho(\mathbf{r}) = \langle \rho(\mathbf{r}; \mathbf{X}) \rangle,
+    \end{equation}
+    """)
+    st.write(r"""
+    where $\textbf{r}$ is the position and $\textbf{X}$ marks a configuration and $\delta(x)$ is approximated by a Gaussian
+    """)
+    
+    st.latex(r"""
+    \begin{equation}
+    \delta(x) =\frac{1}{\sqrt{\pi} a } \exp[-x^2/a^2].
+    \end{equation}
     """
     )
-    st.latex(r"""\rho_c = \frac{1}{T}\sum_{t=0}^T G_c,""")
+    st.write("Finally, the average of the density per cell is")
+    st.latex(r"""\rho_c = \frac{1}{T}\sum_{t=0}^T \rho(\mathbf{r;\mathbf{X}}) ,""")
     st.write(
-        """where $G_c$ the sum of all Gaussians.
-
+        """
 The speed is calculated from $\\rho_i$ by Eq. (1).
     """
     )
@@ -257,14 +270,14 @@ def docs():
 
         The following features are measured:
         - N-T curves at lines
-        - T-D (time-distance) curves at lines . Adrian2020
+        - T-D (time-distance) curves at lines (Adrian2020).
         - Flow vs time at lines
         - Survival function at lines
         - Discharge function
         - Jam waiting time (Sonntag2018)
         - Jam life span (Sonntag2018)
         - RSET heatmaps (Schroder2017a)
-        - Density and speed heatmaps
+        - Density and speed heatmaps (Zhang2012)
         - Density and speed time series
         - Different methods for density and speed calculation
         - Plot trajectories and individual plots

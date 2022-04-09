@@ -56,8 +56,14 @@ Therefore, define in the geometry transitions, such that the pedestrian fully pa
     -  sliders l, x, y
 - [x] RSET maps
 - [ ] Density profiles slider: from and to frames
+- [ ] Use steady state form this script https://github.com/JuPedSim/jpsreport/blob/develop/scripts/SteadyState.py 
+  See also Cumulative sum algorithm https://github.com/BMClab/BMC/blob/master/functions/detect_cusum.py
+  
 - [ ] N_T curves bidirectional flow
-- [ ] Radio buttons to choose  between two different modes: Report vs Interactive
+- [ ] Accelerate calculation of N-T curves data
+- [ ] Radio buttons to choose  between two different modes: 
+  - Report mode 
+  - Interactive mode
 - [ ] Social distancing analysis (Qiancheng's paper)
 - [ ] for faster plots check:
   - https://plotly.com/python/datashader/ 
