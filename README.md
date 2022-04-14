@@ -71,4 +71,13 @@ Therefore, define in the geometry transitions, such that the pedestrian fully pa
   - https://plotly.com/python/datashader/ 
   - https://datashader.org 
   - https://datashader.org/user_guide/Trajectories.html
+- The developement of jam. 
+  - Jam in front of the bottleneck
+  - Jam is desolving 
+  - More people are coming -> jam is going up
+  - Dessolving 
+  - going up again ...
+  
+- Queuing: Contraction of distances!
 
+  
