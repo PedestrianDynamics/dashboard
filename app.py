@@ -192,9 +192,9 @@ def main():
 
     dx = prfx.slider("Grid size", 0.1, 4.0, 1.0, step=0.2, help="Space discretization")
     # methods = ["nearest", "gaussian", "sinc", "bicubic", "mitchell", "bilinear"]
-    methods = ["false", "fast", "best"]
+    methods = ["off", "on"]
     interpolation = prfx.radio(
-        "Interpolation", methods, help="Smoothen the heatmaps"
+        "Smooth", methods, help="Smoothen the heatmaps"
     )
     # prfx.write(
     #      "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
