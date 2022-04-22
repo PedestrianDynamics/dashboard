@@ -196,6 +196,10 @@ def main():
     interpolation = prfx.radio(
         "Smooth", methods, help="Smoothen the heatmaps"
     )
+    if interpolation == "off":
+        interpolation = "false"
+    else:
+        interpolation = "best"
     # prfx.write(
     #      "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
     #      unsafe_allow_html=True,

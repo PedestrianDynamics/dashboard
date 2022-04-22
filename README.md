@@ -55,6 +55,7 @@ Therefore, define in the geometry transitions, such that the pedestrian fully pa
 - [X] Density time series in squares (l x l):
     -  sliders l, x, y
 - [x] RSET maps
+- [x] Accelerate calculation of N-T curves data
 - [ ] Density profiles slider: from and to frames
 - [ ] Use steady state form this script https://github.com/JuPedSim/jpsreport/blob/develop/scripts/SteadyState.py 
   See also Cumulative sum algorithm https://github.com/BMClab/BMC/blob/master/functions/detect_cusum.py
@@ -62,22 +63,22 @@ Therefore, define in the geometry transitions, such that the pedestrian fully pa
 - [ ] LOS (green: d<0.8, yellow: d<1.6, red: d>1.6)
 - [ ] show starting positions with colors
 - [ ] N_T curves bidirectional flow
-- [ ] Accelerate calculation of N-T curves data
 - [ ] Radio buttons to choose  between two different modes: 
   - Report mode 
   - Interactive mode
+- [ ] time series: use the continuity equation to plot the flow as well
 - [ ] Social distancing analysis (Qiancheng's paper)
 - [ ] for faster plots check:
   - https://plotly.com/python/datashader/ 
   - https://datashader.org 
   - https://datashader.org/user_guide/Trajectories.html
-- The developement of jam. 
+- [ ] The developement of jam. 
   - Jam in front of the bottleneck
   - Jam is desolving 
   - More people are coming -> jam is going up
   - Dessolving 
   - going up again ...
   
-- Queuing: Contraction of distances!
+- [ ] Queuing: Contraction of distances!
 
   
