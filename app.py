@@ -1006,8 +1006,9 @@ def main():
         plot_options = choose_NT or choose_flow or choose_time_distance or choose_survival
         # all these options need to calculate N-T-Data
         if make_plots and plot_options:
+            # todo: cache calculation in st.session_state.tstats
             with Utilities.profile("calculate_NT_data"):
-                tstats, cum_num, trans_used, max_len, msg = Utilities.calculate_NT_data(
+                tstats, cum_num, cum_num_positiv, cum_num_negativ, trans_used, max_len, msg = Utilities.calculate_NT_data(
                     transitions,
                     selected_transitions,
                     data,
@@ -1021,7 +1022,7 @@ def main():
                     peds_inside = Utilities.peds_inside(data)
                     fig = plots.plot_peds_inside(frames, peds_inside, fps)
                     if tstats:
-                        traces = plots.plot_NT(tstats, cum_num, fps)
+                        traces = plots.plot_NT(tstats, cum_num, cum_num_positiv, cum_num_negativ, fps)
                         for trace in traces:
                             fig.append_trace(trace, row=1, col=1)
 
@@ -1085,18 +1086,24 @@ def main():
                     else:
                         tmp_stats = tstats[i]
                         tmp_cum_num = cum_num[i]
+                        
+                    tmp_cum_num_p = np.full(len(tmp_cum_num), -1)
+                    tmp_cum_num_p[: len(cum_num_positiv[i])] = cum_num_positiv[i]
+                    tmp_cum_num_n = np.full(len(tmp_cum_num), -1)
+                    tmp_cum_num_n[: len(cum_num_negativ[i])] = cum_num_negativ[i]
 
                     tmp_cum_num = tmp_cum_num.reshape(len(tmp_cum_num), 1)
+                    tmp_cum_num_p = tmp_cum_num_p.reshape(len(tmp_cum_num_p), 1)
+                    tmp_cum_num_n = tmp_cum_num_n.reshape(len(tmp_cum_num_n), 1)
                     if not once:
-
-                        all_stats = np.hstack((tmp_stats, tmp_cum_num))
+                        all_stats = np.hstack((tmp_stats, tmp_cum_num, tmp_cum_num_p, tmp_cum_num_n))
                         once = 1
                     else:
-                        all_stats = np.hstack((all_stats, tmp_stats, tmp_cum_num))
+                        all_stats = np.hstack((all_stats, tmp_stats, tmp_cum_num, tmp_cum_num_p, tmp_cum_num_n))
 
                 if selected_transitions and once:
                     passed_lines = [i for i in selected_transitions if trans_used[i]]
-                    fmt = len(passed_lines) * ["%d", "%d", "%d"]
+                    fmt = len(passed_lines) * ["%d", "%d", "%d", "%d", "%d", "%d"]
                     # all_stats = all_stats.T
                     np.savetxt(
                         file_download,
@@ -1110,7 +1117,7 @@ def main():
                             suppress_small=True,
                         )
                         + f"\nframerate: {fps:.0f}"
-                        + "\npid arrival_frame count_arrivals",
+                        + "\npid\tframe\tdirection\tcount_tot\tcount+\tcount-",
                         comments="#",
                         delimiter="\t",
                     )

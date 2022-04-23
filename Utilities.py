@@ -361,8 +361,9 @@ def passing_frame3(ped_data: np.array, line: LineString, fps: float) -> int:
     M = XY[im]
     i = 0
     passed_line_at_frame = -1
+    sign = -1
     if not on_different_sides(L1, L2, P1, P2):
-        return passed_line_at_frame
+        return passed_line_at_frame, sign
 
     while i1 + 1 < i2 and i < 20:
         i += 1  # to avoid endless loops! Should be removed!
@@ -380,10 +381,12 @@ def passing_frame3(ped_data: np.array, line: LineString, fps: float) -> int:
     line_buffer = line.buffer(1.3/fps, cap_style=2)
     if Point(XY[i1]).within(line_buffer):
         passed_line_at_frame = ped_data[i1, 1]
+        sign = np.sign(np.cross(L1 - L2, XY[i1] - XY[i2]))
     elif Point(XY[i2]).within(line_buffer):
         passed_line_at_frame = ped_data[i2, 1]
+        sign = np.sign(np.cross(L1 - L2, XY[i1] - XY[i2]))
 
-    return passed_line_at_frame
+    return passed_line_at_frame, sign
 
 
 def read_trajectory(input_file):
@@ -886,6 +889,9 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
     Needed to stack arrays and save them in file
     """
     tstats = defaultdict(list)
+    # bidirectional flow
+    cum_num_negativ = {}
+    cum_num_positiv = {}
     cum_num = {}
     msg = ""
     trans_used = {}
@@ -901,30 +907,49 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
                 for ped in peds:
                     ped_data = data[data[:, 0] == ped]
                     #frame = passing_frame(ped_data, line, fps, len_line)
-                    frame = passing_frame3(ped_data, line, fps)
-                    print("ped ", ped, frame)
+                    frame, sign = passing_frame3(ped_data, line, fps)
+                    print("ped ", ped, "frame ", frame, "sign", sign)
                     if frame >= 0:
-                        tstats[i].append([ped, frame])
+                        tstats[i].append([ped, frame, sign])
                         trans_used[i] = True
 
                 if trans_used[i]:
                     tstats[i] = np.array(tstats[i])
                     tstats[i] = tstats[i][tstats[i][:, 1].argsort()]  # sort by frame
                     arrivals = tstats[i][:, 1]
-                    print(tstats[i][:, 0])
+                    arrivals_positiv = arrivals[tstats[i][:, 2] == 1]
+                    arrivals_negativ = arrivals[tstats[i][:, 2] == -1]
                     cum_num[i] = np.cumsum(np.ones(len(arrivals)))
-                    flow = (cum_num[i][-1] - 1) / (arrivals[-1] - arrivals[0]) * fps
-                    with profile("rolling flow: "):
-                        mean_flow, std_flow = rolling_flow(arrivals, fps, windows=100)
+                    inx_pos = np.in1d(arrivals, arrivals_positiv)
+                    inx_neg = np.in1d(arrivals, arrivals_negativ)
+                    tmp_positiv = np.zeros(len(arrivals))
+                    tmp_positiv[inx_pos] = 1
+                    tmp_negativ = np.zeros(len(arrivals))
+                    tmp_negativ[inx_neg] = 1
 
-                    max_len = max(max_len, cum_num[i].size)
-                    msg += f"Transition {i}: length {line.length:.2f}, flow: {flow:.2f} [1/s], rolling_flow: {mean_flow:.2} +- {std_flow:.3f} [1/s],  specific flow: {flow/line.length:.2f} [1/s/m] \n \n"
+                    cum_num_positiv[i] = np.cumsum(tmp_positiv)
+                    cum_num_negativ[i] = np.cumsum(tmp_negativ)
+                    flow = (cum_num[i][-1] - 1) / (arrivals[-1] - arrivals[0]) * fps
+                    if arrivals_positiv.size:
+                        flow_positiv = (cum_num_positiv[i][-1] - 1) / (arrivals_positiv[-1] - arrivals_positiv[0]) * fps
+                    else:
+                        flow_positiv = 0
+
+                    if arrivals_negativ.size:
+                        flow_negativ = (cum_num_negativ[i][-1] - 1) / (arrivals_negativ[-1] - arrivals_negativ[0]) * fps
+                    else:
+                        flow_negativ = 0
+                    # with profile("rolling flow: "):
+                    #     mean_flow, std_flow = rolling_flow(arrivals, fps, windows=100)
+
+                    max_len = max(max_len, cum_num_positiv[i].size, cum_num_negativ[i].size)
+                    msg += f"Transition {i}: length {line.length:.2f}, flow+: {flow_positiv:.2f}, flow-: {flow_negativ:.2f} flow: {flow:.2f} [1/s],  specific flow: {flow/line.length:.2f} [1/s/m] \n \n"
                 else:
                     msg += (
                         f"Transition {i}: length {line.length:.2f}, flow: 0 [1/s] \n \n"
                     )
 
-    return tstats, cum_num, trans_used, max_len, msg
+    return tstats, cum_num, cum_num_positiv, cum_num_negativ, trans_used, max_len, msg
 
 
 #  empirical CDF P(x<=X)
