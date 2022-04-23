@@ -1030,7 +1030,7 @@ def main():
 
             with c3:
                 if choose_flow and tstats:
-                    fig = plots.plot_flow(tstats, cum_num, fps)
+                    fig = plots.plot_flow(tstats, cum_num, cum_num_positiv, cum_num_negativ, fps)
                     st.plotly_chart(fig, use_container_width=True)
 
         c1, c2 = st.columns((1, 1))

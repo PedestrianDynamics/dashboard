@@ -101,7 +101,7 @@ def plot_NT(Frames, Nums, Nums_positiv, Nums_negativ, fps):
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_flow(Frames, Nums, fps):
+def plot_flow(Frames, Nums, Nums_positiv, Nums_negativ, fps):
     logging.info("plot flow-curve")
     fig = make_subplots(
         rows=1,
@@ -113,6 +113,8 @@ def plot_flow(Frames, Nums, fps):
     maxx = -1
     for i, _frames in Frames.items():
         nums = Nums[i]
+        nums_positiv = Nums_positiv[i]
+        nums_negativ = Nums_negativ[i]
         frames = _frames[:, 1]
         if not frames.size:
             continue
@@ -122,6 +124,8 @@ def plot_flow(Frames, Nums, fps):
 
         times = np.array(frames) / fps
         J = (nums - 1) / times
+        J_positiv = (nums_positiv - 1) / times
+        J_negativ = (nums_negativ - 1) / times
         trace = go.Scatter(
             x=np.hstack(([0, times[0]], times)),
             y=np.hstack(([0, 0], J)),
@@ -130,6 +134,26 @@ def plot_flow(Frames, Nums, fps):
             name=f"ID: {i}",
             line=dict(width=3),
         )
+        if J_positiv.any and J_negativ.any:
+            trace_p = go.Scatter(
+                x=np.hstack(([0, times[0]], times)),
+                y=np.hstack(([0, 0], J_positiv)),
+                mode="lines",
+                showlegend=True,
+                name=f"ID: {i}+",
+                line=dict(width=3),
+            )
+            trace_n = go.Scatter(
+                x=np.hstack(([0, times[0]], times)),
+                y=np.hstack(([0, 0], J_negativ)),
+                mode="lines",
+                showlegend=True,
+                name=f"ID: {i}-",
+                line=dict(width=3),
+            )
+            fig.append_trace(trace_p, row=1, col=1)
+            fig.append_trace(trace_n, row=1, col=1)
+
         fig.append_trace(trace, row=1, col=1)
 
     fig.update_layout(hovermode="x")
