@@ -24,6 +24,12 @@ examples = {
         "https://fz-juelich.sciebo.de/s/7kwrnAzcv5m7ii2/download",
         "https://fz-juelich.sciebo.de/s/VSPgE6Kcfp8qDIa/download",
     ],
+    # , free choice of destination
+    "Bidirectional corridor (exp)": [
+        "Multi-Rooms",
+        "https://fz-juelich.sciebo.de/s/o4D8Va2MtbSeG2v/download",
+        "https://fz-juelich.sciebo.de/s/FNuSYwOre85km3U/download",
+    ],
     "Bottleneck (sim)": [
         "bottleneck",
         "https://fz-juelich.sciebo.de/s/HldXLySEfEDMdZo/download",
