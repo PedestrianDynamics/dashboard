@@ -1079,9 +1079,10 @@ def main():
                     if not trans_used[i]:
                         continue
 
-                    if len(tstats[i]) < max_len:
-                        tmp_stats = np.full((max_len, 2), -1)
-                        tmp_stats[: len(tstats[i]), :] = tstats[i]
+                    nrows = tstats[i].shape[0]
+                    if nrows < max_len:
+                        tmp_stats = np.full((max_len, 3), -1)
+                        tmp_stats[: nrows, :] = tstats[i]
                         tmp_cum_num = np.full(max_len, -1)
                         tmp_cum_num[: len(cum_num[i])] = cum_num[i]
                     else:

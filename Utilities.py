@@ -914,7 +914,6 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
                     ped_data = data[data[:, 0] == ped]
                     #frame = passing_frame(ped_data, line, fps, len_line)
                     frame, sign = passing_frame3(ped_data, line, fps)
-                    print("ped ", ped, "frame ", frame, "sign", sign)
                     if frame >= 0:
                         tstats[i].append([ped, frame, sign])
                         trans_used[i] = True
