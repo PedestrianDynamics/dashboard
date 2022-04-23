@@ -1016,18 +1016,19 @@ def main():
                 )
 
         if make_plots:
-            c1, c2 = st.columns((1, 1))
+            c1, c2, c3 = st.columns((1, 1, 1))
             with c1:
                 if choose_NT:
                     peds_inside = Utilities.peds_inside(data)
-                    fig = plots.plot_peds_inside(frames, peds_inside, fps)
+                    fig1 = plots.plot_peds_inside(frames, peds_inside, fps)
                     if tstats:
-                        traces = plots.plot_NT(tstats, cum_num, cum_num_positiv, cum_num_negativ, fps)
-                        for trace in traces:
-                            fig.append_trace(trace, row=1, col=1)
+                        fig2 = plots.plot_NT(tstats, cum_num, cum_num_positiv, cum_num_negativ, fps)
 
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig2, use_container_width=True)
             with c2:
+                st.plotly_chart(fig1, use_container_width=True)
+
+            with c3:
                 if choose_flow and tstats:
                     fig = plots.plot_flow(tstats, cum_num, fps)
                     st.plotly_chart(fig, use_container_width=True)

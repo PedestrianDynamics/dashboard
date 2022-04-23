@@ -34,15 +34,21 @@ def show_trajectories_table(data):
 
 
 @st.cache(suppress_st_warning=True, allow_output_mutation=True, hash_funcs={go.Figure: lambda _: None})
-def plot_NT(Frames, Nums, fps):
+def plot_NT(Frames, Nums, Nums_positiv, Nums_negativ, fps):
     logging.info("plot NT-curve")
-    # fig = make_subplots(
-    #     rows=1, cols=1, subplot_titles=["<b>N-T</b>"], x_title="Time / s", y_title="Number of pedestrians"
-    # )
+    fig = make_subplots(
+        rows=1,
+        cols=1,
+        subplot_titles=["<b>N-T</b>"],
+        x_title="Time / s",
+        y_title="Number at line",
+    )
     maxx = -1
     traces = []
     for i, _frames in Frames.items():
         nums = Nums[i]
+        nums_positiv = Nums_positiv[i]
+        nums_negativ = Nums_negativ[i]
         frames = _frames[:, 1]
         if not frames.size:
             continue
@@ -50,6 +56,8 @@ def plot_NT(Frames, Nums, fps):
         # extend the lines to 0
         if frames[0] > 0:
             frames = np.hstack(([0], frames))
+            nums_positiv = np.hstack(([0], nums_positiv))
+            nums_negativ = np.hstack(([0], nums_negativ))
             nums = np.hstack(([0], nums))
             if maxx < np.max(frames):
                 maxx = np.max(frames)
@@ -62,15 +70,34 @@ def plot_NT(Frames, Nums, fps):
             name=f"ID: {i}",
             line=dict(width=3),
         )
+        if nums_positiv.any() and nums_negativ.any():
+            trace_positiv = go.Scatter(
+                x=np.array(frames) / fps,
+                y=nums_positiv,
+                mode="lines",
+                showlegend=True,
+                name=f"ID: {i}+",
+                line=dict(width=3),
+            )
+            traces.append(trace_positiv)
+            trace_negativ = go.Scatter(
+                x=np.array(frames) / fps,
+                y=nums_negativ,
+                mode="lines",
+                showlegend=True,
+                name=f"ID: {i}-",
+                line=dict(width=3),
+            )
+            traces.append(trace_negativ)
+
         traces.append(trace)
-        # fig.append_trace(trace, row=1, col=1)
 
-    # fig.update_layout(hovermode="x")
-    # fig.update_xaxes(
-    #     range=[0, maxx/fps + 2],
-    # )
 
-    return traces
+    for trace in traces:
+        fig.append_trace(trace, row=1, col=1)
+
+    fig.update_layout(hovermode="x")
+    return fig
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
@@ -185,7 +212,7 @@ def plot_peds_inside(frames, peds_inside, fps):
     fig = make_subplots(
         rows=1,
         cols=1,
-        subplot_titles=["N-T"],
+        subplot_titles=["<b>Discharge curve</b>"],
         x_title="Time / s",
         y_title="Number of Pedestrians inside",
     )
