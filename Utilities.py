@@ -316,7 +316,7 @@ def passing_frame2(ped_data, line: LineString, fps: int, max_distance: float) ->
     # print("Crossed?", crossed_line)
 
 
-def intersects(L1, L2, P1, P2) -> bool:
+def on_different_sides(L1, L2, P1, P2) -> bool:
     """True is P1 and P2 are on different sides from [L1, L2]
 
                         L1
@@ -335,6 +335,21 @@ def intersects(L1, L2, P1, P2) -> bool:
 
 
 def passing_frame3(ped_data: np.array, line: LineString, fps: float) -> int:
+    """First frame at which the pedestrian is within a buffer around line
+
+    fps is used to determin the width of the buffer and is not needed
+    in the calculations.
+    Assume a desired speed of 1.3 m/s
+
+    :param ped_data: trajectories
+    :type ped_data: np.array
+    :param line: measurement line
+    :type line: LineString
+    :param fps: frames per second.
+    :type fps: float
+    :returns:
+
+    """
     XY = ped_data[:, 2:4]
     L1 = np.array(line.coords[0])
     L2 = np.array(line.coords[1])
@@ -345,12 +360,13 @@ def passing_frame3(ped_data: np.array, line: LineString, fps: float) -> int:
     im = int(len(XY) / 2)  # index of the element in the middle
     M = XY[im]
     i = 0
-    if not intersects(L1, L2, P1, P2):
-        return -1
+    passed_line_at_frame = -1
+    if not on_different_sides(L1, L2, P1, P2):
+        return passed_line_at_frame
 
     while i1 + 1 < i2 and i < 20:
         i += 1  # to avoid endless loops! Should be removed!
-        if intersects(L1, L2, M, P2):
+        if on_different_sides(L1, L2, M, P2):
             P1 = M
             i1 = im
         else:
@@ -360,12 +376,14 @@ def passing_frame3(ped_data: np.array, line: LineString, fps: float) -> int:
         im = int((i1 + i2) / 2)
         M = XY[im]
 
-    # this is to ensure, that the pedestrian really passed *through* the line    
-    line_buffer = line.buffer(1.3/fps, cap_style=3)
+    # this is to ensure, that the pedestrian really passed *through* the line
+    line_buffer = line.buffer(1.3/fps, cap_style=2)
     if Point(XY[i1]).within(line_buffer):
-        return ped_data[i1, 1]
+        passed_line_at_frame = ped_data[i1, 1]
+    elif Point(XY[i2]).within(line_buffer):
+        passed_line_at_frame = ped_data[i2, 1]
 
-    return -1
+    return passed_line_at_frame
 
 
 def read_trajectory(input_file):
@@ -884,6 +902,7 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
                     ped_data = data[data[:, 0] == ped]
                     #frame = passing_frame(ped_data, line, fps, len_line)
                     frame = passing_frame3(ped_data, line, fps)
+                    print("ped ", ped, frame)
                     if frame >= 0:
                         tstats[i].append([ped, frame])
                         trans_used[i] = True
@@ -892,6 +911,7 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
                     tstats[i] = np.array(tstats[i])
                     tstats[i] = tstats[i][tstats[i][:, 1].argsort()]  # sort by frame
                     arrivals = tstats[i][:, 1]
+                    print(tstats[i][:, 0])
                     cum_num[i] = np.cumsum(np.ones(len(arrivals)))
                     flow = (cum_num[i][-1] - 1) / (arrivals[-1] - arrivals[0]) * fps
                     with profile("rolling flow: "):
