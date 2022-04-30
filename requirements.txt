@@ -1,4 +1,5 @@
 streamlit
+streamlit_drawable_canvas
 lovely-logger
 pandas
 matplotlib
