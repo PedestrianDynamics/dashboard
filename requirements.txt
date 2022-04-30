@@ -1,5 +1,5 @@
 streamlit
-streamlit_drawable_canvas
+streamlit_drawable_canvas=0.8.0
 lovely-logger
 pandas
 matplotlib
