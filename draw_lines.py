@@ -6,12 +6,40 @@ import pandas as pd
 import streamlit as st
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
+from Utilities import get_unit, read_trajectory
 
 st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+
+def get_dimensions(data):
+    e = 1
+    geominX = np.min(data[:, 2]) - e
+    geominY = np.min(data[:, 3]) - e
+    geomaxX = np.max(data[:, 2]) + e
+    geomaxY = np.max(data[:, 3]) + e
+
+    return geominX, geomaxX, geominY, geomaxY
+
+
+def get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY):
+    scale = np.amin((geomaxX-geominX, geomaxY - geominY))
+    scale_max = 50
+    scale = min(scale_max, scale)
+    scale = (1 - scale/scale_max) * 0.9 + scale/scale_max * 0.1
+    st.write(f"scale= {scale:.2f}")
+    w = (geomaxX - geominX) * scale
+    h = (geomaxY - geominY) * scale
+    return w, h, scale
+
+
+def plot_traj(ax,  data, scale=1, shift_x=0, shift_y=0):
+    pid = np.unique(data[:, 0])
+    for ped in pid:
+        pedd = data[data[:, 0] == ped]
+        ax.plot((pedd[::, 2] - shift_x)*scale, (pedd[::, 3] -shift_y)*scale, "-", color="black", lw=0.8)
 
 def fig2img(fig):
     """Convert a Matplotlib figure to a PIL Image and return it"""
@@ -103,31 +131,39 @@ def process_rects(rects, h_dpi):
     )
 
 
-def plot_lines(_inv, ax2, Xpoints, Ypoints):
+def plot_lines(_inv, ax2, Xpoints, Ypoints, scale=1, shift_x=0, shift_y=0):
     """Plot lines
 
     Xpoints and Ypoints are sorted as follows:
     x_first_points followed by x_second_points
     y_first_points followed by y_second_points
     """
-    aX = _inv.transform(Xpoints)
-    aY = _inv.transform(Ypoints)
+    aX = _inv.transform(Xpoints/scale)
+    aY = _inv.transform(Ypoints/scale)
     num_points = aX.shape[0]
     num_points_half = int(num_points / 2)
     # plot resutls in real world coordinates
     for i in range(0, num_points_half):
         # st.write(aX[i:i+2])
         # st.write(aY[i:i+2])
-        ax2.plot([aX[i], aX[i + num_points_half]], [aY[i], aY[i + num_points_half]])
+        x = (np.array([aX[i], aX[i + num_points_half]])+shift_x)
+        y = (np.array([aY[i], aY[i + num_points_half]])+shift_y)
+        ax2.plot(x, y)
 
 
 def main():
+    trajectory_file = "/Users/chraibi/sciebo/CSR/50_Software/JuPedSim/dashboard_data/Bottleneck_sim/bottleneck_traj.txt"
+    data = read_trajectory(trajectory_file)
+    geominX, geomaxX, geominY, geomaxY = get_dimensions(data)
+    w, h, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
+    st.write(f"w={w:.2f}, h={h:.2f}")
+    st.write(f"geox [{geominX:.2f}, {geomaxX}] geoy [{geominY:.2f}, {geomaxY}]")
     # setup background figure
-    width = 2
-    height = 3
+    width = w
+    height = h
     fig, ax = plt.subplots(figsize=(width, height))
+    fig.set_dpi(100)
     ax.set_xlim((0, width))
-    # ax.set_axis_off()
     ax.set_ylim((0, height))
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
@@ -135,31 +171,32 @@ def main():
     img_width, img_height = bbox.width * fig.dpi, bbox.height * fig.dpi
     # st.info(f"width: {img_width}, height: {img_height}")
 
+    plot_traj(ax, data, scale, geominX, geominY)
     # plot reference points
-    ax.plot([1], [1], "o", ms=5)
-    ax.plot([0.5], [1], "o", ms=5)
-    ax.plot([0.5], [2], "o", ms=5)
-    ax.plot([1], [2], "o", ms=5)
+    # ax.plot([1], [1], "o", ms=5)
+    # ax.plot([0.5], [1], "o", ms=5)
+    # ax.plot([0.5], [2], "o", ms=5)
+    # ax.plot([1], [2], "o", ms=5)
 
     c1, c2 = st.columns((1, 1))
     bg_img = fig2img(fig)
     drawing_mode = st.sidebar.selectbox("Drawing tool:", ("line", "rect", "transform"))
     stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 3)
-    stroke_color = st.sidebar.color_picker("Stroke color hex: ")
+    stroke_color = st.sidebar.color_picker("Stroke color hex: ", "#E80606")
     bg_color = st.sidebar.color_picker("Background color hex: ", "#eee")
-    with c1:
-        canvas_result = st_canvas(
-            fill_color="rgba(255, 165, 0, 0.3)",
-            stroke_width=stroke_width,
-            stroke_color=stroke_color,
-            background_color=bg_color,
-            background_image=bg_img,
-            update_streamlit=True,
-            width=img_width,
-            height=img_height,
-            drawing_mode=drawing_mode,
-            key="canvas",
-        )
+
+    canvas_result = st_canvas(
+        fill_color="rgba(255, 165, 0, 0.3)",
+        stroke_width=stroke_width,
+        stroke_color=stroke_color,
+        background_color=bg_color,
+        background_image=bg_img,
+        update_streamlit=True,
+        width=img_width,
+        height=img_height,
+        drawing_mode=drawing_mode,
+        key="canvas",
+    )
 
     if canvas_result.json_data is not None:
         objects = pd.json_normalize(canvas_result.json_data["objects"])
@@ -173,27 +210,19 @@ def main():
             st.info(f"lines: {len(lines)}, rects: {len(rects)}")
             # result figure in world coordinates
             fig2, ax2 = plt.subplots()
-            ax2.set_xlim((0, width))
-            ax2.set_ylim((0, height))
-            # set aspect ratio to 1
-            ratio = 1.0
-            x_left, x_right = ax2.get_xlim()
-            y_low, y_high = ax2.get_ylim()
-            ax2.set_aspect(abs((x_right - x_left) / (y_low - y_high)) * ratio)
+            ax2.set_xlim((geominX, geomaxX))
+            ax2.set_ylim((geominY, geomaxY))
             ax2.grid(alpha=0.3)
             # plot reference points
-            ax2.plot([1], [1], "o", ms=5)
-            ax2.plot([0.5], [1], "o", ms=5)
-            ax2.plot([0.5], [2], "o", ms=5)
-            ax2.plot([1], [2], "o", ms=5)
-
+            plot_traj(ax2, data)
+         
             if not lines.empty:
                 first_x, first_y, second_x, second_y = process_lines(
                     lines, height * fig.get_dpi()
                 )
                 line_points_x = np.hstack((first_x, second_x))
                 line_points_y = np.hstack((first_y, second_y))
-                plot_lines(inv, ax2, line_points_x, line_points_y)
+                plot_lines(inv, ax2, line_points_x, line_points_y, scale, geominX, geominY)
 
             if not rects.empty:
                 (
@@ -231,10 +260,10 @@ def main():
                     )
                 )
 
-                plot_lines(inv, ax2, rect_points_x, rect_points_y)
+                plot_lines(inv, ax2, rect_points_x, rect_points_y, scale, geominX, geominY)
 
-            with c2:
-                st.pyplot(fig2)
+
+            st.pyplot(fig2)
 
 
 if __name__ == "__main__":
