@@ -27,6 +27,23 @@ To install the requirements use:
 pip install -r requirements.txt
 ```
 
+## Draw geometries 
+
+To draw geometries on trajectory-plots, try to connect all lines, such that they form a closed polygon.
+This is only necessary if you want to visualize the geometry with [jpsvis](https://www.jupedsim.org/).
+
+You can download your drawing as an xml file according to jupedsim's [format](https://www.jupedsim.org/jpscore_geometry.html)
+
+It is possible to draw: 
+- Lines 
+- Rectangles
+
+Lines and rectangle can be rotated and scaled.
+
+To try out:
+https://share.streamlit.io/chraibi/jupedsim-dashboard/main/draw_geometry.py
+
+
 
 ## Profiles 
 The density profile uses the speed of the pedestrians calculated by the Weidmann diagram.
@@ -60,7 +77,7 @@ Therefore, define in the geometry transitions, such that the pedestrian fully pa
 - [ ] Density profiles slider: from and to frames
 - [ ] Use steady state form this script https://github.com/JuPedSim/jpsreport/blob/develop/scripts/SteadyState.py 
   See also Cumulative sum algorithm https://github.com/BMClab/BMC/blob/master/functions/detect_cusum.py
-- [ ] Use density plots to detect the geometry
+- [x] Use density plots to detect the geometry
 - [ ] LOS (green: d<0.8, yellow: d<1.6, red: d>1.6)
 - [ ] show starting positions with colors
 - [ ] Radio buttons to choose  between two different modes: 
