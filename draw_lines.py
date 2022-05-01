@@ -1,5 +1,5 @@
 import io
-
+import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -20,7 +20,6 @@ def get_dimensions(data):
     geominY = np.min(data[:, 3]) - e
     geomaxX = np.max(data[:, 2]) + e
     geomaxY = np.max(data[:, 3]) + e
-
     return geominX, geomaxX, geominY, geomaxY
 
 
@@ -29,6 +28,7 @@ def get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY):
     scale_max = 50
     scale = min(scale_max, scale)
     scale = (1 - scale/scale_max) * 0.9 + scale/scale_max * 0.1
+    scale=0.3
     st.write(f"scale= {scale:.2f}")
     w = (geomaxX - geominX) * scale
     h = (geomaxY - geominY) * scale
@@ -40,6 +40,7 @@ def plot_traj(ax,  data, scale=1, shift_x=0, shift_y=0):
     for ped in pid:
         pedd = data[data[:, 0] == ped]
         ax.plot((pedd[::, 2] - shift_x)*scale, (pedd[::, 3] -shift_y)*scale, "-", color="black", lw=0.8)
+
 
 def fig2img(fig):
     """Convert a Matplotlib figure to a PIL Image and return it"""
@@ -151,8 +152,8 @@ def plot_lines(_inv, ax2, Xpoints, Ypoints, scale=1, shift_x=0, shift_y=0):
         ax2.plot(x, y)
 
 
-def main():
-    trajectory_file = "/Users/chraibi/sciebo/CSR/50_Software/JuPedSim/dashboard_data/Bottleneck_sim/bottleneck_traj.txt"
+def main(trajectory_file):
+    #trajectory_file = "/Users/chraibi/sciebo/CSR/50_Software/JuPedSim/dashboard_data/Bottleneck_sim/bottleneck_traj.txt"
     data = read_trajectory(trajectory_file)
     geominX, geomaxX, geominY, geomaxY = get_dimensions(data)
     w, h, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
@@ -170,13 +171,7 @@ def main():
     inv = ax.transData.inverted()
     img_width, img_height = bbox.width * fig.dpi, bbox.height * fig.dpi
     # st.info(f"width: {img_width}, height: {img_height}")
-
     plot_traj(ax, data, scale, geominX, geominY)
-    # plot reference points
-    # ax.plot([1], [1], "o", ms=5)
-    # ax.plot([0.5], [1], "o", ms=5)
-    # ax.plot([0.5], [2], "o", ms=5)
-    # ax.plot([1], [2], "o", ms=5)
 
     c1, c2 = st.columns((1, 1))
     bg_img = fig2img(fig)
@@ -264,7 +259,52 @@ def main():
 
 
             st.pyplot(fig2)
+            geo_file = "geo_"+trajectory_file.name.split(".")[0]+".xml"
+            write_geometry(first_x, first_y, second_x, second_y, "m", geo_file)
 
+
+def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
+    # ----------
+    delta = 100 if _unit == "cm" else 1
+    # --------
+    # create_geo_header
+    data = ET.Element("geometry")
+    data.set("version", "0.8")
+    data.set("caption", "experiment")
+    data.set("unit", "m")  # jpsvis does not support another unit!
+    # make room/subroom
+    rooms = ET.SubElement(data, "rooms")
+    room = ET.SubElement(rooms, "room")
+    room.set("id", "0")
+    room.set("caption", "room")
+    subroom = ET.SubElement(room, "subroom")
+    subroom.set("id", "0")
+    subroom.set("caption", "subroom")
+    subroom.set("class", "subroom")
+    subroom.set("A_x", "0")
+    subroom.set("B_y", "0")
+    subroom.set("C_z", "0")
+    # poly1
+    for x1, x2, y1, y2 in zip(first_x, first_y, second_x, second_y):
+        polygon = ET.SubElement(subroom, "polygon")
+        polygon.set("caption", "wall")
+        polygon.set("type", "internal")
+        vertex = ET.SubElement(polygon, "vertex")
+        vertex.set("px", f"{x1}")
+        vertex.set("py", f"{y1}")
+        vertex = ET.SubElement(polygon, "vertex")
+        vertex.set("px", f"{x2}")
+        vertex.set("py", f"{y2}")
+
+    b_xml = ET.tostring(data, encoding="utf8", method="xml")
+    with open(geo_file, "wb") as f:
+        f.write(b_xml)
 
 if __name__ == "__main__":
-    main()
+    trajectory_file = st.sidebar.file_uploader(
+        "🚶 🚶‍♀️ Trajectory file ",
+        type=["txt"],
+        help="Load trajectory file",
+    )
+    if trajectory_file:
+        main(trajectory_file)
