@@ -1,4 +1,5 @@
 import io
+
 import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 import numpy as np
@@ -215,7 +216,27 @@ def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
 
 def main(trajectory_file):
     geo_file = ""
-    data = read_trajectory(trajectory_file)
+    stringio = io.StringIO(trajectory_file.getvalue().decode("utf-8"))
+    string_data = stringio.read()
+    unit = get_unit(string_data)
+    print(f"unit {unit}")
+    if unit not in ["cm", "m"]:
+        st.error(f"did not recognize unit from file: {unit}")
+        unit = st.sidebar.radio(
+            "What is the unit of the trajectories?",
+            ["cm", "m"],
+            help="Choose the unit of the original trajectories. Data in the app will be converted to meter",
+        )
+        st.write(
+            "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+            unsafe_allow_html=True,
+        )
+    if unit == "cm":
+        cm2m = 100
+    elif unit == "m":
+        cm2m = 1
+
+    data = read_trajectory(trajectory_file)/cm2m
     geominX, geomaxX, geominY, geomaxY = get_dimensions(data)
     w, h, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
     st.write(f"w={w:.2f}, h={h:.2f}")
@@ -233,19 +254,21 @@ def main(trajectory_file):
     img_width, img_height = bbox.width * fig.dpi, bbox.height * fig.dpi
     # st.info(f"width: {img_width}, height: {img_height}")
     plot_traj(ax, data, scale, geominX, geominY)
-
-    c1, c2 = st.columns((1, 1))
+    drawing_mode = st.sidebar.radio("Drawing tool:", ("line", "rect", "transform"))
+    st.write(
+         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+         unsafe_allow_html=True,
+    )
+    c1, c2 = st.sidebar.columns((1, 1))
     bg_img = fig2img(fig)
-    drawing_mode = st.sidebar.selectbox("Drawing tool:", ("line", "rect", "transform"))
-    stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 3)
-    stroke_color = st.sidebar.color_picker("Stroke color hex: ", "#E80606")
-    bg_color = st.sidebar.color_picker("Background color hex: ", "#eee")
-
+    stroke_width = c2.slider("Stroke width: ", 1, 25, 3)
+    stroke_color = c1.color_picker("Stroke color hex: ", "#E80606")
+    
     canvas_result = st_canvas(
         fill_color="rgba(255, 165, 0, 0.3)",
         stroke_width=stroke_width,
         stroke_color=stroke_color,
-        background_color=bg_color,
+        background_color="#eee",
         background_image=bg_img,
         update_streamlit=True,
         width=img_width,
@@ -341,10 +364,11 @@ if __name__ == "__main__":
         "🚶 🚶‍♀️ Trajectory file ",
         type=["txt"],
         help="Load trajectory file",
-    )
+    )    
     if trajectory_file:
         file_xml = main(trajectory_file)
         if file_xml:
+            st.sidebar.write("-----")
             with open(file_xml, encoding="utf-8") as f:
                 st.sidebar.download_button(
                     "Download geometry", f, file_name=file_xml
