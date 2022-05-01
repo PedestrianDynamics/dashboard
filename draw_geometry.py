@@ -249,8 +249,6 @@ def main(trajectory_file):
     w, h, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
     debug = st.sidebar.checkbox("Debug", help="plot result with ticks and show info")
     st.sidebar.write("----")    
-    global download_pl
-    download_pl= st.empty()
     # setup background figure
     width = w
     height = h
@@ -265,18 +263,20 @@ def main(trajectory_file):
     img_width, img_height = bbox.width * fig.dpi, bbox.height * fig.dpi
     # st.info(f"width: {img_width}, height: {img_height}")
     plot_traj(ax, data, scale, geominX, geominY)
-    major_ticks_top = np.linspace(0, width, 5)
+    major_ticks_top_x = np.linspace(0, width, 5)
+    major_ticks_top_y = np.linspace(0, height, 5)
     minor_ticks_top_x = np.linspace(0, width, 40)
     minor_ticks_top_y = np.linspace(0, height, 40)
-    major_ticks_bottom = np.linspace(0, width, 20)
-    ax.set_xticks(major_ticks_top)
-    ax.set_yticks(major_ticks_top)
+    major_ticks_bottom_x = np.linspace(0, width, 20)
+    major_ticks_bottom_y = np.linspace(0, height, 20)
+    ax.set_xticks(major_ticks_top_x)
+    ax.set_yticks(major_ticks_top_y)
     ax.set_xticks(minor_ticks_top_x, minor=True)
     ax.set_yticks(minor_ticks_top_y, minor=True)
     ax.grid(which="major", alpha=0.6)
     ax.grid(which="minor", alpha=0.3)
-    ax.set_xticks(major_ticks_bottom)
-    ax.set_yticks(major_ticks_bottom)
+    ax.set_xticks(major_ticks_bottom_x)
+    ax.set_yticks(major_ticks_bottom_y)
     ax.set_title("Subplot 2")
     ax.grid()
 
@@ -302,6 +302,8 @@ def main(trajectory_file):
         drawing_mode=drawing_mode,
         key="canvas",
     )
+    global download_pl
+    download_pl= st.empty()
     if debug:
         st.info(
             f"""
