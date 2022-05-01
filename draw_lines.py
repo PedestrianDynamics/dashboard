@@ -158,7 +158,63 @@ def plot_lines(_inv, ax2, Xpoints, Ypoints, scale=1, shift_x=0, shift_y=0):
         ax2.plot(x, y)
 
 
+def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
+    # ----------
+    delta = 100 if _unit == "cm" else 1
+    # --------
+    # create_geo_header
+    data = ET.Element("geometry")
+    data.set("version", "0.8")
+    data.set("caption", "experiment")
+    data.set("unit", "m")  # jpsvis does not support another unit!
+    # make room/subroom
+    rooms = ET.SubElement(data, "rooms")
+    room = ET.SubElement(rooms, "room")
+    room.set("id", "0")
+    room.set("caption", "room")
+    subroom = ET.SubElement(room, "subroom")
+    subroom.set("id", "0")
+    subroom.set("caption", "subroom")
+    subroom.set("class", "subroom")
+    subroom.set("A_x", "0")
+    subroom.set("B_y", "0")
+    subroom.set("C_z", "0")
+    # make lines horizontal/vertical
+    # for x1, y1, x2, y2 in zip(first_x, first_y, second_x, second_y):
+    #     st.info(f"before: {x1:.2f}, {y1:.2f}, {x2:.2f},{y2:.2f}")
+    #     eps = 0.5
+    #     if abs(x1-x2) < eps:
+    #         x2 = x1
+
+    #     if abs(y1-y2) < eps:
+    #         y2 = y1
+
+    #     st.info(f"after {x1:.2f}, {y1:.2f}, {x2:.2f},{y2:.2f}")
+
+    # snap points
+    p1_x = np.hstack((first_x[0], second_x[:]))
+    p1_y = np.hstack((first_y[0], second_y[:]))
+    p2_x = np.hstack((second_x, first_x[0]))
+    p2_y = np.hstack((second_y, first_y[0]))
+    for x1, y1, x2, y2 in zip(p1_x, p1_y, p2_x, p2_y):
+
+        polygon = ET.SubElement(subroom, "polygon")
+        polygon.set("caption", "wall")
+        polygon.set("type", "internal")
+        vertex = ET.SubElement(polygon, "vertex")
+        vertex.set("px", f"{x1:.2f}")
+        vertex.set("py", f"{y1:.2f}")
+        vertex = ET.SubElement(polygon, "vertex")
+        vertex.set("px", f"{x2:.2f}")
+        vertex.set("py", f"{y2:.2f}")
+
+    b_xml = ET.tostring(data, encoding="utf8", method="xml")
+    with open(geo_file, "wb") as f:
+        f.write(b_xml)
+
+
 def main(trajectory_file):
+    geo_file = ""
     data = read_trajectory(trajectory_file)
     geominX, geomaxX, geominY, geomaxY = get_dimensions(data)
     w, h, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
@@ -277,60 +333,7 @@ def main(trajectory_file):
                 geo_file,
             )
 
-
-def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
-    # ----------
-    delta = 100 if _unit == "cm" else 1
-    # --------
-    # create_geo_header
-    data = ET.Element("geometry")
-    data.set("version", "0.8")
-    data.set("caption", "experiment")
-    data.set("unit", "m")  # jpsvis does not support another unit!
-    # make room/subroom
-    rooms = ET.SubElement(data, "rooms")
-    room = ET.SubElement(rooms, "room")
-    room.set("id", "0")
-    room.set("caption", "room")
-    subroom = ET.SubElement(room, "subroom")
-    subroom.set("id", "0")
-    subroom.set("caption", "subroom")
-    subroom.set("class", "subroom")
-    subroom.set("A_x", "0")
-    subroom.set("B_y", "0")
-    subroom.set("C_z", "0")
-    # make lines horizontal/vertical
-    # for x1, y1, x2, y2 in zip(first_x, first_y, second_x, second_y):
-    #     st.info(f"before: {x1:.2f}, {y1:.2f}, {x2:.2f},{y2:.2f}")
-    #     eps = 0.5
-    #     if abs(x1-x2) < eps:
-    #         x2 = x1
-
-    #     if abs(y1-y2) < eps:
-    #         y2 = y1
-
-    #     st.info(f"after {x1:.2f}, {y1:.2f}, {x2:.2f},{y2:.2f}")
-
-    # snap points
-    p1_x = np.hstack((first_x[0], second_x[:]))
-    p1_y = np.hstack((first_y[0], second_y[:]))
-    p2_x = np.hstack((second_x, first_x[0]))
-    p2_y = np.hstack((second_y, first_y[0]))
-    for x1, y1, x2, y2 in zip(p1_x, p1_y, p2_x, p2_y):
-
-        polygon = ET.SubElement(subroom, "polygon")
-        polygon.set("caption", "wall")
-        polygon.set("type", "internal")
-        vertex = ET.SubElement(polygon, "vertex")
-        vertex.set("px", f"{x1:.2f}")
-        vertex.set("py", f"{y1:.2f}")
-        vertex = ET.SubElement(polygon, "vertex")
-        vertex.set("px", f"{x2:.2f}")
-        vertex.set("py", f"{y2:.2f}")
-
-    b_xml = ET.tostring(data, encoding="utf8", method="xml")
-    with open(geo_file, "wb") as f:
-        f.write(b_xml)
+    return geo_file
 
 
 if __name__ == "__main__":
@@ -340,4 +343,9 @@ if __name__ == "__main__":
         help="Load trajectory file",
     )
     if trajectory_file:
-        main(trajectory_file)
+        file_xml = main(trajectory_file)
+        if file_xml:
+            with open(file_xml, encoding="utf-8") as f:
+                st.sidebar.download_button(
+                    "Download geometry", f, file_name=file_xml
+                )
