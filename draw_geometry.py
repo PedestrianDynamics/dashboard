@@ -21,6 +21,7 @@ st.set_page_config(
     },
 )
 
+
 def get_dimensions(data):
     e = 1
     geominX = np.min(data[:, 2]) - e
@@ -32,11 +33,10 @@ def get_dimensions(data):
 
 def get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY):
     scale = np.amin((geomaxX - geominX, geomaxY - geominY))
-    scale_max = 50
+    scale_max = 20
     scale = min(scale_max, scale)
     scale = (1 - scale / scale_max) * 0.9 + scale / scale_max * 0.1
-    scale = 0.3
-    st.write(f"scale= {scale:.2f}")
+    #scale = 0.3
     w = (geomaxX - geominX) * scale
     h = (geomaxY - geominY) * scale
     return w, h, scale
@@ -145,12 +145,14 @@ def process_rects(rects, h_dpi):
     )
 
 
-def plot_lines(_inv, ax2, Xpoints, Ypoints, scale=1, shift_x=0, shift_y=0):
+def plot_lines(_inv, ax2, Xpoints, Ypoints, color, scale=1, shift_x=0, shift_y=0):
     """Plot lines
 
     Xpoints and Ypoints are sorted as follows:
     x_first_points followed by x_second_points
     y_first_points followed by y_second_points
+
+    This function scales and shifts the data.
     """
     aX = _inv.transform(Xpoints / scale)
     aY = _inv.transform(Ypoints / scale)
@@ -162,7 +164,7 @@ def plot_lines(_inv, ax2, Xpoints, Ypoints, scale=1, shift_x=0, shift_y=0):
         # st.write(aY[i:i+2])
         x = np.array([aX[i], aX[i + num_points_half]]) + shift_x
         y = np.array([aY[i], aY[i + num_points_half]]) + shift_y
-        ax2.plot(x, y)
+        ax2.plot(x, y, color=color)
 
 
 def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
@@ -242,11 +244,13 @@ def main(trajectory_file):
     elif unit == "m":
         cm2m = 1
 
-    data = read_trajectory(trajectory_file)/cm2m
+    data = read_trajectory(trajectory_file) / cm2m
     geominX, geomaxX, geominY, geomaxY = get_dimensions(data)
     w, h, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
-    st.write(f"w={w:.2f}, h={h:.2f}")
-    st.write(f"geox [{geominX:.2f}, {geomaxX}] geoy [{geominY:.2f}, {geomaxY}]")
+    debug = st.sidebar.checkbox("Debug", help="plot result with ticks and show info")
+    st.sidebar.write("----")    
+    global download_pl
+    download_pl= st.empty()
     # setup background figure
     width = w
     height = h
@@ -255,15 +259,31 @@ def main(trajectory_file):
     ax.set_xlim((0, width))
     ax.set_ylim((0, height))
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
     bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     inv = ax.transData.inverted()
     img_width, img_height = bbox.width * fig.dpi, bbox.height * fig.dpi
     # st.info(f"width: {img_width}, height: {img_height}")
     plot_traj(ax, data, scale, geominX, geominY)
+    major_ticks_top = np.linspace(0, width, 5)
+    minor_ticks_top_x = np.linspace(0, width, 40)
+    minor_ticks_top_y = np.linspace(0, height, 40)
+    major_ticks_bottom = np.linspace(0, width, 20)
+    ax.set_xticks(major_ticks_top)
+    ax.set_yticks(major_ticks_top)
+    ax.set_xticks(minor_ticks_top_x, minor=True)
+    ax.set_yticks(minor_ticks_top_y, minor=True)
+    ax.grid(which="major", alpha=0.6)
+    ax.grid(which="minor", alpha=0.3)
+    ax.set_xticks(major_ticks_bottom)
+    ax.set_yticks(major_ticks_bottom)
+    ax.set_title("Subplot 2")
+    ax.grid()
+
     drawing_mode = st.sidebar.radio("Drawing tool:", ("line", "rect", "transform"))
     st.write(
-         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
-         unsafe_allow_html=True,
+        "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+        unsafe_allow_html=True,
     )
     c1, c2 = st.sidebar.columns((1, 1))
     bg_img = fig2img(fig)
@@ -282,17 +302,26 @@ def main(trajectory_file):
         drawing_mode=drawing_mode,
         key="canvas",
     )
-
+    if debug:
+        st.info(
+            f"""
+            w: {w:.2f}, h: {h:.2f} \n
+            scale: {scale:.2f} \n
+            x-axis: [{geominX:.2f}, {geomaxX:.2f}]\n
+            y-axis: [{geominY:.2f}, {geomaxY:.2f}]"""
+        )
     if canvas_result.json_data is not None:
         objects = pd.json_normalize(canvas_result.json_data["objects"])
         for col in objects.select_dtypes(include=["object"]).columns:
             objects[col] = objects[col].astype("str")
 
-        st.write(objects)
+        if debug:
+            st.write(objects)
+
         if not objects.empty:
             lines = objects[objects["type"].values == "line"]
             rects = objects[objects["type"].values == "rect"]
-            st.info(f"lines: {len(lines)}, rects: {len(rects)}")
+            #st.info(f"lines: {len(lines)}, rects: {len(rects)}")
             # result figure in world coordinates
             fig2, ax2 = plt.subplots()
             ax2.set_xlim((geominX, geomaxX))
@@ -307,9 +336,10 @@ def main(trajectory_file):
                 )
                 line_points_x = np.hstack((first_x, second_x))
                 line_points_y = np.hstack((first_y, second_y))
-                plot_lines(
-                    inv, ax2, line_points_x, line_points_y, scale, geominX, geominY
-                )
+                if debug:
+                    plot_lines(
+                        inv, ax2, line_points_x, line_points_y, stroke_color, scale, geominX, geominY
+                    )
 
             if not rects.empty:
                 (
@@ -346,12 +376,14 @@ def main(trajectory_file):
                         first_y,
                     )
                 )
+                if debug:
+                    plot_lines(
+                        inv, ax2, rect_points_x, rect_points_y, stroke_color, scale, geominX, geominY 
+                    )
 
-                plot_lines(
-                    inv, ax2, rect_points_x, rect_points_y, scale, geominX, geominY
-                )
+            if debug:
+                st.pyplot(fig2)
 
-            st.pyplot(fig2)
             geo_file = "geo_" + trajectory_file.name.split(".")[0] + ".xml"
             write_geometry(
                 first_x / scale / fig.dpi + geominX,
@@ -375,12 +407,10 @@ if __name__ == "__main__":
         "🚶 🚶‍♀️ Trajectory file ",
         type=["txt"],
         help="Load trajectory file",
-    )    
+    )
     if trajectory_file:
         file_xml = main(trajectory_file)
         if file_xml:
             st.sidebar.write("-----")
             with open(file_xml, encoding="utf-8") as f:
-                st.sidebar.download_button(
-                    "Download geometry", f, file_name=file_xml
-                )
+                download_pl.download_button("Download geometry", f, file_name=file_xml)
