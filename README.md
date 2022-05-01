@@ -44,6 +44,7 @@ To try out:
 https://share.streamlit.io/chraibi/jupedsim-dashboard/main/draw_geometry.py
 
 
+**NOTE**: The script tries to exctract the unit of the data from the trajectory file. A good idea might be to convert the trajetories before using with this [script](https://github.com/JuPedSim/jpscore/blob/master/scripts/petrack2jpsvis.py)
 
 ## Profiles 
 The density profile uses the speed of the pedestrians calculated by the Weidmann diagram.
