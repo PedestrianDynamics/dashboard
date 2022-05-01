@@ -366,6 +366,11 @@ def main(trajectory_file):
 
 
 if __name__ == "__main__":
+    st.sidebar.image("figs/jupedsim.png", use_column_width=True)
+    gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
+    repo = "https://github.com/chraibi/jupedsim-dashboard"
+    repo_name = f"[![Repo]({gh})]({repo})"
+    st.sidebar.markdown(repo_name, unsafe_allow_html=True)
     trajectory_file = st.sidebar.file_uploader(
         "🚶 🚶‍♀️ Trajectory file ",
         type=["txt"],
