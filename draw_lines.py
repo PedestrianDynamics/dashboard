@@ -24,22 +24,28 @@ def get_dimensions(data):
 
 
 def get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY):
-    scale = np.amin((geomaxX-geominX, geomaxY - geominY))
+    scale = np.amin((geomaxX - geominX, geomaxY - geominY))
     scale_max = 50
     scale = min(scale_max, scale)
-    scale = (1 - scale/scale_max) * 0.9 + scale/scale_max * 0.1
-    scale=0.3
+    scale = (1 - scale / scale_max) * 0.9 + scale / scale_max * 0.1
+    scale = 0.3
     st.write(f"scale= {scale:.2f}")
     w = (geomaxX - geominX) * scale
     h = (geomaxY - geominY) * scale
     return w, h, scale
 
 
-def plot_traj(ax,  data, scale=1, shift_x=0, shift_y=0):
+def plot_traj(ax, data, scale=1, shift_x=0, shift_y=0):
     pid = np.unique(data[:, 0])
     for ped in pid:
         pedd = data[data[:, 0] == ped]
-        ax.plot((pedd[::, 2] - shift_x)*scale, (pedd[::, 3] -shift_y)*scale, "-", color="black", lw=0.8)
+        ax.plot(
+            (pedd[::, 2] - shift_x) * scale,
+            (pedd[::, 3] - shift_y) * scale,
+            "-",
+            color="black",
+            lw=0.8,
+        )
 
 
 def fig2img(fig):
@@ -139,21 +145,20 @@ def plot_lines(_inv, ax2, Xpoints, Ypoints, scale=1, shift_x=0, shift_y=0):
     x_first_points followed by x_second_points
     y_first_points followed by y_second_points
     """
-    aX = _inv.transform(Xpoints/scale)
-    aY = _inv.transform(Ypoints/scale)
+    aX = _inv.transform(Xpoints / scale)
+    aY = _inv.transform(Ypoints / scale)
     num_points = aX.shape[0]
     num_points_half = int(num_points / 2)
     # plot resutls in real world coordinates
     for i in range(0, num_points_half):
         # st.write(aX[i:i+2])
         # st.write(aY[i:i+2])
-        x = (np.array([aX[i], aX[i + num_points_half]])+shift_x)
-        y = (np.array([aY[i], aY[i + num_points_half]])+shift_y)
+        x = np.array([aX[i], aX[i + num_points_half]]) + shift_x
+        y = np.array([aY[i], aY[i + num_points_half]]) + shift_y
         ax2.plot(x, y)
 
 
 def main(trajectory_file):
-    #trajectory_file = "/Users/chraibi/sciebo/CSR/50_Software/JuPedSim/dashboard_data/Bottleneck_sim/bottleneck_traj.txt"
     data = read_trajectory(trajectory_file)
     geominX, geomaxX, geominY, geomaxY = get_dimensions(data)
     w, h, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
@@ -210,14 +215,16 @@ def main(trajectory_file):
             ax2.grid(alpha=0.3)
             # plot reference points
             plot_traj(ax2, data)
-         
+
             if not lines.empty:
                 first_x, first_y, second_x, second_y = process_lines(
                     lines, height * fig.get_dpi()
                 )
                 line_points_x = np.hstack((first_x, second_x))
                 line_points_y = np.hstack((first_y, second_y))
-                plot_lines(inv, ax2, line_points_x, line_points_y, scale, geominX, geominY)
+                plot_lines(
+                    inv, ax2, line_points_x, line_points_y, scale, geominX, geominY
+                )
 
             if not rects.empty:
                 (
@@ -255,12 +262,20 @@ def main(trajectory_file):
                     )
                 )
 
-                plot_lines(inv, ax2, rect_points_x, rect_points_y, scale, geominX, geominY)
-
+                plot_lines(
+                    inv, ax2, rect_points_x, rect_points_y, scale, geominX, geominY
+                )
 
             st.pyplot(fig2)
-            geo_file = "geo_"+trajectory_file.name.split(".")[0]+".xml"
-            write_geometry(first_x, first_y, second_x, second_y, "m", geo_file)
+            geo_file = "geo_" + trajectory_file.name.split(".")[0] + ".xml"
+            write_geometry(
+                first_x / scale / fig.dpi + geominX,
+                first_y / scale / fig.dpi + geominY,
+                second_x / scale / fig.dpi + geominX,
+                second_y / scale / fig.dpi + geominY,
+                "m",
+                geo_file,
+            )
 
 
 def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
@@ -284,21 +299,39 @@ def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
     subroom.set("A_x", "0")
     subroom.set("B_y", "0")
     subroom.set("C_z", "0")
-    # poly1
-    for x1, x2, y1, y2 in zip(first_x, first_y, second_x, second_y):
+    # make lines horizontal/vertical
+    # for x1, y1, x2, y2 in zip(first_x, first_y, second_x, second_y):
+    #     st.info(f"before: {x1:.2f}, {y1:.2f}, {x2:.2f},{y2:.2f}")
+    #     eps = 0.5
+    #     if abs(x1-x2) < eps:
+    #         x2 = x1
+
+    #     if abs(y1-y2) < eps:
+    #         y2 = y1
+
+    #     st.info(f"after {x1:.2f}, {y1:.2f}, {x2:.2f},{y2:.2f}")
+
+    # snap points
+    p1_x = np.hstack((first_x[0], second_x[:]))
+    p1_y = np.hstack((first_y[0], second_y[:]))
+    p2_x = np.hstack((second_x, first_x[0]))
+    p2_y = np.hstack((second_y, first_y[0]))
+    for x1, y1, x2, y2 in zip(p1_x, p1_y, p2_x, p2_y):
+
         polygon = ET.SubElement(subroom, "polygon")
         polygon.set("caption", "wall")
         polygon.set("type", "internal")
         vertex = ET.SubElement(polygon, "vertex")
-        vertex.set("px", f"{x1}")
-        vertex.set("py", f"{y1}")
+        vertex.set("px", f"{x1:.2f}")
+        vertex.set("py", f"{y1:.2f}")
         vertex = ET.SubElement(polygon, "vertex")
-        vertex.set("px", f"{x2}")
-        vertex.set("py", f"{y2}")
+        vertex.set("px", f"{x2:.2f}")
+        vertex.set("py", f"{y2:.2f}")
 
     b_xml = ET.tostring(data, encoding="utf8", method="xml")
     with open(geo_file, "wb") as f:
         f.write(b_xml)
+
 
 if __name__ == "__main__":
     trajectory_file = st.sidebar.file_uploader(
