@@ -4,6 +4,8 @@ import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+from xml.dom.minidom import parseString
 import streamlit as st
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
@@ -20,6 +22,13 @@ st.set_page_config(
         "About": "Open source framework for simulating, analyzing and visualizing pedestrian dynamics",
     },
 )
+
+
+def prettify(elem):
+    """Return a pretty-printed XML string for the Element.
+    """
+    reparsed = parseString(elem)
+    return reparsed.toprettyxml(indent="\t")
 
 
 def get_dimensions(data):
@@ -188,18 +197,6 @@ def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
     subroom.set("A_x", "0")
     subroom.set("B_y", "0")
     subroom.set("C_z", "0")
-    # make lines horizontal/vertical
-    # for x1, y1, x2, y2 in zip(first_x, first_y, second_x, second_y):
-    #     st.info(f"before: {x1:.2f}, {y1:.2f}, {x2:.2f},{y2:.2f}")
-    #     eps = 0.5
-    #     if abs(x1-x2) < eps:
-    #         x2 = x1
-
-    #     if abs(y1-y2) < eps:
-    #         y2 = y1
-
-    #     st.info(f"after {x1:.2f}, {y1:.2f}, {x2:.2f},{y2:.2f}")
-
     # snap points
     p1_x = np.hstack((first_x[0], second_x[:]))
     p1_y = np.hstack((first_y[0], second_y[:]))
@@ -218,7 +215,10 @@ def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
         vertex.set("py", f"{y2:.2f}")
 
     b_xml = ET.tostring(data, encoding="utf8", method="xml")
-    with open(geo_file, "wb") as f:
+    b_xml = prettify(b_xml)
+    st.code(b_xml, language="xml")
+    st.info(type(b_xml))
+    with open(geo_file, "w") as f:
         f.write(b_xml)
 
 
