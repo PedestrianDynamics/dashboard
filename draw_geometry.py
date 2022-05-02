@@ -198,10 +198,10 @@ def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
     subroom.set("B_y", "0")
     subroom.set("C_z", "0")
     # snap points
-    p1_x = np.hstack((first_x[0], second_x[:]))
-    p1_y = np.hstack((first_y[0], second_y[:]))
-    p2_x = np.hstack((second_x, first_x[0]))
-    p2_y = np.hstack((second_y, first_y[0]))
+    p1_x = np.hstack((first_x[0], second_x[:]))*delta
+    p1_y = np.hstack((first_y[0], second_y[:]))*delta
+    p2_x = np.hstack((second_x, first_x[0]))*delta
+    p2_y = np.hstack((second_y, first_y[0]))*delta
     for x1, y1, x2, y2 in zip(p1_x, p1_y, p2_x, p2_y):
 
         polygon = ET.SubElement(subroom, "polygon")
@@ -216,11 +216,11 @@ def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
 
     b_xml = ET.tostring(data, encoding="utf8", method="xml")
     b_xml = prettify(b_xml)
-    st.code(b_xml, language="xml")
-    st.info(type(b_xml))
+
     with open(geo_file, "w") as f:
         f.write(b_xml)
 
+    return b_xml
 
 def main(trajectory_file):
     geo_file = ""
@@ -247,8 +247,8 @@ def main(trajectory_file):
     data = read_trajectory(trajectory_file) / cm2m
     geominX, geomaxX, geominY, geomaxY = get_dimensions(data)
     w, h, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
-    debug = st.sidebar.checkbox("Debug", help="plot result with ticks and show info")
-    st.sidebar.write("----")    
+    debug = st.sidebar.checkbox("Show", help="plot result with ticks and show xml")
+    st.sidebar.write("----")
     # setup background figure
     width = w
     height = h
@@ -387,15 +387,17 @@ def main(trajectory_file):
                 st.pyplot(fig2)
 
             geo_file = "geo_" + trajectory_file.name.split(".")[0] + ".xml"
-            write_geometry(
+            b_xml = write_geometry(
                 first_x / scale / fig.dpi + geominX,
                 first_y / scale / fig.dpi + geominY,
                 second_x / scale / fig.dpi + geominX,
                 second_y / scale / fig.dpi + geominY,
-                "m",
+                unit,
                 geo_file,
             )
-
+            if debug:
+                st.code(b_xml, language="xml")
+    
     return geo_file
 
 
