@@ -10,6 +10,7 @@ import streamlit as st
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 from Utilities import get_unit, read_trajectory, get_time
+import collections
 
 st.set_page_config(
     page_title="JuPedSim",
@@ -25,8 +26,7 @@ st.set_page_config(
 
 
 def prettify(elem):
-    """Return a pretty-printed XML string for the Element.
-    """
+    """Return a pretty-printed XML string for the Element."""
     reparsed = parseString(elem)
     return reparsed.toprettyxml(indent="\t")
 
@@ -45,7 +45,7 @@ def get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY):
     scale_max = 20
     scale = min(scale_max, scale)
     scale = (1 - scale / scale_max) * 0.9 + scale / scale_max * 0.1
-    #scale = 0.3
+    # scale = 0.3
     w = (geomaxX - geominX) * scale
     h = (geomaxY - geominY) * scale
     return w, h, scale
@@ -86,6 +86,7 @@ def process_lines(lines, h_dpi):
     :returns: 2 points a 2 coordinates -> 4 values
 
     """
+    st.info(lines["stroke"].values)
     left = np.array(lines["left"])
     top = np.array(lines["top"])
     # height = np.array(lines["height"])
@@ -176,7 +177,9 @@ def plot_lines(_inv, ax2, Xpoints, Ypoints, color, scale=1, shift_x=0, shift_y=0
         ax2.plot(x, y, color=color)
 
 
-def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
+def write_geometry(
+    first_x, first_y, second_x, second_y, rect_points_xml, _unit, geo_file
+):
     # ----------
     delta = 100 if _unit == "cm" else 1
     # --------
@@ -198,12 +201,11 @@ def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
     subroom.set("B_y", "0")
     subroom.set("C_z", "0")
     # snap points
-    p1_x = np.hstack((first_x[0], second_x[:]))*delta
-    p1_y = np.hstack((first_y[0], second_y[:]))*delta
-    p2_x = np.hstack((second_x, first_x[0]))*delta
-    p2_y = np.hstack((second_y, first_y[0]))*delta
+    p1_x = np.hstack((first_x[0], second_x[:])) * delta
+    p1_y = np.hstack((first_y[0], second_y[:])) * delta
+    p2_x = np.hstack((second_x, first_x[0])) * delta
+    p2_y = np.hstack((second_y, first_y[0])) * delta
     for x1, y1, x2, y2 in zip(p1_x, p1_y, p2_x, p2_y):
-
         polygon = ET.SubElement(subroom, "polygon")
         polygon.set("caption", "wall")
         polygon.set("type", "internal")
@@ -213,6 +215,26 @@ def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
         vertex = ET.SubElement(polygon, "vertex")
         vertex.set("px", f"{x2:.2f}")
         vertex.set("py", f"{y2:.2f}")
+
+    # add measurement areas
+    m_areas = ET.SubElement(data, "measurement_areas")
+    m_areas.set("unit", _unit)
+    for i in rect_points_xml.keys():
+        area_B = ET.SubElement(m_areas, "area_B")
+        rect_x = np.array(rect_points_xml[i]["x"]) * delta
+        rect_y = np.array(rect_points_xml[i]["y"]) * delta
+        area_B.set("id", str(i + 1))
+        area_B.set("type", "BoundingBox")
+        area_B.set("zPos", "None")
+        for (x, y) in zip(rect_x, rect_y):
+            vertex = ET.SubElement(area_B, "vertex")
+            vertex.set("px", f"{x:.2f}")
+            vertex.set("py", f"{y:.2f}")
+
+    #     <area_L id="2" type="Line" zPos="None">
+    #         <start px="-2.40" py="1.00" />
+    #         <end px="0" py="1.00" />
+    #     </area_L>
 
     b_xml = ET.tostring(data, encoding="utf8", method="xml")
     b_xml = prettify(b_xml)
@@ -253,6 +275,7 @@ def main(trajectory_file):
     elif unit == "m":
         cm2m = 1
 
+    global debug
     debug = st.sidebar.checkbox("Show", help="plot result with ticks and show xml")
     st.sidebar.write("----")
     if new_data:
@@ -265,8 +288,8 @@ def main(trajectory_file):
         fig.set_dpi(100)
         ax.set_xlim((0, width))
         ax.set_ylim((0, height))
-        plt.subplots_adjust(left=0, right=1, top=1, bottom=0)        
-        inv = ax.transData.inverted()        
+        plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+        inv = ax.transData.inverted()
         # st.info(f"width: {img_width}, height: {img_height}")
         plot_traj(ax, data, scale, geominX, geominY)
         major_ticks_top_x = np.linspace(0, width, 5)
@@ -292,7 +315,7 @@ def main(trajectory_file):
     else:
         bg_img = st.session_state.bg_img
         data = st.session_state.data
-        geominX, geomaxX, geominY, geomaxY = get_dimensions(st.session_state.data)        
+        geominX, geomaxX, geominY, geomaxY = get_dimensions(st.session_state.data)
         width, height, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
 
     fig = st.session_state.fig
@@ -300,15 +323,14 @@ def main(trajectory_file):
     bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     img_width, img_height = bbox.width * fig.dpi, bbox.height * fig.dpi
     inv = ax.transData.inverted()
-    
-    
+
     drawing_mode = st.sidebar.radio("Drawing tool:", ("line", "rect", "transform"))
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
         unsafe_allow_html=True,
     )
     c1, c2 = st.sidebar.columns((1, 1))
-    
+
     stroke_width = c2.slider("Stroke width: ", 1, 25, 3)
     stroke_color = c1.color_picker("Stroke color hex: ", "#E80606")
 
@@ -345,7 +367,7 @@ def main(trajectory_file):
         if not objects.empty:
             lines = objects[objects["type"].values == "line"]
             rects = objects[objects["type"].values == "rect"]
-            #st.info(f"lines: {len(lines)}, rects: {len(rects)}")
+            # st.info(f"lines: {len(lines)}, rects: {len(rects)}")
             # result figure in world coordinates
             fig2, ax2 = plt.subplots()
             ax2.set_xlim((geominX, geomaxX))
@@ -362,9 +384,17 @@ def main(trajectory_file):
                 line_points_y = np.hstack((first_y, second_y))
                 if debug:
                     plot_lines(
-                        inv, ax2, line_points_x, line_points_y, stroke_color, scale, geominX, geominY
+                        inv,
+                        ax2,
+                        line_points_x,
+                        line_points_y,
+                        stroke_color,
+                        scale,
+                        geominX,
+                        geominY,
                     )
 
+            rect_points_xml = collections.defaultdict(dict)
             if not rects.empty:
                 (
                     first_x,
@@ -400,9 +430,42 @@ def main(trajectory_file):
                         first_y,
                     )
                 )
+                i = 0
+                for x1, x2, x3, x4, y1, y2, y3, y4 in zip(
+                    first_x,
+                    second_x,
+                    third_x,
+                    firth_x,
+                    first_y,
+                    second_y,
+                    third_y,
+                    firth_y,
+                ):
+
+                    rect_points_xml[i]["x"] = [
+                        x1 / scale / fig.dpi + geominX,
+                        x2 / scale / fig.dpi + geominX,
+                        x3 / scale / fig.dpi + geominX,
+                        x4 / scale / fig.dpi + geominX,
+                    ]
+                    rect_points_xml[i]["y"] = [
+                        y1 / scale / fig.dpi + geominY,
+                        y2 / scale / fig.dpi + geominY,
+                        y3 / scale / fig.dpi + geominY,
+                        y4 / scale / fig.dpi + geominY,
+                    ]
+                    i += 1
+
                 if debug:
                     plot_lines(
-                        inv, ax2, rect_points_x, rect_points_y, stroke_color, scale, geominX, geominY 
+                        inv,
+                        ax2,
+                        rect_points_x,
+                        rect_points_y,
+                        stroke_color,
+                        scale,
+                        geominX,
+                        geominY,
                     )
 
             if debug:
@@ -414,12 +477,13 @@ def main(trajectory_file):
                 first_y / scale / fig.dpi + geominY,
                 second_x / scale / fig.dpi + geominX,
                 second_y / scale / fig.dpi + geominY,
+                rect_points_xml,
                 unit,
                 geo_file,
             )
             if debug:
                 st.code(b_xml, language="xml")
-    
+
     return geo_file
 
 
@@ -454,13 +518,15 @@ if __name__ == "__main__":
         type=["txt"],
         help="Load trajectory file",
     )
-    set_state_variables()    
+    set_state_variables()
     if trajectory_file:
         time_start = timeit.default_timer()
-        file_xml = main(trajectory_file)        
+        file_xml = main(trajectory_file)
         time_end = timeit.default_timer()
         msg_time = get_time(time_end - time_start)
-        st.sidebar.info(f":clock8: Finished in {msg_time}")
+        if debug:
+            st.sidebar.info(f":clock8: Finished in {msg_time}")
+
         if file_xml:
             st.sidebar.write("-----")
             with open(file_xml, encoding="utf-8") as f:
