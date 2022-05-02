@@ -1,15 +1,15 @@
 import io
-
+import timeit
 import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
+import lovely_logger as logging
 from xml.dom.minidom import parseString
 import streamlit as st
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
-from Utilities import get_unit, read_trajectory
+from Utilities import get_unit, read_trajectory, get_time
 
 st.set_page_config(
     page_title="JuPedSim",
@@ -222,12 +222,21 @@ def write_geometry(first_x, first_y, second_x, second_y, _unit, geo_file):
 
     return b_xml
 
+
 def main(trajectory_file):
     geo_file = ""
     stringio = io.StringIO(trajectory_file.getvalue().decode("utf-8"))
     string_data = stringio.read()
+    if string_data != st.session_state.old_data:
+        st.session_state.old_data = string_data
+        new_data = True
+        logging.info("Loading new trajectory data")
+    else:
+        logging.info("Trajectory data existing")
+        new_data = False
+
     unit = get_unit(string_data)
-    print(f"unit {unit}")
+    logging.info(f"unit {unit}")
     if unit not in ["cm", "m"]:
         st.error(f"did not recognize unit from file: {unit}")
         unit = st.sidebar.radio(
@@ -244,53 +253,66 @@ def main(trajectory_file):
     elif unit == "m":
         cm2m = 1
 
-    data = read_trajectory(trajectory_file) / cm2m
-    geominX, geomaxX, geominY, geomaxY = get_dimensions(data)
-    w, h, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
     debug = st.sidebar.checkbox("Show", help="plot result with ticks and show xml")
     st.sidebar.write("----")
-    # setup background figure
-    width = w
-    height = h
-    fig, ax = plt.subplots(figsize=(width, height))
-    fig.set_dpi(100)
-    ax.set_xlim((0, width))
-    ax.set_ylim((0, height))
-    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    if new_data:
+        data = read_trajectory(trajectory_file) / cm2m
+        geominX, geomaxX, geominY, geomaxY = get_dimensions(data)
+        width, height, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
+        st.session_state.data = data
+        # setup background figure
+        fig, ax = plt.subplots(figsize=(width, height))
+        fig.set_dpi(100)
+        ax.set_xlim((0, width))
+        ax.set_ylim((0, height))
+        plt.subplots_adjust(left=0, right=1, top=1, bottom=0)        
+        inv = ax.transData.inverted()        
+        # st.info(f"width: {img_width}, height: {img_height}")
+        plot_traj(ax, data, scale, geominX, geominY)
+        major_ticks_top_x = np.linspace(0, width, 5)
+        major_ticks_top_y = np.linspace(0, height, 5)
+        minor_ticks_top_x = np.linspace(0, width, 40)
+        minor_ticks_top_y = np.linspace(0, height, 40)
+        major_ticks_bottom_x = np.linspace(0, width, 20)
+        major_ticks_bottom_y = np.linspace(0, height, 20)
+        ax.set_xticks(major_ticks_top_x)
+        ax.set_yticks(major_ticks_top_y)
+        ax.set_xticks(minor_ticks_top_x, minor=True)
+        ax.set_yticks(minor_ticks_top_y, minor=True)
+        ax.grid(which="major", alpha=0.6)
+        ax.grid(which="minor", alpha=0.3)
+        ax.set_xticks(major_ticks_bottom_x)
+        ax.set_yticks(major_ticks_bottom_y)
+        ax.set_title("Subplot 2")
+        ax.grid()
+        bg_img = fig2img(fig)
+        st.session_state.bg_img = bg_img
+        st.session_state.ax = ax
+        st.session_state.fig = fig
+    else:
+        bg_img = st.session_state.bg_img
+        data = st.session_state.data
+        geominX, geomaxX, geominY, geomaxY = get_dimensions(st.session_state.data)        
+        width, height, scale = get_scaled_dimensions(geominX, geomaxX, geominY, geomaxY)
 
+    fig = st.session_state.fig
+    ax = st.session_state.ax
     bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    inv = ax.transData.inverted()
     img_width, img_height = bbox.width * fig.dpi, bbox.height * fig.dpi
-    # st.info(f"width: {img_width}, height: {img_height}")
-    plot_traj(ax, data, scale, geominX, geominY)
-    major_ticks_top_x = np.linspace(0, width, 5)
-    major_ticks_top_y = np.linspace(0, height, 5)
-    minor_ticks_top_x = np.linspace(0, width, 40)
-    minor_ticks_top_y = np.linspace(0, height, 40)
-    major_ticks_bottom_x = np.linspace(0, width, 20)
-    major_ticks_bottom_y = np.linspace(0, height, 20)
-    ax.set_xticks(major_ticks_top_x)
-    ax.set_yticks(major_ticks_top_y)
-    ax.set_xticks(minor_ticks_top_x, minor=True)
-    ax.set_yticks(minor_ticks_top_y, minor=True)
-    ax.grid(which="major", alpha=0.6)
-    ax.grid(which="minor", alpha=0.3)
-    ax.set_xticks(major_ticks_bottom_x)
-    ax.set_yticks(major_ticks_bottom_y)
-    ax.set_title("Subplot 2")
-    ax.grid()
-
+    inv = ax.transData.inverted()
+    
+    
     drawing_mode = st.sidebar.radio("Drawing tool:", ("line", "rect", "transform"))
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
         unsafe_allow_html=True,
     )
     c1, c2 = st.sidebar.columns((1, 1))
-    bg_img = fig2img(fig)
+    
     stroke_width = c2.slider("Stroke width: ", 1, 25, 3)
     stroke_color = c1.color_picker("Stroke color hex: ", "#E80606")
-    
-    canvas_result = st_canvas(
+
+    canvas = st_canvas(
         fill_color="rgba(255, 165, 0, 0.3)",
         stroke_width=stroke_width,
         stroke_color=stroke_color,
@@ -303,17 +325,17 @@ def main(trajectory_file):
         key="canvas",
     )
     global download_pl
-    download_pl= st.empty()
+    download_pl = st.empty()
     if debug:
         st.info(
             f"""
-            w: {w:.2f}, h: {h:.2f} \n
+            w: {width:.2f}, h: {height:.2f} \n
             scale: {scale:.2f} \n
             x-axis: [{geominX:.2f}, {geomaxX:.2f}]\n
             y-axis: [{geominY:.2f}, {geomaxY:.2f}]"""
         )
-    if canvas_result.json_data is not None:
-        objects = pd.json_normalize(canvas_result.json_data["objects"])
+    if canvas.json_data is not None:
+        objects = pd.json_normalize(canvas.json_data["objects"])
         for col in objects.select_dtypes(include=["object"]).columns:
             objects[col] = objects[col].astype("str")
 
@@ -401,6 +423,26 @@ def main(trajectory_file):
     return geo_file
 
 
+def set_state_variables():
+    if "old_data" not in st.session_state:
+        st.session_state.old_data = ""
+
+    if "data" not in st.session_state:
+        st.session_state.data = np.array([])
+
+    if "unit" not in st.session_state:
+        st.session_state.unit = "m"
+
+    if "bg_img" not in st.session_state:
+        st.session_state.bg_img = None
+
+    if "ax" not in st.session_state:
+        st.session_state.ax = None
+
+    if "fig" not in st.session_state:
+        st.session_state.fig = None
+
+
 if __name__ == "__main__":
     st.sidebar.image("figs/jupedsim.png", use_column_width=True)
     gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
@@ -412,8 +454,13 @@ if __name__ == "__main__":
         type=["txt"],
         help="Load trajectory file",
     )
+    set_state_variables()    
     if trajectory_file:
-        file_xml = main(trajectory_file)
+        time_start = timeit.default_timer()
+        file_xml = main(trajectory_file)        
+        time_end = timeit.default_timer()
+        msg_time = get_time(time_end - time_start)
+        st.sidebar.info(f":clock8: Finished in {msg_time}")
         if file_xml:
             st.sidebar.write("-----")
             with open(file_xml, encoding="utf-8") as f:
