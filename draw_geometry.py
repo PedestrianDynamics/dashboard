@@ -1,16 +1,18 @@
+import collections
 import io
 import timeit
 import xml.etree.ElementTree as ET
+from xml.dom.minidom import parseString
+
+import lovely_logger as logging
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import lovely_logger as logging
-from xml.dom.minidom import parseString
 import streamlit as st
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
-from Utilities import get_unit, read_trajectory, get_time
-import collections
+
+from Utilities import get_time, get_unit, read_trajectory
 
 st.set_page_config(
     page_title="JuPedSim",
@@ -86,7 +88,7 @@ def process_lines(lines, h_dpi):
     :returns: 2 points a 2 coordinates -> 4 values
 
     """
-    st.info(lines["stroke"].values)
+
     left = np.array(lines["left"])
     top = np.array(lines["top"])
     # height = np.array(lines["height"])
@@ -178,7 +180,17 @@ def plot_lines(_inv, ax2, Xpoints, Ypoints, color, scale=1, shift_x=0, shift_y=0
 
 
 def write_geometry(
-    first_x, first_y, second_x, second_y, rect_points_xml, _unit, geo_file
+    first_x,
+    first_y,
+    second_x,
+    second_y,
+    mfirst_x,
+    mfirst_y,
+    msecond_x,
+    msecond_y,
+    rect_points_xml,
+    _unit,
+    geo_file,
 ):
     # ----------
     delta = 100 if _unit == "cm" else 1
@@ -201,10 +213,17 @@ def write_geometry(
     subroom.set("B_y", "0")
     subroom.set("C_z", "0")
     # snap points
-    p1_x = np.hstack((first_x[0], second_x[:])) * delta
-    p1_y = np.hstack((first_y[0], second_y[:])) * delta
-    p2_x = np.hstack((second_x, first_x[0])) * delta
-    p2_y = np.hstack((second_y, first_y[0])) * delta
+    if len(first_x) > 1:
+        p1_x = np.hstack((first_x[0], second_x)) * delta
+        p1_y = np.hstack((first_y[0], second_y)) * delta
+        p2_x = np.hstack((second_x, first_x[0])) * delta
+        p2_y = np.hstack((second_y, first_y[0])) * delta
+    else:
+        p1_x = first_x * delta
+        p1_y = first_y * delta
+        p2_x = second_x * delta
+        p2_y = second_y * delta
+
     for x1, y1, x2, y2 in zip(p1_x, p1_y, p2_x, p2_y):
         polygon = ET.SubElement(subroom, "polygon")
         polygon.set("caption", "wall")
@@ -235,6 +254,20 @@ def write_geometry(
     #         <start px="-2.40" py="1.00" />
     #         <end px="0" py="1.00" />
     #     </area_L>
+    if mfirst_x:
+        i = 0
+        for x1, y1, x2, y2 in zip(mfirst_x, mfirst_y, msecond_x, msecond_y):
+            i += 1
+            area_L = ET.SubElement(m_areas, "area_L")
+            area_L.set("id", str(i))
+            area_L.set("type", "Line")
+            area_L.set("zPos", "None")
+            start = ET.SubElement(area_L, "start")
+            end = ET.SubElement(area_L, "end")
+            start.set("px", f"{x1:.2f}")
+            start.set("py", f"{y1:.2f}")
+            end.set("px", f"{x2:.2f}")
+            end.set("py", f"{y2:.2f}")
 
     b_xml = ET.tostring(data, encoding="utf8", method="xml")
     b_xml = prettify(b_xml)
@@ -247,6 +280,7 @@ def write_geometry(
 
 def main(trajectory_file):
     geo_file = ""
+    m_lines = []
     stringio = io.StringIO(trajectory_file.getvalue().decode("utf-8"))
     string_data = stringio.read()
     if string_data != st.session_state.old_data:
@@ -324,15 +358,27 @@ def main(trajectory_file):
     img_width, img_height = bbox.width * fig.dpi, bbox.height * fig.dpi
     inv = ax.transData.inverted()
 
-    drawing_mode = st.sidebar.radio("Drawing tool:", ("line", "rect", "transform"))
+    drawing_mode = st.sidebar.radio(
+        "Drawing tool:", ("wall", "m_area", "m_line", "transform")
+    )
     st.write(
         "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
         unsafe_allow_html=True,
     )
-    c1, c2 = st.sidebar.columns((1, 1))
+    stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 3)
+    # stroke_colocr = c1.color_picker("Stroke color hex: ", "#E80606")
 
-    stroke_width = c2.slider("Stroke width: ", 1, 25, 3)
-    stroke_color = c1.color_picker("Stroke color hex: ", "#E80606")
+    if drawing_mode == "m_line":
+        stroke_color = st.session_state.stroke_mline
+
+    if drawing_mode in ["wall", "m_area", "transform"]:
+        stroke_color = st.session_state.stroke_wall
+
+    if drawing_mode in ["wall", "m_line"]:
+        drawing_mode = "line"
+
+    if drawing_mode == "m_area":
+        drawing_mode = "rect"
 
     canvas = st_canvas(
         fill_color="rgba(255, 165, 0, 0.3)",
@@ -361,85 +407,118 @@ def main(trajectory_file):
         for col in objects.select_dtypes(include=["object"]).columns:
             objects[col] = objects[col].astype("str")
 
-        if debug:
-            st.write(objects)
-
         if not objects.empty:
-            lines = objects[objects["type"].values == "line"]
+            cond_mline = np.logical_and(
+                objects["type"].values == "line",
+                objects["stroke"].values == st.session_state.stroke_mline,
+            )
+            cond_wall = np.logical_and(
+                objects["type"].values == "line",
+                objects["stroke"].values == st.session_state.stroke_wall,
+            )
+            mlines = objects[cond_mline]
+            lines = objects[cond_wall]
             rects = objects[objects["type"].values == "rect"]
-            # st.info(f"lines: {len(lines)}, rects: {len(rects)}")
             # result figure in world coordinates
-            fig2, ax2 = plt.subplots()
-            ax2.set_xlim((geominX, geomaxX))
-            ax2.set_ylim((geominY, geomaxY))
-            ax2.grid(alpha=0.3)
-            # plot reference points
-            plot_traj(ax2, data)
 
+            if not st.session_state.first_plot_traj:
+                fig2, ax2 = plt.subplots()
+                ax2.set_xlim((geominX, geomaxX))
+                ax2.set_ylim((geominY, geomaxY))
+                ax2.grid(alpha=0.3)
+                plot_traj(ax2, data)
+                st.session_state.fig2 = fig2
+                st.session_state.ax2 = ax2
+                st.session_state.first_plot_traj = True
+
+            else:
+                fig2 = st.session_state.fig2
+                ax2 = st.session_state.ax2
+
+            wfirst_x = np.array([])
             if not lines.empty:
-                first_x, first_y, second_x, second_y = process_lines(
+                wfirst_x, wfirst_y, wsecond_x, wsecond_y = process_lines(
                     lines, height * fig.get_dpi()
                 )
-                line_points_x = np.hstack((first_x, second_x))
-                line_points_y = np.hstack((first_y, second_y))
+                wline_points_x = np.hstack((wfirst_x, wsecond_x))
+                wline_points_y = np.hstack((wfirst_y, wsecond_y))
                 if debug:
                     plot_lines(
                         inv,
                         ax2,
-                        line_points_x,
-                        line_points_y,
-                        stroke_color,
+                        wline_points_x,
+                        wline_points_y,
+                        st.session_state.stroke_wall,
                         scale,
                         geominX,
                         geominY,
                     )
-
+            # --------------------
+            mfirst_x = np.array([])
+            if not mlines.empty:
+                mfirst_x, mfirst_y, msecond_x, msecond_y = process_lines(
+                    mlines, height * fig.get_dpi()
+                )
+                mline_points_x = np.hstack((mfirst_x, msecond_x))
+                mline_points_y = np.hstack((mfirst_y, msecond_y))
+                if debug:
+                    plot_lines(
+                        inv,
+                        ax2,
+                        mline_points_x,
+                        mline_points_y,
+                        st.session_state.stroke_mline,
+                        scale,
+                        geominX,
+                        geominY,
+                    )
+                    # --------------------
             rect_points_xml = collections.defaultdict(dict)
             if not rects.empty:
                 (
-                    first_x,
-                    first_y,
-                    second_x,
-                    second_y,
-                    third_x,
-                    third_y,
-                    firth_x,
-                    firth_y,
+                    rfirst_x,
+                    rfirst_y,
+                    rsecond_x,
+                    rsecond_y,
+                    rthird_x,
+                    rthird_y,
+                    rfirth_x,
+                    rfirth_y,
                 ) = process_rects(rects, height * fig.get_dpi())
                 rect_points_x = np.hstack(
                     (
-                        first_x,
-                        second_x,
-                        firth_x,
-                        third_x,
-                        second_x,
-                        firth_x,
-                        third_x,
-                        first_x,
+                        rfirst_x,
+                        rsecond_x,
+                        rfirth_x,
+                        rthird_x,
+                        rsecond_x,
+                        rfirth_x,
+                        rthird_x,
+                        rfirst_x,
                     )
                 )
                 rect_points_y = np.hstack(
                     (
-                        first_y,
-                        second_y,
-                        firth_y,
-                        third_y,
-                        second_y,
-                        firth_y,
-                        third_y,
-                        first_y,
+                        rfirst_y,
+                        rsecond_y,
+                        rfirth_y,
+                        rthird_y,
+                        rsecond_y,
+                        rfirth_y,
+                        rthird_y,
+                        rfirst_y,
                     )
                 )
                 i = 0
                 for x1, x2, x3, x4, y1, y2, y3, y4 in zip(
-                    first_x,
-                    second_x,
-                    third_x,
-                    firth_x,
-                    first_y,
-                    second_y,
-                    third_y,
-                    firth_y,
+                    rfirst_x,
+                    rsecond_x,
+                    rthird_x,
+                    rfirth_x,
+                    rfirst_y,
+                    rsecond_y,
+                    rthird_y,
+                    rfirth_y,
                 ):
 
                     rect_points_xml[i]["x"] = [
@@ -462,7 +541,7 @@ def main(trajectory_file):
                         ax2,
                         rect_points_x,
                         rect_points_y,
-                        stroke_color,
+                        st.session_state.stroke_mline,
                         scale,
                         geominX,
                         geominY,
@@ -472,17 +551,39 @@ def main(trajectory_file):
                 st.pyplot(fig2)
 
             geo_file = "geo_" + trajectory_file.name.split(".")[0] + ".xml"
-            b_xml = write_geometry(
-                first_x / scale / fig.dpi + geominX,
-                first_y / scale / fig.dpi + geominY,
-                second_x / scale / fig.dpi + geominX,
-                second_y / scale / fig.dpi + geominY,
-                rect_points_xml,
-                unit,
-                geo_file,
-            )
-            if debug:
-                st.code(b_xml, language="xml")
+
+            if wfirst_x.size != 0:
+                if mfirst_x.size != 0:
+                    b_xml = write_geometry(
+                        wfirst_x / scale / fig.dpi + geominX,
+                        wfirst_y / scale / fig.dpi + geominY,
+                        wsecond_x / scale / fig.dpi + geominX,
+                        wsecond_y / scale / fig.dpi + geominY,
+                        mfirst_x / scale / fig.dpi + geominX,
+                        mfirst_y / scale / fig.dpi + geominY,
+                        msecond_x / scale / fig.dpi + geominX,
+                        msecond_y / scale / fig.dpi + geominY,
+                        rect_points_xml,
+                        unit,
+                        geo_file,
+                    )
+                else:
+                    b_xml = write_geometry(
+                        wfirst_x / scale / fig.dpi + geominX,
+                        wfirst_y / scale / fig.dpi + geominY,
+                        wsecond_x / scale / fig.dpi + geominX,
+                        wsecond_y / scale / fig.dpi + geominY,
+                        None,
+                        None,
+                        None,
+                        None,
+                        rect_points_xml,
+                        unit,
+                        geo_file,
+                    )
+                if debug:
+                    st.code(b_xml, language="xml")
+                    st.write(objects)
 
     return geo_file
 
@@ -505,6 +606,21 @@ def set_state_variables():
 
     if "fig" not in st.session_state:
         st.session_state.fig = None
+
+    if "stroke_wall" not in st.session_state:
+        st.session_state.stroke_wall = "#E80606"
+
+    if "stroke_mline" not in st.session_state:
+        st.session_state.stroke_mline = "#060EE8"
+
+    if "first_plot_traj" not in st.session_state:
+        st.session_state.first_plot_traj = False
+
+    if "ax2" not in st.session_state:
+        st.session_state.ax2 = None
+
+    if "fig2" not in st.session_state:
+        st.session_state.fig2 = None
 
 
 if __name__ == "__main__":
