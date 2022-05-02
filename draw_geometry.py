@@ -250,11 +250,7 @@ def write_geometry(
             vertex.set("px", f"{x:.2f}")
             vertex.set("py", f"{y:.2f}")
 
-    #     <area_L id="2" type="Line" zPos="None">
-    #         <start px="-2.40" py="1.00" />
-    #         <end px="0" py="1.00" />
-    #     </area_L>
-    if mfirst_x:
+    if mfirst_x is not None:
         i = 0
         for x1, y1, x2, y2 in zip(mfirst_x, mfirst_y, msecond_x, msecond_y):
             i += 1
