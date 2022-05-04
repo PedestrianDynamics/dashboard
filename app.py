@@ -600,25 +600,23 @@ def main():
             else:
                 angle_agent = agent[:, -2]
 
-            c1, c2 = st.columns((1, 1))
+            with Utilities.profile("plot_trajectories"):
+                fig = plots.plot_trajectories(
+                    data,
+                    plot_ped,
+                    speed_agent,
+                    geometry_wall,
+                    transitions,
+                    geominX,
+                    geomaxX,
+                    geominY,
+                    geomaxY,
+                    choose_transitions,
+                    sample_trajectories,
+                )
+                st.plotly_chart(fig, use_container_width=True) 
+            c1, c2, c3 = st.columns((1, 1, 1))
             with c1:
-                with Utilities.profile("plot_trajectories"):
-                    fig = plots.plot_trajectories(
-                        data,
-                        plot_ped,
-                        speed_agent,
-                        geometry_wall,
-                        transitions,
-                        geominX,
-                        geomaxX,
-                        geominY,
-                        geomaxY,
-                        choose_transitions,
-                        sample_trajectories,
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-
-            with c2:
                 with Utilities.profile("plot_agent_xy"):
                     fig = plots.plot_agent_xy(
                         agent[::sample_trajectories, 1],
@@ -628,7 +626,7 @@ def main():
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
-            with c1:
+            with c2:
                 with Utilities.profile("plot_agent_angle"):
                     fig = plots.plot_agent_angle(
                         plot_ped,
@@ -638,7 +636,7 @@ def main():
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
-            with c2:
+            with c3:
                 with Utilities.profile("plot_agent_speed"):
 
                     fig = plots.plot_agent_speed(
@@ -1017,22 +1015,18 @@ def main():
 
         if make_plots:
             c1, c2, c3 = st.columns((1, 1, 1))
-            with c1:
-                if choose_NT:
-                    peds_inside = Utilities.peds_inside(data)
-                    fig1 = plots.plot_peds_inside(frames, peds_inside, fps)
-                    if tstats:
-                        fig2 = plots.plot_NT(tstats, cum_num, cum_num_positiv, cum_num_negativ, fps)
-
-                    st.plotly_chart(fig2, use_container_width=True)
-            with c2:
-                st.plotly_chart(fig1, use_container_width=True)
-
-            with c3:
+            if choose_NT:
+                peds_inside = Utilities.peds_inside(data)
+                fig1 = plots.plot_peds_inside(frames, peds_inside, fps)
+                c2.plotly_chart(fig1, use_container_width=True)
+                if tstats:
+                    fig2 = plots.plot_NT(tstats, cum_num, cum_num_positiv, cum_num_negativ, fps)
+                    c1.plotly_chart(fig2, use_container_width=True)                                
+            
                 if choose_flow and tstats:
                     fig = plots.plot_flow(tstats, cum_num, cum_num_positiv, cum_num_negativ, fps)
-                    st.plotly_chart(fig, use_container_width=True)
-
+                    c3.plotly_chart(fig, use_container_width=True)
+                    
         c1, c2 = st.columns((1, 1))
         if make_plots and choose_time_distance:
             with c1:
