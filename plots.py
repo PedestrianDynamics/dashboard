@@ -865,8 +865,6 @@ def plot_survival(Frames, fps):
 
         times = np.array(frames) / fps
         y, dif = survival(times)
-        print(y)
-        print(dif)
         trace = go.Scatter(
             x=dif,
             y=y,
