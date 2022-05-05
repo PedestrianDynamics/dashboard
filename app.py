@@ -409,26 +409,27 @@ def main():
             else:
                 special_agent = peds[10]
 
-            sample_trajectories = pl_sample_trajectories.number_input(
-                "sample",
-                min_value=1,
-                max_value=int(np.max(frames * 0.2)),
-                value=10,
-                step=5,
-                help="Sample rate of ploting trajectories and time series \
-                (the lower the slower)",
-                key="sample_traj",
-            )
-            # hack. I dont know why this is sometimes float
-            sample_trajectories = int(sample_trajectories)
-            plot_ped = pl_select_special_agent.number_input(
-                "Highlight pedestrian",
-                min_value=np.min(peds),
-                max_value=np.max(peds),
-                value=special_agent,
-                step=10,
-                help="Choose a pedestrian by id",
-            )
+            if show_special_agent_stats:
+                sample_trajectories = pl_sample_trajectories.number_input(
+                    "Sample rate",
+                    min_value=1,
+                    max_value=int(np.max(frames * 0.2)),
+                    value=10,
+                    step=5,
+                    help="Sample rate of ploting trajectories and time series \
+                    (the lower the slower)",
+                    key="sample_traj",
+                )
+                 # hack. I dont know why this is sometimes float
+                sample_trajectories = int(sample_trajectories)
+                plot_ped = pl_select_special_agent.number_input(
+                    "Highlight pedestrian",
+                    min_value=np.min(peds),
+                    max_value=np.max(peds),
+                    value=special_agent,
+                    step=10,
+                    help="Choose a pedestrian by id",
+                )
 
             logging.info(f"fps = {fps}")
         except Exception as e:
@@ -599,12 +600,19 @@ def main():
                     data[:, st.session_state.speed_index] /= 100
 
         if choose_trajectories:
-            agent = data[data[:, 0] == plot_ped]
-            speed_agent = agent[:, st.session_state.speed_index]
-            if how_speed == "from simulation":
-                angle_agent = agent[:, 7]
+            if show_special_agent_stats:
+                agent = data[data[:, 0] == plot_ped]
+                speed_agent = agent[:, st.session_state.speed_index]
+                if how_speed == "from simulation":
+                    angle_agent = agent[:, 7]
+                else:
+                    angle_agent = agent[:, -2]
             else:
-                angle_agent = agent[:, -2]
+                agent = []
+                speed_agent = []
+                angle_agent = []
+                plot_ped = -1
+                sample_trajectories = 1
 
             with Utilities.profile("plot_trajectories"):
                 fig = plots.plot_trajectories(

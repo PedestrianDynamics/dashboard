@@ -600,8 +600,6 @@ def plot_trajectories(
     logging.info("plot trajectories")
     fig = make_subplots(rows=1, cols=1, subplot_titles=["<b>Trajectories</b>"])
     peds = np.unique(data[:, 0])
-    s = data[data[:, 0] == special_ped]
-    sc = speed / np.max(speed)
     for ped in peds:
         d = data[data[:, 0] == ped]
         trace_traj = go.Scatter(
@@ -614,34 +612,37 @@ def plot_trajectories(
         )
         fig.append_trace(trace_traj, row=1, col=1)
 
-    trace_agent = go.Scatter(
-        x=s[1::sample_trajectories, 2],
-        y=s[1::sample_trajectories, 3],
-        mode="markers",
-        showlegend=False,
-        name=f"Agent: {special_ped:0.0f}",
-        marker=dict(size=5,
-                    cmax=1,
-                    cmin=0,
-                    colorbar=dict(
-                        title="Speed / m/s"),
-                    color=sc,
-                    colorscale="Jet"),
-        #line=dict(color="firebrick", width=4),
-    )
-    trace_agent_start = go.Scatter(
-        x=[s[0, 2]],
-        y=[s[0, 3]],
-        mode="markers",
-        showlegend=False,
-        name=f"Start: {special_ped:0.0f}",
-        marker=dict(size=10,
-                    color="black",
-                    ),
-    )
+
+    if special_ped > 0:
+        s = data[data[:, 0] == special_ped]
+        sc = speed / np.max(speed)
     
-    fig.append_trace(trace_agent, row=1, col=1)
-    fig.append_trace(trace_agent_start, row=1, col=1)
+        trace_agent = go.Scatter(
+            x=s[1::sample_trajectories, 2],
+            y=s[1::sample_trajectories, 3],
+            mode="markers",
+            showlegend=False,
+            name=f"Agent: {special_ped:0.0f}",
+            marker=dict(size=5,
+                        cmax=1,
+                        cmin=0,
+                        colorbar=dict(
+                            title="Speed / m/s"),
+                        color=sc,
+                        colorscale="Jet"),
+        )
+        trace_agent_start = go.Scatter(
+            x=[s[0, 2]],
+            y=[s[0, 3]],
+            mode="markers",
+            showlegend=False,
+            name=f"Start: {special_ped:0.0f}",
+            marker=dict(size=10,
+                        color="black",
+                        ),
+        )
+        fig.append_trace(trace_agent, row=1, col=1)
+        fig.append_trace(trace_agent_start, row=1, col=1)
     for gw in geo_walls.keys():
         trace_walls = go.Scatter(
             x=geo_walls[gw][:, 0],
