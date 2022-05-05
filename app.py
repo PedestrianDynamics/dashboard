@@ -150,7 +150,7 @@ def main():
     st.sidebar.markdown("-------")
     unit_pl = st.sidebar.empty()
     st.sidebar.header("📉 Plot trajectories")
-    px = st.sidebar.expander("Options")
+    px = st.sidebar.expander("Options", expanded=True)
     c1, c2 = px.columns((1, 1))
     choose_trajectories = c1.checkbox(
         "Trajectories", help="Plot trajectories", key="Traj", value=True,
@@ -158,6 +158,9 @@ def main():
     if choose_trajectories:
         choose_transitions = c2.checkbox(
             "Transitions", help="Show transittions", value=True, key="Tran"
+        )
+        show_special_agent_stats = c1.checkbox(
+            "Agent", help="Show speed/angle and trajectory of highlighted agent", value=False, key="SpecialAgent"
         )
 
     pl_select_special_agent = px.empty()
@@ -614,9 +617,9 @@ def main():
                     choose_transitions,
                     sample_trajectories,
                 )
-                st.plotly_chart(fig, use_container_width=True) 
+                st.plotly_chart(fig, use_container_width=True)
             c1, c2, c3 = st.columns((1, 1, 1))
-            with c1:
+            if show_special_agent_stats:
                 with Utilities.profile("plot_agent_xy"):
                     fig = plots.plot_agent_xy(
                         agent[::sample_trajectories, 1],
@@ -624,9 +627,8 @@ def main():
                         agent[:, 3],
                         fps,
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    c1.plotly_chart(fig, use_container_width=True)
 
-            with c2:
                 with Utilities.profile("plot_agent_angle"):
                     fig = plots.plot_agent_angle(
                         plot_ped,
@@ -634,9 +636,8 @@ def main():
                         angle_agent[::sample_trajectories],
                         fps,
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    c2.plotly_chart(fig, use_container_width=True)
 
-            with c3:
                 with Utilities.profile("plot_agent_speed"):
 
                     fig = plots.plot_agent_speed(
@@ -646,7 +647,7 @@ def main():
                         np.max(data[:, st.session_state.speed_index]),
                         fps,
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    c3.plotly_chart(fig, use_container_width=True)
 
         # choose_dprofile =
         choose_vprofile = True  # todo: not sure is I want to keep this option
