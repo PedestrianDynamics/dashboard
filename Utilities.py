@@ -19,42 +19,27 @@ from shapely.geometry import LineString, Point
 # geometry
 
 examples = {
-    "Multi-Rooms (sim)": [
-        "Multi-Rooms",
-        "https://fz-juelich.sciebo.de/s/7kwrnAzcv5m7ii2/download",
-        "https://fz-juelich.sciebo.de/s/VSPgE6Kcfp8qDIa/download",
-    ],
     # , free choice of destination
     "Bidirectional corridor (exp)": [
         "Multi-Rooms",
         "https://fz-juelich.sciebo.de/s/o4D8Va2MtbSeG2v/download",
         "https://fz-juelich.sciebo.de/s/FNuSYwOre85km3U/download",
     ],
-    "Bottleneck (sim)": [
-        "bottleneck",
-        "https://fz-juelich.sciebo.de/s/HldXLySEfEDMdZo/download",
-        "https://fz-juelich.sciebo.de/s/FqiSFGr6FajfYLD/download",
-    ],
-    "HC-BUW (sim)": [
-        "HC_BUW",
-        "https://fz-juelich.sciebo.de/s/GgvVjc81lzmhTgv/download",
-        "https://fz-juelich.sciebo.de/s/NikHJ6TIHCwSoUM/download",
-    ],
     "Bottleneck BUW (exp)": [
         "030_c_56_h0",
         "https://fz-juelich.sciebo.de/s/AsrA465S3wNDNlo/download",
         "https://fz-juelich.sciebo.de/s/rVdksQ7yUngiUmw/download",
-    ],
-    "Corner (exp)": [
-        "jps_eo-300-300-300_combined_MB",
-        "https://fz-juelich.sciebo.de/s/BfNxMk1qM64QqYj/download",
-        "https://fz-juelich.sciebo.de/s/qNVoD8RZ8UentBB/download",
     ],
     "Bottleneck WDG (exp)": [
         "WDG_09",
         "https://fz-juelich.sciebo.de/s/oTG7vRCcQyYJ08q/download",
         "https://fz-juelich.sciebo.de/s/lDuCQlJkwh9Of1C/download",
         "",
+    ],
+    "Corner (exp)": [
+        "jps_eo-300-300-300_combined_MB",
+        "https://fz-juelich.sciebo.de/s/BfNxMk1qM64QqYj/download",
+        "https://fz-juelich.sciebo.de/s/qNVoD8RZ8UentBB/download",
     ],
     "Crossing 90 (exp)": [
         "CROSSING_90_a_10",
@@ -76,6 +61,21 @@ examples = {
         "https://fz-juelich.sciebo.de/s/ckzZLnRJCKKgAnZ/download",
         "https://fz-juelich.sciebo.de/s/kgXUEyu95FTQlFC/download",
     ],
+    "Multi-Rooms (sim)": [
+        "Multi-Rooms",
+        "https://fz-juelich.sciebo.de/s/7kwrnAzcv5m7ii2/download",
+        "https://fz-juelich.sciebo.de/s/VSPgE6Kcfp8qDIa/download",
+    ],
+    "Bottleneck (sim)": [
+        "bottleneck",
+        "https://fz-juelich.sciebo.de/s/HldXLySEfEDMdZo/download",
+        "https://fz-juelich.sciebo.de/s/FqiSFGr6FajfYLD/download",
+    ],
+    "HC-BUW (sim)": [
+        "HC_BUW",
+        "https://fz-juelich.sciebo.de/s/GgvVjc81lzmhTgv/download",
+        "https://fz-juelich.sciebo.de/s/NikHJ6TIHCwSoUM/download",
+    ]
 }
 
 

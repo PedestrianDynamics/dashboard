@@ -35,8 +35,8 @@ def init_logger():
 
 
 st.set_page_config(
-    page_title="JuPedSim",
-    page_icon=":large_blue_circle:",
+    page_title="JuPedSim-Analytics",
+    page_icon=":bar_chart:",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
@@ -117,7 +117,7 @@ def set_state_variables():
 
 def main():
     time_start = timeit.default_timer()
-    st.header(":information_source: Dashboard")
+    st.header(":information_source: Analytics dashboard")
     info = st.expander("click to expand")
     with info:
         doc.docs()
@@ -127,7 +127,10 @@ def main():
     gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
     repo = "https://github.com/chraibi/jupedsim-dashboard"
     repo_name = f"[![Repo]({gh})]({repo})"
-    st.sidebar.markdown(repo_name, unsafe_allow_html=True)    
+    c1, c2 = st.sidebar.columns((1, 1))
+    c1.markdown(repo_name, unsafe_allow_html=True)
+    c2.write("[![Star](https://img.shields.io/github/stars/chraibi/jupedsim-dashboard.svg?logo=github&style=social)](https://gitHub.com/chraibi/jupedsim-dashboard)")
+    
     from_examples = st.sidebar.selectbox(
         "📂 Select example",
         ["None"] + list(Utilities.examples.keys()),
