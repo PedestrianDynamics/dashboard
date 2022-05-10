@@ -7,3 +7,4 @@ numpy
 scipy
 plotly
 shapely
+hydralit

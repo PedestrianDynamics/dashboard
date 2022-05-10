@@ -169,12 +169,18 @@ def doc_speed():
 def doc_timeseries():
     st.write(
         """
-    Time series of the density and the speed are calculated within the measurement area (a square).
-    When the option **Profiles** is activated, you can define measurement are by:
-    - $x$-position of the center
-    - $y$-position of the center
-    - side length of the square
+    Time series of the density and the speed are calculated within a measurement rectangle with side lengths $dx$ and $dy$.
 
+    Density and speed are calculated as defined in `Profiles`, whereas flow is defined as:
+    """)
+
+    st.latex(r"""
+    J = \rho\cdot v / l,
+""")
+    st.write(
+        """
+        where $l$ is a constant between $dx$ and $dy$.
+        
     Depending on the frames per seconds of the trajectories, it might be better to increase the sampling rate
     (`sample`) to speed up rendering the plots.
     """
