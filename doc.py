@@ -1,5 +1,5 @@
 import streamlit as st
-
+from streamlit.components.v1 import html
 
 def doc_plots():
     st.write(
@@ -276,19 +276,29 @@ def docs():
 
         The following features are measured:
         - N-T curves at lines
-        - T-D (time-distance) curves at lines (Adrian2020).
+        - T-D (time-distance) curves at lines ([Adrian2020](https://collective-dynamics.eu/index.php/cod/article/view/A50))
         - Flow vs time at lines
         - Survival function at lines
         - Discharge function
-        - Jam waiting time (Sonntag2018)
-        - Jam life span (Sonntag2018)
-        - RSET heatmaps (Schroder2017a)
-        - Density and speed heatmaps (Zhang2012)
+        - Jam waiting time ([Sonntag2020](https://fz-juelich.sciebo.de/s/rqcrLVT5v7R9icI))
+        - Jam life span ([Sonntag2020](https://fz-juelich.sciebo.de/s/rqcrLVT5v7R9icI))
+        - RSET heatmaps ([Schroeder2017](http://elpub.bib.uni-wuppertal.de/servlets/DerivateServlet/Derivate-7013/dd1611.pdf))
+        - Density and speed heatmaps ([Zhang2012](https://arxiv.org/abs/1112.5299))
         - Density and speed time series
         - Different methods for density and speed calculation
         - Plot trajectories and individual plots
+        """, unsafe_allow_html=True
+    )
+    st.write(
+        """
+        ## References:
+        - 
+        - 
+        - 
+        - 
         """
     )
+    
 
 
 def doc_RSET():

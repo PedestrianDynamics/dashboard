@@ -5,6 +5,7 @@ sys.path.append('../')
 import doc
 from hydralit import HydraHeadApp
 
+
 class AboutClass(HydraHeadApp):
 
     def run(self):

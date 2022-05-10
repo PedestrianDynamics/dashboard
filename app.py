@@ -12,6 +12,7 @@ import numpy as np
 
 import streamlit as st
 from hydralit import HydraApp
+import hydralit_components as hc
 
 import doc
 import plots
@@ -422,7 +423,7 @@ def main():
         )
         app.add_app(
             "Trajectories",
-            icon="📈",
+            icon="👫🏻",
             app=trajectories.TrajClass(
                 data,
                 how_speed,
@@ -480,7 +481,13 @@ def main():
 
 if __name__ == "__main__":
     # st.header(":information_source: Analytics dashboard")
-    over_theme = {"txc_inactive": "#FFFFF0"}
-    app = HydraApp(title="Sample Hydralit App", favicon="🐙", navbar_theme=over_theme)
+    over_theme = {'txc_inactive': '#FFFFFF'}
+    app = HydraApp(title="JuPedSim - Dashboard",
+                   favicon="🐙",
+                   navbar_animation=True,
+                   navbar_sticky=True,
+                   navbar_theme=over_theme)
+    
+    
     with Utilities.profile("Main"):
         main()

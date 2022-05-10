@@ -7,4 +7,4 @@ numpy
 scipy
 plotly
 shapely
-hydralit
+hydralit==1.0.9

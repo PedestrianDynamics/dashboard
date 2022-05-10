@@ -174,7 +174,7 @@ class dvTimeSeriesClass(HydraHeadApp):
             doc.doc_timeseries()
 
         sample, choose_d_method, gauss_width, canvas, dpi, scale, img_height = dvTimeSeriesClass.init_sidebar(self)
-        #canvas
+        canvas
         frames = np.unique(self.data[:, 1])
         rects = dvTimeSeriesClass.draw_rects(self, canvas, img_height, dpi, scale)
         for ir in range(len(rects)):
