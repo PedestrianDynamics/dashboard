@@ -269,28 +269,27 @@ The speed is calculated from $\\rho_i$ by Eq. (1).
 def docs():
     st.write(
         """
-        ### About this dashboard
+        ### :information_source: About this dashboard
         
-        This is an interactive visual tool for explorative analysis and inspection of pedestrian dynamics.
-        
+        This is an interactive visual tool for explorative analysis and inspection of pedestrian dynamics based on trajectories.
         The input data are
 
-        - trajectories of pedestrians. Can be [jpscore](https://github.com/jupedsim/jpscore)-simulations or [experimental data](https://ped.fz-juelich.de/db/).
+        - Trajectories of pedestrians. The file can be a [jpscore](https://github.com/jupedsim/jpscore)-simulation or [experimental data](https://ped.fz-juelich.de/db/).
         - A geometry file.
 
-        ### Examples
+        ### :point_left: Examples
 
-        To use this dashboard you can
-        1. Use one of the provided examples
-        2. Or upload your own trajectory and geometry files
+        To use this dashboard, you can either
+        1. Explore one of the provided examples.
+        2. Or upload your own trajectory and geometry files.
 
-        ### Measurements
+        ### :bar_chart: Measurements
 
-        The dashboard is organized in decoupled tabs that can be used independently from each others
+        The dashboard is organized in decoupled tabs that can be used independently from each others.
 
-        - **Data summary**: Gives a brief summary of the imported trajectory file
+        - **Data summary**: Gives a brief overview of the imported trajectory file.
         - **Trajectories**: Plot trajectories and measurement lines. Optionally, a single pedestrian can be plotted as well.
-        - **Jam**: Some relevant Jam-quantities are calculated and plotted e.g.:
+        - **Jam**: Some relevant Jam-quantities are calculated and plotted, e.g.:
           - Jam waiting time ([Sonntag2020](https://fz-juelich.sciebo.de/s/rqcrLVT5v7R9icI))
           - Jam life span ([Sonntag2020](https://fz-juelich.sciebo.de/s/rqcrLVT5v7R9icI))
         - **Statistics**: Some common quantities are calculated at measurement lines and plotted. These are:
@@ -299,8 +298,8 @@ def docs():
           - Flow vs time at lines
           - Survival function at lines[Xu2021](https://www.sciencedirect.com/science/article/abs/pii/S0968090X21004502)
           - Discharge function        
-        - **Profiles**: Density and speed heatmaps ([Zhang2012](https://arxiv.org/abs/1112.5299)). Different methods for density and speed calculation. See documentation inside tab.
-        - **Time series**:  Density, speed and flow time series. Here, you can draw measurement areas and calculate these quantities inside.
+        - **Profiles**: Density and speed heatmaps ([Zhang2012](https://arxiv.org/abs/1112.5299)). Different methods for density and speed calculation. See documentation inside the tab.
+        - **Time-series**:  Density, speed and flow time series. Here, you can draw measurement areas and calculate these quantities inside.
         - **RSET** heatmaps ([Schroeder2017](http://elpub.bib.uni-wuppertal.de/servlets/DerivateServlet/Derivate-7013/dd1611.pdf))
         """, unsafe_allow_html=True
     )

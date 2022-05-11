@@ -12,7 +12,7 @@ import numpy as np
 
 import streamlit as st
 from hydralit import HydraApp
-import hydralit_components as hc
+
 
 import doc
 import plots
@@ -26,7 +26,7 @@ from apps import (
     stats,
     time_series,
     trajectories,
-    loader
+    loader,
 )
 
 path = Path(__file__)
@@ -175,20 +175,9 @@ def main():
         type=["xml"],
         help="Load geometry file",
     )
-    time_msg = st.sidebar.empty()
     st.sidebar.markdown("-------")
     unit_pl = st.sidebar.empty()
 
-    # pl_select_special_agent = px.empty()
-    # pl_sample_trajectories = px.empty()
-    # ---------------------------------
-    # st.sidebar.header("🔵 Speed")
-    # sx = st.sidebar.expander("Options")
-    # how_speed_pl = sx.empty()
-    # df_pl = sx.empty()
-    # ---------------------------------
-
-    # ----- Jam
     msg_status = st.empty()
     disable_NT_flow = False
     if (trajectory_file and geometry_file) or from_examples != "None":
@@ -306,19 +295,6 @@ def main():
                 )
                 st.sidebar.markdown("-------")
 
-            frames = np.unique(data[:, 1])
-            peds = np.unique(data[:, 0]).astype(int)
-            nagents = len(peds)
-
-            # f = st.expander("Documentation: Speed (click to expand)")
-            # with f:
-            #     doc.doc_speed()
-
-            if nagents <= 10:
-                special_agent = 5
-            else:
-                special_agent = peds[10]
-
             logging.info(f"fps = {fps}")
         except Exception as e:
             msg_status.error(
@@ -433,9 +409,10 @@ def main():
                     data[:, 2:4] /= 100
                     data[:, st.session_state.speed_index] /= 100
 
-        # add all your application classes here
+        pl.empty()
         app.add_loader_app(loader.MyLoadingApp())
         app.add_app("About", icon="ℹ️", app=about.AboutClass())
+        app.add_loader_app(loader.MyLoadingApp())
         app.add_app(
             "Data summary", icon="🔢", app=stats.StatClass(data, unit, fps, header_traj)
         )
@@ -478,7 +455,16 @@ def main():
             "Time series",
             icon="🟠",
             app=dv_time_series.dvTimeSeriesClass(
-                "Time series", data, how_speed, geometry_wall, geominX, geomaxX, geominY, geomaxY, fps, new_data
+                "Time series",
+                data,
+                how_speed,
+                geometry_wall,
+                geominX,
+                geomaxX,
+                geominY,
+                geomaxY,
+                fps,
+                new_data,
             ),
         )
 
@@ -499,13 +485,20 @@ def main():
 
 if __name__ == "__main__":
     # st.header(":information_source: Analytics dashboard")
-    over_theme = {'txc_inactive': '#FFFFFF'}
-    app = HydraApp(title="JuPedSim - Dashboard",
-                   favicon="🐙",
-                   navbar_animation=True,
-                   navbar_sticky=True,
-                   navbar_theme=over_theme)
-    
-    
+    over_theme = {"txc_inactive": "#FFFFFF"}
+    app = HydraApp(
+        title="JuPedSim - Dashboard",
+        favicon="🐙",
+        navbar_animation=True,
+        navbar_sticky=True,
+        navbar_theme=over_theme,
+    )
+
+    # st.header("Dashboard")
+    global pl
+    pl = st.empty()
+    with pl:
+        doc.docs()
+
     with Utilities.profile("Main"):
         main()
