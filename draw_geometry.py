@@ -14,18 +14,6 @@ from streamlit_drawable_canvas import st_canvas
 
 from Utilities import get_time, get_unit, read_trajectory
 
-st.set_page_config(
-    page_title="JuPedSim",
-    page_icon=":large_blue_circle:",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        "Get Help": "https://github.com/jupedsim/jpscore",
-        "Report a bug": "https://github.com/jupedsim/jpscore/issues",
-        "About": "Open source framework for simulating, analyzing and visualizing pedestrian dynamics",
-    },
-)
-
 
 def prettify(elem):
     """Return a pretty-printed XML string for the Element."""

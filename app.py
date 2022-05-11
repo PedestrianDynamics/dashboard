@@ -46,20 +46,6 @@ def init_logger():
 
     return logfile
 
-
-st.set_page_config(
-    page_title="JuPedSim-Analytics",
-    page_icon=":bar_chart:",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        "Get Help": "https://github.com/jupedsim/jpscore",
-        "Report a bug": "https://github.com/jupedsim/jpscore/issues",
-        "About": "Open source framework for simulating, analyzing and visualizing pedestrian dynamics",
-    },
-)
-
-
 def set_state_variables():
     if "bg_img" not in st.session_state:
         st.session_state.bg_img = None
@@ -484,6 +470,18 @@ def main():
 
 
 if __name__ == "__main__":
+    st.set_page_config(
+    page_title="JuPedSim-Analytics",
+    page_icon=":bar_chart:",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        "Get Help": "https://github.com/jupedsim/jpscore",
+        "Report a bug": "https://github.com/jupedsim/jpscore/issues",
+        "About": "Open source framework for simulating, analyzing and visualizing pedestrian dynamics",
+    },
+)
+
     # st.header(":information_source: Analytics dashboard")
     over_theme = {"txc_inactive": "#FFFFFF"}
     app = HydraApp(
