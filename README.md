@@ -82,6 +82,7 @@ Therefore, define in the geometry transitions, such that the pedestrian fully pa
 - [x] RSET maps
 - [x] Accelerate calculation of N-T curves data
 - [x] N_T curves bidirectional flow
+- [x] Redesign of the UI usniig multipages https://github.com/TangleSpace/hydralit-example
 - [ ] Density profiles slider: from and to frames
 - [ ] Use steady state form this script https://github.com/JuPedSim/jpsreport/blob/develop/scripts/SteadyState.py 
   See also Cumulative sum algorithm https://github.com/BMClab/BMC/blob/master/functions/detect_cusum.py

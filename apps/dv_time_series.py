@@ -13,11 +13,12 @@ from streamlit_drawable_canvas import st_canvas
 from hydralit import HydraHeadApp
 import pandas as pd
 import collections
-
+import logging
 
 class dvTimeSeriesClass(HydraHeadApp):
-    def __init__(self, data, how_speed, geometry_wall, geominX, geomaxX, geominY, geomaxY, fps):
 
+    def __init__(self, title, data, how_speed, geometry_wall, geominX, geomaxX, geominY, geomaxY, fps, newdata):
+        self.title = title
         self.how_speed = how_speed
         self.fps = fps
         self.data = data
@@ -26,10 +27,11 @@ class dvTimeSeriesClass(HydraHeadApp):
         self.geominY = geominY
         self.geomaxY = geomaxY
         self.geometry_wall = geometry_wall
-
+        self.newdata = newdata
 
     def init_sidebar(self):
-        frames = np.unique(self.data[:, 1])        
+        logging.info(f"newdata {self.newdata}")
+        frames = np.unique(self.data[:, 1])
         choose_d_method = st.sidebar.radio(
             "Density method",
             ["Classic", "Gaussian"],
@@ -42,7 +44,7 @@ class dvTimeSeriesClass(HydraHeadApp):
         )
         sample = st.sidebar.slider(
             "Sample rate",
-            min_value=1,
+            min_value=2,
             max_value=int(np.max(frames * 0.2)),
             value=10,
             step=5,
@@ -71,7 +73,27 @@ class dvTimeSeriesClass(HydraHeadApp):
             drawing_mode = "transform"
 
         stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 3)
-        bg_img, img_width, img_height, dpi, scale = dvTimeSeriesClass.bg_img(self)        
+
+
+        #-------
+        if st.session_state.bg_img is None:
+            logging.info("START new canvas")
+            bg_img, img_width, img_height, dpi, scale = dvTimeSeriesClass.bg_img(self)
+            st.session_state.scale = scale
+            st.session_state.dpi = dpi
+            st.session_state.img_width = img_width
+            st.session_state.img_height = img_height
+            st.session_state.bg_img = bg_img
+        else:
+            bg_img = st.session_state.bg_img
+            scale = st.session_state.scale
+            dpi = st.session_state.dpi
+            img_height = st.session_state.img_height
+            img_width = st.session_state.img_width
+
+        if 'canvas' in globals():
+            del canvas
+            
         canvas = st_canvas(
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=stroke_width,
@@ -136,7 +158,8 @@ class dvTimeSeriesClass(HydraHeadApp):
 
 
     def bg_img(self):
-        width, height, scale = dg.get_scaled_dimensions(self.geominX, self.geomaxX, self.geominY, self.geomaxY)        
+        logging.info("enter bg_img")
+        width, height, scale = dg.get_scaled_dimensions(self.geominX, self.geomaxX, self.geominY, self.geomaxY)
         fig, ax = plt.subplots(figsize=(width, height))
         fig.set_dpi(100)
         ax.set_xlim((0, width))
@@ -166,15 +189,18 @@ class dvTimeSeriesClass(HydraHeadApp):
         return bg_img, img_width, img_height, fig.dpi, scale
 
 
-    def run(self):                
+    def run(self):
         info_timeseries = st.expander(
             "Documentation: Density/Speed Time Series (click to expand)"
         )
+        st.info("Draw a measurement area with **Area** and move it if necessary with **Transform**")
+        sample, choose_d_method, gauss_width, canvas, dpi, scale, img_height = dvTimeSeriesClass.init_sidebar(self)
+        #canvas
+        
         with info_timeseries:
             doc.doc_timeseries()
 
-        sample, choose_d_method, gauss_width, canvas, dpi, scale, img_height = dvTimeSeriesClass.init_sidebar(self)
-        canvas
+        
         frames = np.unique(self.data[:, 1])
         rects = dvTimeSeriesClass.draw_rects(self, canvas, img_height, dpi, scale)
         for ir in range(len(rects)):

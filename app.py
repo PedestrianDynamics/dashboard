@@ -26,6 +26,7 @@ from apps import (
     stats,
     time_series,
     trajectories,
+    loader
 )
 
 path = Path(__file__)
@@ -60,6 +61,21 @@ st.set_page_config(
 
 
 def set_state_variables():
+    if "bg_img" not in st.session_state:
+        st.session_state.bg_img = None
+
+    if "scale" not in st.session_state:
+        st.session_state.scale = 0.5
+
+    if "dpi" not in st.session_state:
+        st.session_state.dpi = 100
+
+    if "img_height" not in st.session_state:
+        st.session_state.img_height = 100
+
+    if "img_width" not in st.session_state:
+        st.session_state.img_width = 100
+
     if "old_data" not in st.session_state:
         st.session_state.old_data = ""
 
@@ -264,6 +280,7 @@ def main():
                     st.session_state.fps = fps
                     st.session_state.speed_index = speed_index
                     st.session_state.header_traj = header_traj
+                    st.session_state.bg_img = None
                     logging.info("Done loading trajectories")
 
             else:
@@ -417,6 +434,7 @@ def main():
                     data[:, st.session_state.speed_index] /= 100
 
         # add all your application classes here
+        app.add_loader_app(loader.MyLoadingApp())
         app.add_app("About", icon="ℹ️", app=about.AboutClass())
         app.add_app(
             "Data summary", icon="🔢", app=stats.StatClass(data, unit, fps, header_traj)
@@ -460,7 +478,7 @@ def main():
             "Time series",
             icon="🟠",
             app=dv_time_series.dvTimeSeriesClass(
-                data, how_speed, geometry_wall, geominX, geomaxX, geominY, geomaxY, fps
+                "Time series", data, how_speed, geometry_wall, geominX, geomaxX, geominY, geomaxY, fps, new_data
             ),
         )
 

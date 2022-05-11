@@ -110,7 +110,7 @@ def plot_flow(Frames, Nums, Nums_positiv, Nums_negativ, fps):
         x_title="Time / s",
         y_title="J / 1/s",
     )
-    maxx = -1
+    maxx = -1    
     for i, _frames in Frames.items():
         nums = Nums[i]
         nums_positiv = Nums_positiv[i]
@@ -126,6 +126,8 @@ def plot_flow(Frames, Nums, Nums_positiv, Nums_negativ, fps):
         J = (nums - 1) / times
         J_positiv = (nums_positiv - 1) / times
         J_negativ = (nums_negativ - 1) / times
+        J_negativ = J_negativ[J_negativ > 0]
+        J_positiv = J_positiv[J_positiv > 0]
         trace = go.Scatter(
             x=np.hstack(([0, times[0]], times)),
             y=np.hstack(([0, 0], J)),
@@ -134,7 +136,7 @@ def plot_flow(Frames, Nums, Nums_positiv, Nums_negativ, fps):
             name=f"ID: {i}",
             line=dict(width=3),
         )
-        if J_positiv.any and J_negativ.any:
+        if J_positiv.any() and J_negativ.any():            
             trace_p = go.Scatter(
                 x=np.hstack(([0, times[0]], times)),
                 y=np.hstack(([0, 0], J_positiv)),
@@ -164,11 +166,13 @@ def plot_flow(Frames, Nums, Nums_positiv, Nums_negativ, fps):
     return fig
 
 
-#@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
     frames_initial_speed_mean = 4 * fps  # Adrian2020a 4 s
     logging.info("plot time_distance curve")
     peds = _frames[:, 0].astype(int)
+    num_peds = int(num_peds)
+    sample = int(sample)
     frames = _frames[:, 1]
     peds = peds[:num_peds]
     fig = make_subplots(
@@ -180,7 +184,6 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
         x_title="Distance to entrance / m",
         y_title="Time to entrance / s",
     )
-
     xstart = []
     ystart = []
     colors = []
@@ -210,12 +213,11 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
             line=dict(width=0.3, color="black"),
         )
         fig.append_trace(trace, row=1, col=1)
-
+    
     trace_start = go.Scatter(
         x=xstart,
         y=ystart,
         mode="markers",
-        name=f"Agent: {p:.0f}",
         showlegend=False,
         marker=dict(
             size=5,
