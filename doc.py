@@ -290,17 +290,17 @@ def docs():
         - **Data summary**: Gives a brief overview of the imported trajectory file.
         - **Trajectories**: Plot trajectories and measurement lines. Optionally, a single pedestrian can be plotted as well.
         - **Jam**: Some relevant Jam-quantities are calculated and plotted, e.g.:
-          - Jam waiting time ([Sonntag2020](https://fz-juelich.sciebo.de/s/rqcrLVT5v7R9icI))
-          - Jam life span ([Sonntag2020](https://fz-juelich.sciebo.de/s/rqcrLVT5v7R9icI))
+          - Jam waiting time [[Sonntag2020](https://fz-juelich.sciebo.de/s/rqcrLVT5v7R9icI)].
+          - Jam life span [[Sonntag2020](https://fz-juelich.sciebo.de/s/rqcrLVT5v7R9icI)].
         - **Statistics**: Some common quantities are calculated at **measurement lines** and plotted. These are:
           - N-T curves.
-          - T-D (time-distance) curves. ([Adrian2020](https://collective-dynamics.eu/index.php/cod/article/view/A50))
+          - T-D (time-distance) curves [[Adrian2020](https://collective-dynamics.eu/index.php/cod/article/view/A50)].
           - Flow vs time.
-          - Survival function. [Xu2021](https://www.sciencedirect.com/science/article/abs/pii/S0968090X21004502)
-          - Discharge function: The change of the number of pedestrians inside a room w.r.t to time.       
-        - **Profiles**: Density and speed heatmaps ([Zhang2012](https://arxiv.org/abs/1112.5299)). Different methods for density and speed calculation. See documentation inside the tab.
+          - Survival function  [[Xu2021](https://www.sciencedirect.com/science/article/abs/pii/S0968090X21004502)].
+          - Discharge function: The change of the number of pedestrians inside a room w.r.t to time.
+        - **Profiles**: Density and speed heatmaps [[Zhang2012](https://arxiv.org/abs/1112.5299)]. Different methods for density and speed calculation. See documentation inside the tab.
         - **Time-series**:  Density, speed and flow time series. Here, you can draw measurement areas and calculate these quantities inside.
-        - **RSET** heatmaps ([Schroeder2017](http://elpub.bib.uni-wuppertal.de/servlets/DerivateServlet/Derivate-7013/dd1611.pdf))
+        - **RSET** heatmaps [[Schroeder2017](http://elpub.bib.uni-wuppertal.de/servlets/DerivateServlet/Derivate-7013/dd1611.pdf)]
         """, unsafe_allow_html=True
     )
 
