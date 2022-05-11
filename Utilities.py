@@ -34,7 +34,6 @@ examples = {
         "WDG_09",
         "https://fz-juelich.sciebo.de/s/oTG7vRCcQyYJ08q/download",
         "https://fz-juelich.sciebo.de/s/lDuCQlJkwh9Of1C/download",
-        "",
     ],
     "Corner (exp)": [
         "jps_eo-300-300-300_combined_MB",
@@ -636,11 +635,11 @@ def compute_speed_and_angle(data, fps, df=10):
 
 
 def calculate_speed_average(
-    geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y, speed
+        geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y, speed
 ):
     """Calculate speed average over time"""
     xbins = np.arange(geominX, geomaxX + dx, dx)
-    ybins = np.arange(geominY, geomaxY + dx, dx)
+    ybins = np.arange(geominY, geomaxY + dy, dy)
     ret = stats.binned_statistic_2d(
         X,
         Y,
@@ -652,12 +651,12 @@ def calculate_speed_average(
 
 
 def calculate_density_average_weidmann(
-    geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y, speed
+        geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y, speed
 ):
     """Calculate density using Weidmann(speed)"""
     density = inv_weidmann(speed)
     xbins = np.arange(geominX, geomaxX + dx, dx)
-    ybins = np.arange(geominY, geomaxY + dx, dx)
+    ybins = np.arange(geominY, geomaxY + dy, dy)
     ret = stats.binned_statistic_2d(
         X,
         Y,
@@ -669,16 +668,16 @@ def calculate_density_average_weidmann(
 
 
 def calculate_density_average_classic(
-    geominX, geomaxX, geominY, geomaxY, dx, nframes, X, Y
+        geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y
 ):
     """Calculate classical method
 
     Density = mean_time(N/A_i)
     """
-
+    
     xbins = np.arange(geominX, geomaxX + dx, dx)
-    ybins = np.arange(geominY, geomaxY + dx, dx)
-    area = dx * dx
+    ybins = np.arange(geominY, geomaxY + dy, dy)
+    area = dx * dy
     ret = stats.binned_statistic_2d(
         X,
         Y,
@@ -686,19 +685,18 @@ def calculate_density_average_classic(
         "count",
         bins=[xbins, ybins],
     )
-
     return np.nan_to_num(ret.statistic.T) / nframes / area
 
 
-def calculate_density_frame_classic(geominX, geomaxX, geominY, geomaxY, dx, X, Y):
+def calculate_density_frame_classic(geominX, geomaxX, geominY, geomaxY, dx, dy, X, Y):
     """Calculate classical method
 
     Density = mean_time(N/A_i)
     """
 
     xbins = np.arange(geominX, geomaxX + dx, dx)
-    ybins = np.arange(geominY, geomaxY + dx, dx)
-    area = dx * dx
+    ybins = np.arange(geominY, geomaxY + dy, dy)
+    area = dx * dy
     ret = stats.binned_statistic_2d(
         X,
         Y,
@@ -709,10 +707,10 @@ def calculate_density_frame_classic(geominX, geomaxX, geominY, geomaxY, dx, X, Y
     return np.nan_to_num(ret.statistic.T) / area
 
 
-def calculate_RSET(geominX, geomaxX, geominY, geomaxY, dx, X, Y, time, func):
+def calculate_RSET(geominX, geomaxX, geominY, geomaxY, dx, dy, X, Y, time, func):
     """Calculate RSET according to 5.5.1 RSET Maps in Schroder2017a"""
     xbins = np.arange(geominX, geomaxX + dx, dx)
-    ybins = np.arange(geominY, geomaxY + dx, dx)
+    ybins = np.arange(geominY, geomaxY + dy, dy)
     ret = stats.binned_statistic_2d(
         X,
         Y,
@@ -762,7 +760,7 @@ def xdensYdens(lattice_x, lattice_y, x_array, y_array):
 
 
 def calculate_density_average_gauss(
-    geominX, geomaxX, geominY, geomaxY, dx, nframes, width, X, Y
+        geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, width, X, Y
 ):
     """
     Calculate density using Gauss method

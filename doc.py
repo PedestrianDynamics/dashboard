@@ -1,5 +1,5 @@
 import streamlit as st
-
+from streamlit.components.v1 import html
 
 def doc_plots():
     st.write(
@@ -169,12 +169,18 @@ def doc_speed():
 def doc_timeseries():
     st.write(
         """
-    Time series of the density and the speed are calculated within the measurement area (a square).
-    When the option **Profiles** is activated, you can define measurement are by:
-    - $x$-position of the center
-    - $y$-position of the center
-    - side length of the square
+    Time series of the density and the speed are calculated within a measurement rectangle with side lengths $dx$ and $dy$.
 
+    Density and speed are calculated as defined in `Profiles`, whereas flow is defined as:
+    """)
+
+    st.latex(r"""
+    J = \rho\cdot v / l,
+""")
+    st.write(
+        """
+        where $l$ is a constant between $dx$ and $dy$.
+        
     Depending on the frames per seconds of the trajectories, it might be better to increase the sampling rate
     (`sample`) to speed up rendering the plots.
     """
@@ -263,25 +269,39 @@ The speed is calculated from $\\rho_i$ by Eq. (1).
 def docs():
     st.write(
         """
-        This is an interactive visual tool for explorative analysis and inspection of pedestrian dynamics.
-        Show statistics and make plots extracted from [jpscore](https://github.com/jupedsim/jpscore)-simulations and [experimental data](https://ped.fz-juelich.de/db/).
+        ### :information_source: About this dashboard
+        
+        This is an interactive visual tool for explorative analysis and inspection of pedestrian dynamics based on trajectories.
+        The input data are
 
-        The input data are trajectories of pedestrians, that can be [jpscore](https://github.com/jupedsim/jpscore)-simulations or [experimental data](https://ped.fz-juelich.de/db/).
+        - Trajectories of pedestrians. The file can be a [jpscore](https://github.com/jupedsim/jpscore)-simulation or [experimental data](https://ped.fz-juelich.de/db/).
+        - A geometry file.
 
-        The following features are measured:
-        - N-T curves at lines
-        - T-D (time-distance) curves at lines (Adrian2020).
-        - Flow vs time at lines
-        - Survival function at lines
-        - Discharge function
-        - Jam waiting time (Sonntag2018)
-        - Jam life span (Sonntag2018)
-        - RSET heatmaps (Schroder2017a)
-        - Density and speed heatmaps (Zhang2012)
-        - Density and speed time series
-        - Different methods for density and speed calculation
-        - Plot trajectories and individual plots
-        """
+        ### :point_left: Examples
+
+        To use this dashboard, you can either
+        1. Explore one of the provided examples.
+        2. Or upload your own trajectory and geometry files.
+
+        ### :bar_chart: Measurements
+
+        The dashboard is organized in decoupled tabs that can be used independently from each others.
+
+        - **Data summary**: Gives a brief overview of the imported trajectory file.
+        - **Trajectories**: Plot trajectories and measurement lines. Optionally, a single pedestrian can be plotted as well.
+        - **Jam**: Some relevant Jam-quantities are calculated and plotted, e.g.:
+          - Jam waiting time ([Sonntag2020](https://fz-juelich.sciebo.de/s/rqcrLVT5v7R9icI))
+          - Jam life span ([Sonntag2020](https://fz-juelich.sciebo.de/s/rqcrLVT5v7R9icI))
+        - **Statistics**: Some common quantities are calculated at measurement lines and plotted. These are:
+          - N-T curves at lines
+          - T-D (time-distance) curves at lines ([Adrian2020](https://collective-dynamics.eu/index.php/cod/article/view/A50))
+          - Flow vs time at lines
+          - Survival function at lines[Xu2021](https://www.sciencedirect.com/science/article/abs/pii/S0968090X21004502)
+          - Discharge function        
+        - **Profiles**: Density and speed heatmaps ([Zhang2012](https://arxiv.org/abs/1112.5299)). Different methods for density and speed calculation. See documentation inside the tab.
+        - **Time-series**:  Density, speed and flow time series. Here, you can draw measurement areas and calculate these quantities inside.
+        - **RSET** heatmaps ([Schroeder2017](http://elpub.bib.uni-wuppertal.de/servlets/DerivateServlet/Derivate-7013/dd1611.pdf))
+        """, unsafe_allow_html=True
     )
 
 
