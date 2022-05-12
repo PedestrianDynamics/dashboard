@@ -29,6 +29,10 @@ class RsetClass(HydraHeadApp):
         interpolation = st.sidebar.radio(
             "Smooth", methods, help="Smoothen the heatmaps"
         )
+        st.write(
+             "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+             unsafe_allow_html=True,
+        )
         if interpolation == "off":
             interpolation = "false"
         else:

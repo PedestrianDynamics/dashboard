@@ -18,7 +18,7 @@ class StatClass(HydraHeadApp):
         self.header_traj = header_traj
 
     def run(self):
-        st.markdown("### :bar_chart: Summary of the trajectory data")
+        st.markdown("### :round_pushpin: Summary of the trajectory data")
         frames = np.unique(self.data[:, 1])
         peds = np.unique(self.data[:, 0]).astype(int)
         nagents = len(peds)
@@ -31,8 +31,8 @@ class StatClass(HydraHeadApp):
         Evac-time: {np.max(frames)/self.fps} [s]
         """
         st.info(msg)
-        st.markdown("### :bar_chart: Trajectories")
+        st.markdown("### :chart_with_upwards_trend: Trajectories")
         with Utilities.profile("show_table"):
             logging.info(f"show table with {self.data.shape}")
-            fig = plots.show_trajectories_table(self.data[:, 0:5])
+            fig = plots.show_trajectories_table(self.data[:10, 0:5])
             st.plotly_chart(fig, use_container_width=True)

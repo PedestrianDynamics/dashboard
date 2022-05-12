@@ -397,10 +397,9 @@ def main():
 
         pl.empty()
         app.add_loader_app(loader.MyLoadingApp())
-        app.add_app("About", icon="ℹ️", app=about.AboutClass())
         app.add_loader_app(loader.MyLoadingApp())
         app.add_app(
-            "Data summary", icon="🔢", app=stats.StatClass(data, unit, fps, header_traj)
+            "Summary", icon="🔢", app=stats.StatClass(data, unit, fps, header_traj)
         )
         app.add_app(
             "Trajectories",
@@ -461,6 +460,7 @@ def main():
                 data, geominX, geomaxX, geominY, geomaxY, geometry_wall, fps
             ),
         )
+        app.add_app("About", icon="ℹ️", app=about.AboutClass())
         app.run()
         c1, c2 = st.columns((1, 1))
 
