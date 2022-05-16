@@ -135,12 +135,13 @@ def main():
     set_state_variables()
     st.sidebar.image("figs/jupedsim.png", use_column_width=True)
     gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
-    repo = "https://github.com/chraibi/jupedsim-dashboard"
+    repo = "https://github.com/PedestrianDynamics/dashboard"
     repo_name = f"[![Repo]({gh})]({repo})"
     c1, c2 = st.sidebar.columns((1, 1))
     c1.markdown(repo_name, unsafe_allow_html=True)
     c2.write(
-        "[![Star](https://img.shields.io/github/stars/chraibi/jupedsim-dashboard.svg?logo=github&style=social)](https://gitHub.com/chraibi/jupedsim-dashboard)"
+
+        "[![Star](https://img.shields.io/github/stars/PedestrianDynamics/dashboard.svg?logo=github&style=social)](https://gitHub.com/PedestrianDynamics/dashboard)"
     )
 
     from_examples = st.sidebar.selectbox(

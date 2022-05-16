@@ -1,4 +1,4 @@
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/chraibi/jupedsim-dashboard/main/app.py)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/pedestriandynamics/dashboard/main/app.py)
 [![Heroku](http://heroku-shields.herokuapp.com/jupedsim-dashboard)](https://jupedsim-dashboard.herokuapp.com/)
 
 
@@ -41,7 +41,7 @@ It is possible to draw:
 Lines and rectangle can be rotated and scaled.
 
 To try out:
-https://share.streamlit.io/chraibi/jupedsim-dashboard/main/draw_geometry.py
+https://share.streamlit.io/pedestriandynamics/dashboard/main/draw_geometry.py
 
 See a Demo:
 
@@ -65,7 +65,7 @@ Therefore, for jpscore-simulations, use the `optional_output`-option in the inif
 
 ## NT-curve 
 
-NT-curves and flow at lines (`transitions` or `[area_L](https://www.jupedsim.org/jpsreport_inifile#measurement-area))
+NT-curves and flow at lines (`transitions` or [area_L](https://www.jupedsim.org/jpsreport_inifile#measurement-area))
 are calculates be testing for every agent, if croses the line.
 Therefore, define in the geometry transitions, such that the pedestrian fully pass them. 
 

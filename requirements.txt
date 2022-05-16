@@ -7,4 +7,4 @@ numpy
 scipy
 plotly
 shapely
-git+https://github.com/Patarimi/hydralit.git
+git+https://github.com/chraibi/hydralit.git
