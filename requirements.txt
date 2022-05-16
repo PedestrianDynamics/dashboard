@@ -1,4 +1,4 @@
-streamlit==1.8
+streamlit
 streamlit_drawable_canvas==0.8.0
 lovely-logger
 pandas
