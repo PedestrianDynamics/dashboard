@@ -167,7 +167,7 @@ def plot_flow(Frames, Nums, Nums_positiv, Nums_negativ, fps):
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
+def plot_time_distance(_frames, data, line, i, fps, num_peds, sample, group_index):
     frames_initial_speed_mean = 4 * fps  # Adrian2020a 4 s
     logging.info("plot time_distance curve")
     peds = _frames[:, 0].astype(int)
@@ -188,7 +188,20 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
     ystart = []
     colors = []
     for p, toframe in zip(peds, frames):
+        
         ff = data[np.logical_and(data[:, 1] <= toframe, data[:, 0] == p)]
+        ped_group = data[data[:, 0] == p][0, group_index]
+        
+        if ped_group == 1:
+            color = "blue"
+        elif ped_group == 2:
+            color = "red"
+        elif ped_group == 3:
+            color = "green"
+        else:
+            color = "black"
+
+        print(p, ped_group, color)
         speed = np.mean(ff[:frames_initial_speed_mean,  st.session_state.speed_index])
         sc = speed
         xx = []
@@ -210,7 +223,7 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
             mode="lines",
             name=f"Agent: {p:.0f}",
             showlegend=False,
-            line=dict(width=0.3, color="black"),
+            line=dict(width=0.3, color=color),
         )
         fig.append_trace(trace, row=1, col=1)
     
@@ -219,6 +232,7 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample):
         y=ystart,
         mode="markers",
         showlegend=False,
+        name=f"Group: {ped_group:.0f}",
         marker=dict(
             size=5,
             color=colors,

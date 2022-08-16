@@ -211,6 +211,8 @@ def main():
                 logging.info("Trajectory data existing")
                 new_data = False
 
+            group_index = Utilities.get_index_group(string_data)
+            st.info(f"Group index: {group_index}")
             if Utilities.detect_jpscore(string_data):
                 # how_speed = sx.radio(
                 #    "source", ["from simulation", "from trajectory"]
@@ -427,7 +429,7 @@ def main():
             "Statistics",
             icon="📉 ",
             app=time_series.TimeSeriesClass(
-                data, disable_NT_flow, transitions, default, fps, name
+                data, disable_NT_flow, transitions, default, fps, name, group_index
             ),
         )
         app.add_app(

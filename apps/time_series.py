@@ -14,7 +14,7 @@ import logging
 
 
 class TimeSeriesClass(HydraHeadApp):
-    def __init__(self, data, disable_NT_flow, transitions, default, fps, name):
+    def __init__(self, data, disable_NT_flow, transitions, default, fps, name, group_index):
         self.data = data
         self.disable_NT_flow = disable_NT_flow
         self.frames = np.unique(self.data[:, 1])
@@ -23,6 +23,7 @@ class TimeSeriesClass(HydraHeadApp):
         self.default = default
         self.fps = fps
         self.name = name
+        self.group_index = group_index
 
     def init_sidebar(self):
         st.sidebar.header("📊 Summary curves")
@@ -160,6 +161,7 @@ class TimeSeriesClass(HydraHeadApp):
                             self.fps,
                             num_peds_TD,
                             sample_TD,
+                            self.group_index
                         )
                         st.plotly_chart(fig, use_container_width=True)
 
