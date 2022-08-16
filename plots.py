@@ -188,10 +188,8 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample, group_inde
     ystart = []
     colors = []
     for p, toframe in zip(peds, frames):
-        
         ff = data[np.logical_and(data[:, 1] <= toframe, data[:, 0] == p)]
         ped_group = data[data[:, 0] == p][0, group_index]
-        
         if ped_group == 1:
             color = "blue"
         elif ped_group == 2:
@@ -201,7 +199,6 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample, group_inde
         else:
             color = "black"
 
-        print(p, ped_group, color)
         speed = np.mean(ff[:frames_initial_speed_mean,  st.session_state.speed_index])
         sc = speed
         xx = []
