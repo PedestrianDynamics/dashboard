@@ -42,6 +42,13 @@ class TimeSeriesClass(HydraHeadApp):
             key="Flow",
             disabled=self.disable_NT_flow,
         )
+        choose_speed_PDF = choose_time_distance = c1.checkbox(
+            "vPDF",
+            value=True,
+            help="Plot PDF of speed",
+            key="vPDF",
+            disabled=self.disable_NT_flow,
+        )
         choose_time_distance = c1.checkbox(
             "T-D",
             value=True,
@@ -56,22 +63,26 @@ class TimeSeriesClass(HydraHeadApp):
             disabled=self.disable_NT_flow,
             key="Survival",
         )
-        num_peds_TD = st.sidebar.number_input(
-            "number pedestrians",
-            min_value=1,
-            max_value=len(self.peds),
-            value=int(0.3 * len(self.peds)),
-            step=1,
-            help="number of pedestrians to show in T-D",
-        )
-        sample_TD = st.sidebar.number_input(
-            "sample",
-            min_value=1,
-            max_value=int(0.1 * len(self.frames)),
-            value=int(0.01 * len(self.frames)),
-            step=1,
-            help="sample rate in T-D",
-        )
+        if choose_time_distance:
+            num_peds_TD = st.sidebar.number_input(
+                "number pedestrians",
+                min_value=1,
+                max_value=len(self.peds),
+                value=int(0.3 * len(self.peds)),
+                step=1,
+                help="number of pedestrians to show in T-D",
+            )
+            sample_TD = st.sidebar.number_input(
+                "sample",
+                min_value=1,
+                max_value=int(0.1 * len(self.frames)),
+                value=int(0.01 * len(self.frames)),
+                step=1,
+                help="sample rate in T-D",
+            )
+        else:
+            num_peds_TD = 0
+            sample_TD = 0
 
         selected_transitions = st.sidebar.multiselect(
             "Select transition",
@@ -86,6 +97,7 @@ class TimeSeriesClass(HydraHeadApp):
             choose_flow,
             choose_time_distance,
             choose_survival,
+            choose_speed_PDF,
             num_peds_TD,
             sample_TD,
         )
@@ -97,6 +109,7 @@ class TimeSeriesClass(HydraHeadApp):
             choose_flow,
             choose_time_distance,
             choose_survival,
+            choose_speed_PDF,
             num_peds_TD,
             sample_TD,
         ) = TimeSeriesClass.init_sidebar(self)
@@ -143,6 +156,11 @@ class TimeSeriesClass(HydraHeadApp):
                 )
                 c3.plotly_chart(fig, use_container_width=True)
 
+        if choose_speed_PDF:
+            fig = plots.plot_vpdf(self.data)
+            c1.plotly_chart(fig, use_container_width=True)
+
+        # second row
         c1, c2 = st.columns((1, 1))
         if choose_time_distance:
             with c1:

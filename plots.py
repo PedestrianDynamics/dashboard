@@ -9,6 +9,7 @@ import streamlit as st
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
 from shapely.geometry import LineString, Point
+from scipy import stats
 
 from Utilities import survival
 
@@ -259,7 +260,7 @@ def plot_peds_inside(frames, peds_inside, fps):
         y=peds_inside,
         mode="lines",
         name="<b>Discharge curve</b>",
-        showlegend=True,
+        showlegend=False,
         line=dict(width=3, color="royalblue"),
     )
     fig.append_trace(trace, row=1, col=1)
@@ -898,4 +899,33 @@ def plot_survival(Frames, fps):
         # range=[-1, 1]
     )
     fig.update_layout(hovermode="x")
+    return fig
+
+
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_vpdf(data):
+    logging.info("plot speed pdf")
+    speed = data[:, st.session_state.speed_index]
+    speed = np.unique(speed)
+    loc = speed.mean()
+    scale = speed.std()
+    pdf = stats.norm.pdf(speed, loc=loc, scale=scale)
+    print(len(pdf), pdf)
+    fig = make_subplots(
+        rows=1,
+        cols=1,
+        subplot_titles=["<b>PDF Speed</b>"],
+        x_title="Speed m / s",
+        y_title=r"PDF",
+    )
+
+    trace = go.Scatter(
+        x=speed,
+        y=pdf,
+        mode="lines",
+        showlegend=False,
+        line=dict(width=3),
+        )
+
+    fig.append_trace(trace, row=1, col=1)
     return fig
