@@ -910,7 +910,7 @@ def plot_vpdf(data):
     loc = speed.mean()
     scale = speed.std()
     pdf = stats.norm.pdf(speed, loc=loc, scale=scale)
-    print(len(pdf), pdf)
+    #print(len(pdf), pdf)
     fig = make_subplots(
         rows=1,
         cols=1,
@@ -928,4 +928,161 @@ def plot_vpdf(data):
         )
 
     fig.append_trace(trace, row=1, col=1)
+    return fig
+
+
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_pdf(x, y, title, xlabel):
+    logging.info(f"plot pdf {title}")
+    x = np.unique(x)
+    fig = make_subplots(
+        rows=1,
+        cols=1,
+        subplot_titles=[f"<b>{title}</b>"],
+        x_title=xlabel,
+        y_title=r"PDF",
+    )
+
+    trace = go.Scatter(
+        x=x,
+        y=y,
+        mode="lines",
+        showlegend=False,
+        line=dict(width=3),
+        )
+
+    fig.append_trace(trace, row=1, col=1)
+    return fig
+
+
+
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_areas(areas, frames, agent):
+    logging.info(f"plot areas")
+    fig = make_subplots(
+        rows=1,
+        cols=1,
+        subplot_titles=[f"<b>Agent {agent}</b>"],
+        x_title="frame",
+        y_title=r"Area / m^2",
+    )
+
+    trace = go.Scatter(
+        x=frames,
+        y=areas,
+        mode="lines",
+        showlegend=False,
+        line=dict(width=3),
+        )
+
+    fig.append_trace(trace, row=1, col=1)
+    return fig
+
+
+def plot_agents(agent,
+                frame,
+                data,
+                neighbors,
+                geo_walls,
+                min_x,
+                max_x,
+                min_y,
+                max_y,):
+    fig = make_subplots(
+        rows=1,
+        cols=1,
+        subplot_titles=[f"<b>Agent {agent} at Frame {frame} has {len(neighbors)} neighbors</b>"],
+        x_title="X",
+        y_title=r"Y",
+    )
+    for gw in geo_walls.keys():
+        trace_walls = go.Scatter(
+            x=geo_walls[gw][:, 0],
+            y=geo_walls[gw][:, 1],
+            showlegend=False,
+            mode="lines",
+            line=dict(color="black", width=2),
+        )        
+        fig.append_trace(trace_walls, row=1, col=1)
+
+
+        
+    rped = 0.2
+    data0 = data[data[:, 1] == frame]
+    x_agent, y_agent = data0[data0[:, 0] == agent][0, 2:4]
+    
+    
+    X = data0[:, 2]
+    Y = data0[:, 3]
+    X0 = neighbors[:, 0]
+    Y0 = neighbors[:, 1]
+    for x, y in zip(X, Y):
+        fig.add_shape(
+            type="circle",
+            xref="x",
+            yref="y",
+            x0=x - rped,
+            y0=y - rped,
+            x1=x + rped,
+            y1=y + rped,
+            fillcolor="Gray",
+            line_color="lightgray",
+        )
+
+    
+    
+    ind = np.argsort(X0)
+    #X0 = X0[ind]
+    #Y0 = Y0[ind]
+    # polygon = go.Scatter(
+    #     x=X0,
+    #     y=Y0,
+    #     showlegend=False,
+    #     mode="lines",
+    #     fill="toself",
+    #     line=dict(color="LightSeaGreen", width=2),
+    #     )   
+    
+    # fig.append_trace(polygon, row=1, col=1)
+    # plot neighbors
+    for x, y in zip(X0, Y0):
+        fig.add_shape(
+            type="circle",
+            xref="x",
+            yref="y",
+            x0=x - rped,
+            y0=y - rped,
+            x1=x + rped,
+            y1=y + rped,
+            fillcolor="PaleTurquoise",
+            line_color="LightSeaGreen",
+        )
+
+    # plot agent
+    fig.add_shape(
+        type="circle",
+        xref="x",
+        yref="y",
+        x0=x_agent - rped,
+        y0=y_agent - rped,
+        x1=x_agent + rped,
+        y1=y_agent + rped,
+        fillcolor="red",
+        line_color="firebrick",
+    )
+
+        
+
+    eps = 1
+    fig.update_yaxes(
+        range=[min_y - eps, max_y + eps],
+    )
+    fig.update_xaxes(
+        range=[min_x - eps, max_x + eps],
+    )
+  
+    fig.update_yaxes(
+        scaleanchor="x",
+        scaleratio=1,
+    )
     return fig

@@ -26,6 +26,7 @@ from apps import (
     stats,
     time_series,
     trajectories,
+    neighbors,
     loader,
 )
 
@@ -463,6 +464,11 @@ def main():
             ),
         )
         app.add_app("About", icon="ℹ️", app=about.AboutClass())
+        app.add_app("Neighbors", icon="👥", app=neighbors.NeighborsClass(
+            data,
+            geominX, geomaxX, geominY, geomaxY, geometry_wall
+        )
+                    )
         app.run()
         c1, c2 = st.columns((1, 1))
 

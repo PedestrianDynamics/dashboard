@@ -2,8 +2,6 @@ import contextlib
 import os
 import time
 from collections import defaultdict
-from shapely.geometry import Polygon
-from shapely.strtree import STRtree
 
 import lovely_logger as logging
 import numpy as np
@@ -12,7 +10,8 @@ import requests
 import streamlit as st
 from pandas import read_csv
 from scipy import stats
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, Polygon
+from sklearn.neighbors import KDTree
 
 # name
 # trajectory
@@ -74,7 +73,7 @@ examples = {
         "HC_BUW",
         "https://fz-juelich.sciebo.de/s/GgvVjc81lzmhTgv/download",
         "https://fz-juelich.sciebo.de/s/NikHJ6TIHCwSoUM/download",
-    ]
+    ],
 }
 
 
@@ -197,6 +196,7 @@ def get_index_group(traj_file):
                     return index
 
     return index
+
 
 def get_unit(traj_file):
     unit = "NOTHING"
@@ -398,7 +398,7 @@ def passing_frame(ped_data: np.array, line: LineString, fps: float) -> int:
         M = XY[im]
 
     # this is to ensure, that the pedestrian really passed *through* the line
-    line_buffer = line.buffer(1.3/fps, cap_style=2)
+    line_buffer = line.buffer(1.3 / fps, cap_style=2)
     if Point(XY[i1]).within(line_buffer):
         passed_line_at_frame = ped_data[i1, 1]
         sign = np.sign(np.cross(L1 - L2, XY[i1] - XY[i2]))
@@ -650,7 +650,7 @@ def compute_speed_and_angle(data, fps, df=10):
 
 
 def calculate_speed_average(
-        geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y, speed
+    geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y, speed
 ):
     """Calculate speed average over time"""
     xbins = np.arange(geominX, geomaxX + dx, dx)
@@ -666,7 +666,7 @@ def calculate_speed_average(
 
 
 def calculate_density_average_weidmann(
-        geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y, speed
+    geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y, speed
 ):
     """Calculate density using Weidmann(speed)"""
     density = inv_weidmann(speed)
@@ -683,13 +683,13 @@ def calculate_density_average_weidmann(
 
 
 def calculate_density_average_classic(
-        geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y
+    geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y
 ):
     """Calculate classical method
 
     Density = mean_time(N/A_i)
     """
-    
+
     xbins = np.arange(geominX, geomaxX + dx, dx)
     ybins = np.arange(geominY, geomaxY + dy, dy)
     area = dx * dy
@@ -775,7 +775,7 @@ def xdensYdens(lattice_x, lattice_y, x_array, y_array):
 
 
 def calculate_density_average_gauss(
-        geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, width, X, Y
+    geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, width, X, Y
 ):
     """
     Calculate density using Gauss method
@@ -922,10 +922,10 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
             trans_used[i] = False
             if i in selected_transitions:
                 line = LineString(t)
-                #len_line = line.length
+                # len_line = line.length
                 for ped in peds:
                     ped_data = data[data[:, 0] == ped]
-                    #frame = passing_frame(ped_data, line, fps, len_line)
+                    # frame = passing_frame(ped_data, line, fps, len_line)
                     frame, sign = passing_frame(ped_data, line, fps)
                     if frame >= 0:
                         tstats[i].append([ped, frame, sign])
@@ -949,18 +949,28 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
                     cum_num_negativ[i] = np.cumsum(tmp_negativ)
                     flow = (cum_num[i][-1] - 1) / (arrivals[-1] - arrivals[0]) * fps
                     if arrivals_positiv.size:
-                        flow_positiv = (cum_num_positiv[i][-1] - 1) / (arrivals_positiv[-1] - arrivals_positiv[0]) * fps
+                        flow_positiv = (
+                            (cum_num_positiv[i][-1] - 1)
+                            / (arrivals_positiv[-1] - arrivals_positiv[0])
+                            * fps
+                        )
                     else:
                         flow_positiv = 0
 
                     if arrivals_negativ.size:
-                        flow_negativ = (cum_num_negativ[i][-1] - 1) / (arrivals_negativ[-1] - arrivals_negativ[0]) * fps
+                        flow_negativ = (
+                            (cum_num_negativ[i][-1] - 1)
+                            / (arrivals_negativ[-1] - arrivals_negativ[0])
+                            * fps
+                        )
                     else:
                         flow_negativ = 0
                     # with profile("rolling flow: "):
                     #     mean_flow, std_flow = rolling_flow(arrivals, fps, windows=100)
 
-                    max_len = max(max_len, cum_num_positiv[i].size, cum_num_negativ[i].size)
+                    max_len = max(
+                        max_len, cum_num_positiv[i].size, cum_num_negativ[i].size
+                    )
                     msg += f"Transition {i}: length {line.length:.2f}, flow+: {flow_positiv:.2f}, flow-: {flow_negativ:.2f} flow: {flow:.2f} [1/s],  specific flow: {flow/line.length:.2f} [1/s/m] \n \n"
                 else:
                     msg += (
@@ -1011,3 +1021,46 @@ def peds_inside(data):
         p_inside.append(len(d))
 
     return p_inside
+
+
+def get_neighbors_at_frame(frame, data, k):
+    at_frame = data[data[:, 1] == frame]
+    points = at_frame[:, 2:4]
+    tree = KDTree(points)
+    if k < len(points):
+        nearest_dist, nearest_ind = tree.query(points, k)
+        return nearest_dist, nearest_ind
+    else:
+        return np.array([]), np.array([])
+
+
+def get_neighbors_special_agent_area(agent, frame, data, nearest_dist, nearest_ind):
+
+    at_frame = data[data[:, 1] == frame]
+    points = at_frame[:, 2:4]
+    if (at_frame[:, 0] == agent).any():
+        agent_index = np.where(at_frame[:, 0] == agent)[0][0]
+        mask = nearest_ind[:, 0] == agent_index
+        neighbors_ind = nearest_ind[mask][0, 1:]
+        neighbors_dist = nearest_dist[mask][0, 1:]
+        neighbors = np.array([points[i] for i in neighbors_ind])
+
+    else:
+        return np.array([]), 0
+
+    if len(neighbors) > 2:
+        polygon = Polygon(neighbors)
+        area = polygon.area
+    else:
+        area = 0
+
+    return neighbors, area
+
+
+def get_neighbors_pdf(nearest_dist):
+    distances = np.unique(nearest_dist)
+    loc = distances.mean()
+    scale = distances.std()
+    distances = np.hstack(([0, 0], distances))
+    pdf = stats.norm.pdf(distances, loc=loc, scale=scale)
+    return pdf

@@ -139,7 +139,7 @@ class TimeSeriesClass(HydraHeadApp):
                     self.fps,
                 )
 
-        c1, c2, c3 = st.columns((1, 1, 1))
+        c1, c2 = st.columns((1, 1))
         if choose_NT:
             peds_inside = Utilities.peds_inside(self.data)
             fig1 = plots.plot_peds_inside(self.frames, peds_inside, self.fps)
@@ -154,7 +154,7 @@ class TimeSeriesClass(HydraHeadApp):
                 fig = plots.plot_flow(
                     tstats, cum_num, cum_num_positiv, cum_num_negativ, self.fps
                 )
-                c3.plotly_chart(fig, use_container_width=True)
+                c2.plotly_chart(fig, use_container_width=True)
 
         if choose_speed_PDF:
             fig = plots.plot_vpdf(self.data)
