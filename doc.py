@@ -64,10 +64,14 @@ def doc_neighbors():
     The nearest neighbors of pedestrians are retrieved using the algorithm `sklearn.neighbors.KDTree` for fast
     calculations.
     This module shows the following statistics:
-    - For a certain pedestrian `i`, show the time serie of the area formed by its neighbors
-    - Show the PDF of distances at a certain frame `fr`.
-    - Show the PDF of distances for all frames.
-        
+    - **For a pedestrian** $i$:
+       - show the time serie of the area formed by its neighbors
+       - show the time serie of its contact index according to Eq. (4) in https://www.mdpi.com/2071-1050/12/22/9385
+
+    - **For all pedestrians**:
+       - show the PDF of distances at a certain frame `fr`.
+       - show the PDF of distances for all frames.
+       - show time serie of all distances. 
     """
     )
 

@@ -10,6 +10,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
 from shapely.geometry import LineString, Point
 from scipy import stats
+from scipy.spatial import ConvexHull
 
 from Utilities import survival
 
@@ -932,7 +933,7 @@ def plot_vpdf(data):
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_pdf(x, y, title, xlabel):
+def plot_x_y(x, y, title, xlabel, ylabel):
     logging.info(f"plot pdf {title}")
     x = np.unique(x)
     fig = make_subplots(
@@ -940,7 +941,7 @@ def plot_pdf(x, y, title, xlabel):
         cols=1,
         subplot_titles=[f"<b>{title}</b>"],
         x_title=xlabel,
-        y_title=r"PDF",
+        y_title=ylabel,
     )
 
     trace = go.Scatter(
@@ -949,6 +950,7 @@ def plot_pdf(x, y, title, xlabel):
         mode="lines",
         showlegend=False,
         line=dict(width=3),
+        fill="none"  #"tonexty"
         )
 
     fig.append_trace(trace, row=1, col=1)
@@ -973,6 +975,7 @@ def plot_areas(areas, frames, agent):
         mode="lines",
         showlegend=False,
         line=dict(width=3),
+        fill="none"
         )
 
     fig.append_trace(trace, row=1, col=1)
@@ -1007,7 +1010,7 @@ def plot_agents(agent,
 
 
         
-    rped = 0.2
+    rped = 0.1
     data0 = data[data[:, 1] == frame]
     x_agent, y_agent = data0[data0[:, 0] == agent][0, 2:4]
     
@@ -1031,19 +1034,20 @@ def plot_agents(agent,
 
     
     
-    ind = np.argsort(X0)
-    #X0 = X0[ind]
-    #Y0 = Y0[ind]
-    # polygon = go.Scatter(
-    #     x=X0,
-    #     y=Y0,
-    #     showlegend=False,
-    #     mode="lines",
-    #     fill="toself",
-    #     line=dict(color="LightSeaGreen", width=2),
-    #     )   
+    hull = ConvexHull(neighbors)
+    X00 = neighbors[hull.vertices,0]
+    Y00 = neighbors[hull.vertices,1]
+    polygon = go.Scatter(
+        x=X00,
+        y=Y00,
+        showlegend=False,
+        mode="lines",
+        fill="toself",
+        name=f"ConvexHull for pedestrian {agent}",
+        line=dict(color="LightSeaGreen", width=2),
+        )   
     
-    # fig.append_trace(polygon, row=1, col=1)
+    fig.append_trace(polygon, row=1, col=1)
     # plot neighbors
     for x, y in zip(X0, Y0):
         fig.add_shape(
@@ -1068,6 +1072,7 @@ def plot_agents(agent,
         x1=x_agent + rped,
         y1=y_agent + rped,
         fillcolor="red",
+        name=f"Agent: {agent:0.0f}",
         line_color="firebrick",
     )
 

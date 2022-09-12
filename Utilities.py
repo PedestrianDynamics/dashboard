@@ -1034,19 +1034,20 @@ def get_neighbors_at_frame(frame, data, k):
         return np.array([]), np.array([])
 
 
-def get_neighbors_special_agent_area(agent, frame, data, nearest_dist, nearest_ind):
+def get_neighbors_special_agent_data(agent, frame, data, nearest_dist, nearest_ind):
 
     at_frame = data[data[:, 1] == frame]
     points = at_frame[:, 2:4]
+    Ids = at_frame[:, 0]
     if (at_frame[:, 0] == agent).any():
         agent_index = np.where(at_frame[:, 0] == agent)[0][0]
         mask = nearest_ind[:, 0] == agent_index
         neighbors_ind = nearest_ind[mask][0, 1:]
         neighbors_dist = nearest_dist[mask][0, 1:]
         neighbors = np.array([points[i] for i in neighbors_ind])
-
+        neighbors_ids =  np.array([Ids[i] for i in neighbors_ind])
     else:
-        return np.array([]), 0
+        return np.array([]), np.array([]), 0, np.array([])
 
     if len(neighbors) > 2:
         polygon = Polygon(neighbors)
@@ -1054,7 +1055,7 @@ def get_neighbors_special_agent_area(agent, frame, data, nearest_dist, nearest_i
     else:
         area = 0
 
-    return neighbors, area
+    return neighbors, neighbors_ids, area, neighbors_dist
 
 
 def get_neighbors_pdf(nearest_dist):
