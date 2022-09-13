@@ -185,11 +185,9 @@ def detect_jpscore(traj_file):
 
 
 def get_index_group(traj_file):
-    print("enter get index group")
     index = -1
     lines = traj_file.split("\n")
     for line in lines:
-        print(line)
         if "ID" in line and "GROUP" in line:
             line_split = line.split()
             for elem in line_split:
