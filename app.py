@@ -463,12 +463,15 @@ def main():
                 data, geominX, geomaxX, geominY, geomaxY, geometry_wall, fps
             ),
         )
-        app.add_app("About", icon="ℹ️", app=about.AboutClass())
         app.add_app("Neighbors", icon="👥", app=neighbors.NeighborsClass(
             data,
             geominX, geomaxX, geominY, geomaxY, geometry_wall
         )
                     )
+        # Add new tabs here
+        # ----
+        #
+        app.add_app("About", icon="ℹ️", app=about.AboutClass())
         app.run()
         c1, c2 = st.columns((1, 1))
 

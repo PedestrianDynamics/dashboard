@@ -10,7 +10,9 @@ import requests
 import streamlit as st
 from pandas import read_csv
 from scipy import stats
+import shapely
 from shapely.geometry import LineString, Point, Polygon
+#shapely.geometry.polygon.orient
 from sklearn.neighbors import KDTree
 
 # name
@@ -1038,6 +1040,7 @@ def get_neighbors_special_agent_data(agent, frame, data, nearest_dist, nearest_i
 
     at_frame = data[data[:, 1] == frame]
     points = at_frame[:, 2:4]
+    _speeds = at_frame[:,  st.session_state.speed_index]
     Ids = at_frame[:, 0]
     if (at_frame[:, 0] == agent).any():
         agent_index = np.where(at_frame[:, 0] == agent)[0][0]
@@ -1045,17 +1048,20 @@ def get_neighbors_special_agent_data(agent, frame, data, nearest_dist, nearest_i
         neighbors_ind = nearest_ind[mask][0, 1:]
         neighbors_dist = nearest_dist[mask][0, 1:]
         neighbors = np.array([points[i] for i in neighbors_ind])
-        neighbors_ids =  np.array([Ids[i] for i in neighbors_ind])
+        neighbors_ids = np.array([Ids[i] for i in neighbors_ind])
+        neighbors_speeds = np.array([_speeds[i] for i in neighbors_ind])
     else:
-        return np.array([]), np.array([]), 0, np.array([])
+        return np.array([]), np.array([]), 0, np.array([]), np.array([])
 
     if len(neighbors) > 2:
-        polygon = Polygon(neighbors)
-        area = polygon.area
+        my_polygon = Polygon(neighbors)
+        # my_polygon2 = shapely.geometry.polygon.orient(my_polygon, sign=1.0)
+        neighbors = np.array(my_polygon.exterior.coords)
+        area = my_polygon.area
     else:
         area = 0
 
-    return neighbors, neighbors_ids, area, neighbors_dist
+    return neighbors, neighbors_ids, area, neighbors_dist, neighbors_speeds
 
 
 def get_neighbors_pdf(nearest_dist):

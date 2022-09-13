@@ -933,7 +933,7 @@ def plot_vpdf(data):
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_x_y(x, y, title, xlabel, ylabel):
+def plot_x_y(x, y, title, xlabel, ylabel, threshold=0):
     logging.info(f"plot pdf {title}")
     x = np.unique(x)
     fig = make_subplots(
@@ -943,14 +943,24 @@ def plot_x_y(x, y, title, xlabel, ylabel):
         x_title=xlabel,
         y_title=ylabel,
     )
+    if threshold:
+        trace_threshold = go.Scatter(
+                x=[x[0], x[-1]],
+            y=[threshold, threshold],
+            mode="lines",
+            showlegend=True,
+            name="Social Distance = 1.5 m",
+            line=dict(width=4, dash="dash", color="gray"),
+        )
+        fig.append_trace(trace_threshold, row=1, col=1)
 
     trace = go.Scatter(
         x=x,
         y=y,
         mode="lines",
         showlegend=False,
-        line=dict(width=3),
-        fill="none"  #"tonexty"
+        line=dict(width=3, color="blue"),
+        fill="none"
         )
 
     fig.append_trace(trace, row=1, col=1)
@@ -1033,10 +1043,14 @@ def plot_agents(agent,
         )
 
     
-    
-    hull = ConvexHull(neighbors)
-    X00 = neighbors[hull.vertices,0]
-    Y00 = neighbors[hull.vertices,1]
+    if len(neighbors) > 2:
+        hull = ConvexHull(neighbors)
+        X00 = neighbors[hull.vertices,0]
+        Y00 = neighbors[hull.vertices,1]
+    else:
+        X00 = X0
+        Y00 = Y0
+
     polygon = go.Scatter(
         x=X00,
         y=Y00,
@@ -1045,8 +1059,8 @@ def plot_agents(agent,
         fill="toself",
         name=f"ConvexHull for pedestrian {agent}",
         line=dict(color="LightSeaGreen", width=2),
-        )   
-    
+        )
+
     fig.append_trace(polygon, row=1, col=1)
     # plot neighbors
     for x, y in zip(X0, Y0):
