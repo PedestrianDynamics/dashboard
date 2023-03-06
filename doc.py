@@ -1,5 +1,10 @@
 import streamlit as st
 from streamlit.components.v1 import html
+from pathlib import Path
+
+
+ROOT_DIR = Path(__file__).parent.absolute()
+
 
 def doc_plots():
     st.write(
@@ -38,7 +43,7 @@ def doc_plots():
     """
     )
     st.image(
-        "./figs/distance-time.png",
+        f"{ROOT_DIR}/figs/distance-time.png",
         caption="Relation between time and distance to entrance. Fig.6 in https://doi.org/10.1371/journal.pone.0177328.g006",
     )
 
@@ -53,14 +58,14 @@ def doc_plots():
     """
     )
     st.image(
-        "./figs/survival_function.png",
+        f"{ROOT_DIR}/figs/survival_function.png",
         caption="The survival functions w.r.t door widths. Fig.7 (a) in https://doi.org/10.1016/j.physa.2021.125934",
     )
 
 
 def doc_neighbors():
     st.write(
-    """
+        """
     The nearest neighbors of pedestrians are retrieved using the algorithm `sklearn.neighbors.KDTree` for fast
     calculations.
     This module shows the following statistics:
@@ -75,7 +80,7 @@ def doc_neighbors():
     """
     )
 
-    
+
 def doc_jam():
     st.write(
         """
@@ -190,11 +195,14 @@ def doc_timeseries():
     Time series of the density and the speed are calculated within a measurement rectangle with side lengths $dx$ and $dy$.
 
     Density and speed are calculated as defined in `Profiles`, whereas flow is defined as:
-    """)
+    """
+    )
 
-    st.latex(r"""
+    st.latex(
+        r"""
     J = \rho\cdot v / l,
-""")
+"""
+    )
     st.write(
         """
         where $l$ is a constant between $dx$ and $dy$.
@@ -254,17 +262,23 @@ def doc_profile():
     st.write(
         """#### Gaussian
 For every pedestrian $i$ the density field over the whole geometry is used. The local density $\\rho$ in the system can be defined as 
-        """)
-    st.latex(r"""
+        """
+    )
+    st.latex(
+        r"""
     \begin{equation}
     \rho(\mathbf{r;\mathbf{X}}) = \sum_{i=1}^{N} \delta(\mathbf{r}_i - \mathbf{r}), \quad \rho(\mathbf{r}) = \langle \rho(\mathbf{r}; \mathbf{X}) \rangle,
     \end{equation}
-    """)
-    st.write(r"""
+    """
+    )
+    st.write(
+        r"""
     where $\textbf{r}$ is the position and $\textbf{X}$ marks a configuration and $\delta(x)$ is approximated by a Gaussian
-    """)
-    
-    st.latex(r"""
+    """
+    )
+
+    st.latex(
+        r"""
     \begin{equation}
     \delta(x) =\frac{1}{\sqrt{\pi} a } \exp[-x^2/a^2].
     \end{equation}
@@ -319,12 +333,14 @@ def docs():
         - **Profiles**: Density and speed heatmaps [[Zhang2012](https://arxiv.org/abs/1112.5299)]. Different methods for density and speed calculation. See documentation inside the tab.
         - **Time-series**:  Density, speed and flow time series. Here, you can draw measurement areas and calculate these quantities inside.
         - **RSET** heatmaps [[Schroeder2017](http://elpub.bib.uni-wuppertal.de/servlets/DerivateServlet/Derivate-7013/dd1611.pdf)]
-        """, unsafe_allow_html=True
+        """,
+        unsafe_allow_html=True,
     )
 
 
 def doc_RSET():
-    st.write("""
+    st.write(
+        """
     RSET maps are defined in Schroeder2017 [1] are a spatial representation of the required safe egress time.
     In a regular grid, the time for which, the cell was last occupied by a pedestrian is calculated.
 
@@ -332,4 +348,5 @@ def doc_RSET():
     More importantly they  highlight the used exits in the scenario.
 
     [1]: Multivariate methods for life safety analysis in case of fire
-    """)
+    """
+    )

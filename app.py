@@ -47,6 +47,7 @@ def init_logger():
 
     return logfile
 
+
 def set_state_variables():
     if "bg_img" not in st.session_state:
         st.session_state.bg_img = None
@@ -134,14 +135,14 @@ def main():
     time_start = timeit.default_timer()
 
     set_state_variables()
-    st.sidebar.image("figs/jupedsim.png", use_column_width=True)
+
+    st.sidebar.image(f"{ROOT_DIR}/figs/jupedsim.png", use_column_width=True)
     gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
     repo = "https://github.com/PedestrianDynamics/dashboard"
     repo_name = f"[![Repo]({gh})]({repo})"
     c1, c2 = st.sidebar.columns((1, 1))
     c1.markdown(repo_name, unsafe_allow_html=True)
     c2.write(
-
         "[![Star](https://img.shields.io/github/stars/PedestrianDynamics/dashboard.svg?logo=github&style=social)](https://gitHub.com/PedestrianDynamics/dashboard)"
     )
 
@@ -212,7 +213,7 @@ def main():
                 logging.info("Trajectory data existing")
                 new_data = False
 
-            group_index = Utilities.get_index_group(string_data)            
+            group_index = Utilities.get_index_group(string_data)
             if Utilities.detect_jpscore(string_data):
                 # how_speed = sx.radio(
                 #    "source", ["from simulation", "from trajectory"]
@@ -463,11 +464,13 @@ def main():
                 data, geominX, geomaxX, geominY, geomaxY, geometry_wall, fps
             ),
         )
-        app.add_app("Neighbors", icon="👥", app=neighbors.NeighborsClass(
-            data,
-            geominX, geomaxX, geominY, geomaxY, geometry_wall
+        app.add_app(
+            "Neighbors",
+            icon="👥",
+            app=neighbors.NeighborsClass(
+                data, geominX, geomaxX, geominY, geomaxY, geometry_wall
+            ),
         )
-                    )
         # Add new tabs here
         # ----
         #
@@ -482,16 +485,16 @@ def main():
 
 if __name__ == "__main__":
     st.set_page_config(
-    page_title="JuPedSim-Analytics",
-    page_icon=":bar_chart:",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        "Get Help": "https://github.com/jupedsim/jpscore",
-        "Report a bug": "https://github.com/jupedsim/jpscore/issues",
-        "About": "Open source framework for simulating, analyzing and visualizing pedestrian dynamics",
-    },
-)
+        page_title="JuPedSim-Analytics",
+        page_icon=":bar_chart:",
+        layout="wide",
+        initial_sidebar_state="expanded",
+        menu_items={
+            "Get Help": "https://github.com/jupedsim/jpscore",
+            "Report a bug": "https://github.com/jupedsim/jpscore/issues",
+            "About": "Open source framework for simulating, analyzing and visualizing pedestrian dynamics",
+        },
+    )
 
     # st.header(":information_source: Analytics dashboard")
     over_theme = {"txc_inactive": "#FFFFFF"}
