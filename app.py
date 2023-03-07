@@ -47,6 +47,7 @@ def init_logger():
 
     return logfile
 
+
 def set_state_variables():
     if "bg_img" not in st.session_state:
         st.session_state.bg_img = None
@@ -134,14 +135,14 @@ def main():
     time_start = timeit.default_timer()
 
     set_state_variables()
-    st.sidebar.image("figs/jupedsim.png", use_column_width=True)
+
+    st.sidebar.image(f"{ROOT_DIR}/figs/jupedsim.png", use_column_width=True)
     gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
     repo = "https://github.com/PedestrianDynamics/dashboard"
     repo_name = f"[![Repo]({gh})]({repo})"
     c1, c2 = st.sidebar.columns((1, 1))
     c1.markdown(repo_name, unsafe_allow_html=True)
     c2.write(
-
         "[![Star](https://img.shields.io/github/stars/PedestrianDynamics/dashboard.svg?logo=github&style=social)](https://gitHub.com/PedestrianDynamics/dashboard)"
     )
 
@@ -166,9 +167,12 @@ def main():
     st.sidebar.markdown("-------")
     unit_pl = st.sidebar.empty()
 
-    msg_status = st.empty()
+    msg_status = st.sidebar.empty()
     disable_NT_flow = False
-    if (trajectory_file and geometry_file) or from_examples != "None":
+    parse_geometry_file = None
+    geometry_file_d = None
+    trajectory_file_d = None
+    if (trajectory_file or geometry_file) or from_examples != "None":
         traj_from_upload = True
         if not trajectory_file and not geometry_file:
             traj_from_upload = False
@@ -185,15 +189,15 @@ def main():
                 logging.info(f"Using selected {from_examples}")
 
         else:
-            logging.info(f">> {trajectory_file}")
-            logging.info(f">> {geometry_file}")
+            logging.info(f">> Trajectory_file: {trajectory_file}")
+            logging.info(f">> Geometry_file: {geometry_file}")
             if trajectory_file is None:
                 st.error("No trajectory file uploaded yet!")
                 st.stop()
 
             if geometry_file is None:
-                st.error("No geometry file uploaded yet!")
-                st.stop()
+                st.sidebar.warning("No geometry file uploaded yet!")
+                # st.stop()
 
         try:
             logging.info(f"Trajectory from upload: {traj_from_upload}")
@@ -212,7 +216,7 @@ def main():
                 logging.info("Trajectory data existing")
                 new_data = False
 
-            group_index = Utilities.get_index_group(string_data)            
+            group_index = Utilities.get_index_group(string_data)
             if Utilities.detect_jpscore(string_data):
                 # how_speed = sx.radio(
                 #    "source", ["from simulation", "from trajectory"]
@@ -293,18 +297,33 @@ def main():
             st.stop()
 
         try:
+            st.info(f"Geometry: traj_from_upload {traj_from_upload}")
             if traj_from_upload:
                 parse_geometry_file = Utilities.get_geometry_file(string_data)
-                logging.info(f"Geometry: <{geometry_file.name}>")
+                logging.info(f"Parsed Geometry name: <{parse_geometry_file}>")
                 # Read Geometry file
-                if parse_geometry_file != geometry_file.name:
-                    st.error(
-                        f"Mismatched geometry files. Parsed {parse_geometry_file}. Uploaded {geometry_file.name}"
-                    )
-                    st.stop()
+                if not parse_geometry_file:
+                    parse_geometry_file = "geometry.xml"
 
-                geo_stringio = StringIO(geometry_file.getvalue().decode("utf-8"))
-                geo_string_data = geo_stringio.read()
+                if geometry_file is None:
+                    Utilities.touch_default_geometry_file(
+                        data, st.session_state.unit, parse_geometry_file
+                    )
+                    with open(
+                        parse_geometry_file, encoding="utf-8"
+                    ) as geometry_file_obj:
+                        geo_string_data = geometry_file_obj.read()
+
+                # if parse_geometry_file != geometry_file.name:
+                #     st.error(
+                #         f"Mismatched geometry files. Parsed {parse_geometry_file}. Uploaded {geometry_file.name}"
+                #     )
+                #     st.stop()
+                else:
+                    logging.info(f"geometry file {geometry_file}")
+                    geo_stringio = StringIO(geometry_file.getvalue().decode("utf-8"))
+                    geo_string_data = geo_stringio.read()
+
             else:
                 with open(geometry_file_d, encoding="utf-8") as geometry_file_obj:
                     geo_string_data = geometry_file_obj.read()
@@ -314,7 +333,10 @@ def main():
                     # new_geometry = True
                     st.session_state.geometry_data = geo_string_data
                     if traj_from_upload:
-                        geo_xml = parseString(geometry_file.getvalue())
+                        if not geometry_file is None:
+                            geo_xml = parseString(geometry_file.getvalue())
+                        else:
+                            geo_xml = parse(parse_geometry_file)
                     else:
                         geo_xml = parse(geometry_file_d)
 
@@ -463,11 +485,13 @@ def main():
                 data, geominX, geomaxX, geominY, geomaxY, geometry_wall, fps
             ),
         )
-        app.add_app("Neighbors", icon="👥", app=neighbors.NeighborsClass(
-            data,
-            geominX, geomaxX, geominY, geomaxY, geometry_wall
+        app.add_app(
+            "Neighbors",
+            icon="👥",
+            app=neighbors.NeighborsClass(
+                data, geominX, geomaxX, geominY, geomaxY, geometry_wall
+            ),
         )
-                    )
         # Add new tabs here
         # ----
         #
@@ -482,16 +506,16 @@ def main():
 
 if __name__ == "__main__":
     st.set_page_config(
-    page_title="JuPedSim-Analytics",
-    page_icon=":bar_chart:",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        "Get Help": "https://github.com/jupedsim/jpscore",
-        "Report a bug": "https://github.com/jupedsim/jpscore/issues",
-        "About": "Open source framework for simulating, analyzing and visualizing pedestrian dynamics",
-    },
-)
+        page_title="JuPedSim-Analytics",
+        page_icon=":bar_chart:",
+        layout="wide",
+        initial_sidebar_state="expanded",
+        menu_items={
+            "Get Help": "https://github.com/jupedsim/jpscore",
+            "Report a bug": "https://github.com/jupedsim/jpscore/issues",
+            "About": "Open source framework for simulating, analyzing and visualizing pedestrian dynamics",
+        },
+    )
 
     # st.header(":information_source: Analytics dashboard")
     over_theme = {"txc_inactive": "#FFFFFF"}

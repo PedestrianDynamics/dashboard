@@ -1,18 +1,20 @@
 import contextlib
 import os
 import time
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 
 import lovely_logger as logging
 import numpy as np
 import pandas as pd
 import requests
+import shapely
 import streamlit as st
 from pandas import read_csv
 from scipy import stats
-import shapely
 from shapely.geometry import LineString, Point, Polygon
-#shapely.geometry.polygon.orient
+
+# shapely.geometry.polygon.orient
 from sklearn.neighbors import KDTree
 
 # name
@@ -516,6 +518,80 @@ def get_geometry_file(traj_file):
     return traj_file.split("geometry:")[-1].split("\n")[0].strip()
 
 
+def touch_default_geometry_file(data, _unit, geo_file):
+    """Creates a bounding box around the trajectories
+
+    :param data: 2D-array
+    :param Unit: Unit of the trajectories (cm or m)
+    :param geo_file: write geometry in this file
+    :returns: geometry file named geometry.xml
+
+    """
+    # ----------
+    delta = 100 if _unit == "cm" else 1
+    # 1 m around to better contain the trajectories
+    xmin = np.min(data[:, 2]) - delta
+    xmax = np.max(data[:, 2]) + delta
+    ymin = np.min(data[:, 3]) - delta
+    ymax = np.max(data[:, 3]) + delta
+    # --------
+    # create_geo_header
+    data = ET.Element("geometry")
+    data.set("version", "0.8")
+    data.set("caption", "experiment")
+    data.set("unit", "m")  # jpsvis does not support another unit!
+    # make room/subroom
+    rooms = ET.SubElement(data, "rooms")
+    room = ET.SubElement(rooms, "room")
+    room.set("id", "0")
+    room.set("caption", "room")
+    subroom = ET.SubElement(room, "subroom")
+    subroom.set("id", "0")
+    subroom.set("caption", "subroom")
+    subroom.set("class", "subroom")
+    subroom.set("A_x", "0")
+    subroom.set("B_y", "0")
+    subroom.set("C_z", "0")
+    # poly1
+    polygon = ET.SubElement(subroom, "polygon")
+    polygon.set("caption", "wall")
+    polygon.set("type", "internal")
+    vertex = ET.SubElement(polygon, "vertex")
+    vertex.set("px", f"{xmin}")
+    vertex.set("py", f"{ymin}")
+    vertex = ET.SubElement(polygon, "vertex")
+    vertex.set("px", f"{xmax}")
+    vertex.set("py", f"{ymin}")
+    # poly2
+    polygon = ET.SubElement(subroom, "polygon")
+    vertex = ET.SubElement(polygon, "vertex")
+    vertex.set("px", f"{xmax}")
+    vertex.set("py", f"{ymin}")
+    vertex = ET.SubElement(polygon, "vertex")
+    vertex.set("px", f"{xmax}")
+    vertex.set("py", f"{ymax}")
+    # poly3
+    polygon = ET.SubElement(subroom, "polygon")
+    vertex = ET.SubElement(polygon, "vertex")
+    vertex.set("px", f"{xmax}")
+    vertex.set("py", f"{ymax}")
+    vertex = ET.SubElement(polygon, "vertex")
+    vertex.set("px", f"{xmin}")
+    vertex.set("py", f"{ymax}")
+    # poly4
+    polygon = ET.SubElement(subroom, "polygon")
+    vertex = ET.SubElement(polygon, "vertex")
+    vertex.set("px", f"{xmin}")
+    vertex.set("py", f"{ymax}")
+    vertex = ET.SubElement(polygon, "vertex")
+    vertex.set("px", f"{xmin}")
+    vertex.set("py", f"{ymin}")
+    b_xml = ET.tostring(data, encoding="utf8", method="xml")
+
+    with open(geo_file, "wb") as f:
+        f.write(b_xml)
+
+
 def compute_speed(data, fps, df=10):
     """Calculates the speed and the angle from the trajectory points.
 
@@ -758,7 +834,7 @@ def widthOfGaußian(fwhm):
 def Gauss(x, a):
     """1 / (np.sqrt(np.pi) * a) * np.e ** (-x ** 2 / a ** 2)"""
 
-    return 1 / (1.7724538 * a) * np.e ** (-(x**2) / a**2)
+    return 1 / (1.7724538 * a) * np.e ** (-(x ** 2) / a ** 2)
 
 
 def densityField(x_dens, y_dens, a):
@@ -1038,7 +1114,7 @@ def get_neighbors_special_agent_data(agent, frame, data, nearest_dist, nearest_i
 
     at_frame = data[data[:, 1] == frame]
     points = at_frame[:, 2:4]
-    _speeds = at_frame[:,  st.session_state.speed_index]
+    _speeds = at_frame[:, st.session_state.speed_index]
     Ids = at_frame[:, 0]
     if (at_frame[:, 0] == agent).any():
         agent_index = np.where(at_frame[:, 0] == agent)[0][0]
