@@ -345,6 +345,7 @@ def main():
             icon="👫🏻",
             app=trajectories.TrajClass(
                 data,
+                files._df,
                 how_speed,
                 geometry_wall,
                 transitions,

@@ -12,6 +12,7 @@ class TrajClass(HydraHeadApp):
     def __init__(
         self,
         data,
+        data_df,
         how_speed,
         geometry_wall,
         transitions,
@@ -26,6 +27,7 @@ class TrajClass(HydraHeadApp):
         self.how_speed = how_speed
         self.fps = fps
         self.data = data
+        self.data_df = data_df
         self.geominX = geominX
         self.geomaxX = geomaxX
         self.geominY = geominY
@@ -55,6 +57,13 @@ class TrajClass(HydraHeadApp):
             value=False,
             key="SpecialAgent",
         )
+        self.choose_trajectories = c2.checkbox(
+            "Trajectories", help="Show trajectories", value=False, key="Traj"
+        )
+        self.choose_visualisation = c1.checkbox(
+            "Animation", help="Show visualisation", value=True, key="Vis"
+        )
+
         sample_trajectories = st.sidebar.number_input(
             "Sample rate",
             min_value=1,
@@ -97,6 +106,7 @@ class TrajClass(HydraHeadApp):
         with Utilities.profile("plot_trajectories"):
             fig = plots.plot_trajectories(
                 self.data,
+                self.data_df,
                 self.plot_ped,
                 speed_agent,
                 self.geometry_wall,
@@ -107,8 +117,11 @@ class TrajClass(HydraHeadApp):
                 self.geomaxY,
                 self.choose_transitions,
                 sample_trajectories,
+                self.choose_trajectories,
+                self.choose_visualisation,
             )
             st.plotly_chart(fig, use_container_width=True)
+
         c1, c2, c3 = st.columns((1, 1, 1))
         if self.show_special_agent_stats:
             with Utilities.profile("plot_agent_xy"):
