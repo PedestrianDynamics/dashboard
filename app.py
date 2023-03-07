@@ -167,9 +167,12 @@ def main():
     st.sidebar.markdown("-------")
     unit_pl = st.sidebar.empty()
 
-    msg_status = st.empty()
+    msg_status = st.sidebar.empty()
     disable_NT_flow = False
-    if (trajectory_file and geometry_file) or from_examples != "None":
+    parse_geometry_file = None
+    geometry_file_d = None
+    trajectory_file_d = None
+    if (trajectory_file or geometry_file) or from_examples != "None":
         traj_from_upload = True
         if not trajectory_file and not geometry_file:
             traj_from_upload = False
@@ -186,15 +189,15 @@ def main():
                 logging.info(f"Using selected {from_examples}")
 
         else:
-            logging.info(f">> {trajectory_file}")
-            logging.info(f">> {geometry_file}")
+            logging.info(f">> Trajectory_file: {trajectory_file}")
+            logging.info(f">> Geometry_file: {geometry_file}")
             if trajectory_file is None:
                 st.error("No trajectory file uploaded yet!")
                 st.stop()
 
             if geometry_file is None:
-                st.error("No geometry file uploaded yet!")
-                st.stop()
+                st.sidebar.warning("No geometry file uploaded yet!")
+                # st.stop()
 
         try:
             logging.info(f"Trajectory from upload: {traj_from_upload}")
@@ -294,18 +297,33 @@ def main():
             st.stop()
 
         try:
+            st.info(f"Geometry: traj_from_upload {traj_from_upload}")
             if traj_from_upload:
                 parse_geometry_file = Utilities.get_geometry_file(string_data)
-                logging.info(f"Geometry: <{geometry_file.name}>")
+                logging.info(f"Parsed Geometry name: <{parse_geometry_file}>")
                 # Read Geometry file
-                if parse_geometry_file != geometry_file.name:
-                    st.error(
-                        f"Mismatched geometry files. Parsed {parse_geometry_file}. Uploaded {geometry_file.name}"
-                    )
-                    st.stop()
+                if not parse_geometry_file:
+                    parse_geometry_file = "geometry.xml"
 
-                geo_stringio = StringIO(geometry_file.getvalue().decode("utf-8"))
-                geo_string_data = geo_stringio.read()
+                if geometry_file is None:
+                    Utilities.touch_default_geometry_file(
+                        data, st.session_state.unit, parse_geometry_file
+                    )
+                    with open(
+                        parse_geometry_file, encoding="utf-8"
+                    ) as geometry_file_obj:
+                        geo_string_data = geometry_file_obj.read()
+
+                # if parse_geometry_file != geometry_file.name:
+                #     st.error(
+                #         f"Mismatched geometry files. Parsed {parse_geometry_file}. Uploaded {geometry_file.name}"
+                #     )
+                #     st.stop()
+                else:
+                    logging.info(f"geometry file {geometry_file}")
+                    geo_stringio = StringIO(geometry_file.getvalue().decode("utf-8"))
+                    geo_string_data = geo_stringio.read()
+
             else:
                 with open(geometry_file_d, encoding="utf-8") as geometry_file_obj:
                     geo_string_data = geometry_file_obj.read()
@@ -315,7 +333,10 @@ def main():
                     # new_geometry = True
                     st.session_state.geometry_data = geo_string_data
                     if traj_from_upload:
-                        geo_xml = parseString(geometry_file.getvalue())
+                        if not geometry_file is None:
+                            geo_xml = parseString(geometry_file.getvalue())
+                        else:
+                            geo_xml = parse(parse_geometry_file)
                     else:
                         geo_xml = parse(geometry_file_d)
 
