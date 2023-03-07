@@ -3,31 +3,31 @@ import os
 import timeit
 from collections import defaultdict
 from copy import deepcopy
-from io import StringIO
+
 from pathlib import Path
-from xml.dom.minidom import parse, parseString
 
 import lovely_logger as logging
 import numpy as np
-
 import streamlit as st
 from hydralit import HydraApp
 
+import data_structure
+
 
 import doc
-import plots
+
 import Utilities
 from apps import (
     about,
     dv_time_series,
     jams,
+    loader,
+    neighbors,
     profiles,
     rset,
     stats,
     time_series,
     trajectories,
-    neighbors,
-    loader,
 )
 
 path = Path(__file__)
@@ -151,7 +151,6 @@ def main():
         ["None"] + list(Utilities.examples.keys()),
         help="Select example. If files are uploaded (below), then this selection is invalidated",
     )
-
     c1, c2 = st.sidebar.columns((1, 1))
     trajectory_file = c1.file_uploader(
         "🚶 🚶‍♀️ Trajectory file ",
@@ -169,45 +168,10 @@ def main():
 
     msg_status = st.sidebar.empty()
     disable_NT_flow = False
-    parse_geometry_file = None
-    geometry_file_d = None
-    trajectory_file_d = None
-    if (trajectory_file or geometry_file) or from_examples != "None":
-        traj_from_upload = True
-        if not trajectory_file and not geometry_file:
-            traj_from_upload = False
-            selection = Utilities.selected_traj_geo(from_examples)
-            name_selection = selection[0]
-            trajectory_file_d = name_selection + ".txt"
-            geometry_file_d = name_selection + ".xml"
-            if name_selection not in st.session_state.example_downloaded:
-                st.session_state.example_downloaded[name_selection] = True
-                logging.info(f"Downloading selected {from_examples}")
-                Utilities.download(selection[1], trajectory_file_d)
-                Utilities.download(selection[2], geometry_file_d)
-            else:
-                logging.info(f"Using selected {from_examples}")
-
-        else:
-            logging.info(f">> Trajectory_file: {trajectory_file}")
-            logging.info(f">> Geometry_file: {geometry_file}")
-            if trajectory_file is None:
-                st.error("No trajectory file uploaded yet!")
-                st.stop()
-
-            if geometry_file is None:
-                st.sidebar.warning("No geometry file uploaded yet!")
-                # st.stop()
-
+    files = data_structure.data_files(trajectory_file, geometry_file, from_examples)
+    if files.got_traj_data:
         try:
-            logging.info(f"Trajectory from upload: {traj_from_upload}")
-            if traj_from_upload:
-                stringio = StringIO(trajectory_file.getvalue().decode("utf-8"))
-                string_data = stringio.read()
-            else:
-                with open(trajectory_file_d, encoding="utf-8") as f:
-                    string_data = f.read()
-
+            string_data = files.process_traj_file()
             if string_data != st.session_state.old_data:
                 st.session_state.old_data = string_data
                 new_data = True
@@ -218,9 +182,6 @@ def main():
 
             group_index = Utilities.get_index_group(string_data)
             if Utilities.detect_jpscore(string_data):
-                # how_speed = sx.radio(
-                #    "source", ["from simulation", "from trajectory"]
-                # )
                 how_speed = "from simulation"
                 st.write(
                     "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
@@ -229,23 +190,11 @@ def main():
                 df = 10
             else:
                 how_speed = "from experiment"
-                # df = sx.slider(
-                #     "df",
-                #     2,
-                #     50,
-                #     10,
-                #     help="how many frames to consider for calculating the speed",
-                # )
                 df = 10
 
             if new_data:
                 with Utilities.profile("Load trajectories"):
-                    logging.info("Load trajectories ..")
-                    if not traj_from_upload:
-                        data = Utilities.read_trajectory(trajectory_file_d)
-                    else:
-                        data = Utilities.read_trajectory(trajectory_file)
-
+                    data = files._data
                     st.session_state.orig_data = np.copy(data)
                     fps = Utilities.get_fps(string_data)
                     speed_index = Utilities.get_speed_index(string_data)
@@ -294,51 +243,16 @@ def main():
                 f"""Problem by initialising the trajectory data.
                 Error: {e}"""
             )
+
             st.stop()
 
         try:
-            st.info(f"Geometry: traj_from_upload {traj_from_upload}")
-            if traj_from_upload:
-                parse_geometry_file = Utilities.get_geometry_file(string_data)
-                logging.info(f"Parsed Geometry name: <{parse_geometry_file}>")
-                # Read Geometry file
-                if not parse_geometry_file:
-                    parse_geometry_file = "geometry.xml"
-
-                if geometry_file is None:
-                    Utilities.touch_default_geometry_file(
-                        data, st.session_state.unit, parse_geometry_file
-                    )
-                    with open(
-                        parse_geometry_file, encoding="utf-8"
-                    ) as geometry_file_obj:
-                        geo_string_data = geometry_file_obj.read()
-
-                # if parse_geometry_file != geometry_file.name:
-                #     st.error(
-                #         f"Mismatched geometry files. Parsed {parse_geometry_file}. Uploaded {geometry_file.name}"
-                #     )
-                #     st.stop()
-                else:
-                    logging.info(f"geometry file {geometry_file}")
-                    geo_stringio = StringIO(geometry_file.getvalue().decode("utf-8"))
-                    geo_string_data = geo_stringio.read()
-
-            else:
-                with open(geometry_file_d, encoding="utf-8") as geometry_file_obj:
-                    geo_string_data = geometry_file_obj.read()
-
+            geo_string_data = files.process_geo_file()
             if geo_string_data != st.session_state.geometry_data:
                 with Utilities.profile("Load geometry:"):
                     # new_geometry = True
                     st.session_state.geometry_data = geo_string_data
-                    if traj_from_upload:
-                        if not geometry_file is None:
-                            geo_xml = parseString(geometry_file.getvalue())
-                        else:
-                            geo_xml = parse(parse_geometry_file)
-                    else:
-                        geo_xml = parse(geometry_file_d)
+                    geo_xml = files.read_geo_data()
 
                     logging.info("Geometry parsed successfully")
                     geometry_wall = Utilities.read_subroom_walls(geo_xml, unit="m")
@@ -442,10 +356,11 @@ def main():
             ),
         )
         app.add_app("Jam", icon="🐌 ", app=jams.JamClass(data, fps))
-        if traj_from_upload:
-            name = trajectory_file.name.split(".txt")[0]
-        else:
-            name = trajectory_file_d.split(".txt")[0]
+        name = files.traj_name
+        # if traj_from_upload:
+        #     name = trajectory_file.name.split(".txt")[0]
+        # else:
+        #     name = trajectory_file_d.split(".txt")[0]
 
         app.add_app(
             "Statistics",

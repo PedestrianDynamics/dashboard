@@ -101,7 +101,7 @@ def selected_traj_geo(text):
         return examples[text]
     else:
         logging.warning(f"Could not find {text}")
-        logging.info(f"Available examples are {examples}")
+        # logging.info(f"Available examples are {examples}")
         return []
 
 
