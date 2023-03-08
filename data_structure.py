@@ -30,6 +30,7 @@ class data_files:
     got_traj_data: Any = field(init=False, default=False)
     _data: npt.NDArray[np.float32] = field(init=False, default=np.array([]))
     _df: pd.DataFrame = field(init=False)
+    _header: list[str] = field(init=False)
     default_geometry_file: str = (
         "geometry.xml"  # in case trajectories have no geometry files
     )
@@ -64,6 +65,28 @@ class data_files:
 
         return geo_string_data
 
+    def init_header(self):
+
+        if self._data.shape[1] == 10:
+            self._header = [
+                "ID",
+                "FR",
+                "X",
+                "Y",
+                "Z",
+                "A",
+                "B",
+                "ANGLE",
+                "COLOR",
+                "SPEED",
+            ]
+
+        elif self._data.shape[1] == 9:
+            self._header = ["ID", "FR", "X", "Y", "Z", "A", "B", "ANGLE", "COLOR"]
+
+        else:
+            self._header = ["ID", "FR", "X", "Y", "Z"]
+
     def read_traj_data(self):
         """Set _data with trajectories if traj file uploaded or selected"""
         logging.info(f"Got data: {self.got_traj_data}")
@@ -71,9 +94,6 @@ class data_files:
             self._data = read_csv(
                 self.got_traj_data, sep=r"\s+", dtype=np.float64, comment="#"
             ).values
-            num_cols = self._data.shape[1]
-            names = ["ID", "FR", "X", "Y", "Z", "A", "B", "ANGLE", "COLOR", "SPEED"]
-            self._df = pd.DataFrame(self._data, columns=names[0:num_cols])
 
     def read_geo_data(self) -> Document:
         """Return xml object from geoemtry file"""
@@ -102,13 +122,16 @@ class data_files:
 
         self.got_traj_data = self.selected_traj_file or self.uploaded_traj_file
         if self.uploaded_traj_file:
-            traj_name = self.uploaded_traj_file.name.split(".txt")[0]
+            self.traj_name = self.uploaded_traj_file.name.split(".txt")[0]
         if self.selected_traj_file:
-            traj_name = self.selected_traj_file.split(".txt")[0]
+            self.traj_name = self.selected_traj_file.split(".txt")[0]
 
         self.read_traj_data()
         if self.got_traj_data:
             Utilities.touch_default_geometry_file(
                 self._data, st.session_state.unit, self.default_geometry_file
             )
+
+        self.init_header()
+        self._df = pd.DataFrame(self._data, columns=self._header)
         self.read_geo_data()
