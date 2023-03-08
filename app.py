@@ -134,17 +134,16 @@ def set_state_variables():
 def main():
     time_start = timeit.default_timer()
 
-    set_state_variables()
-
-    st.sidebar.image(f"{ROOT_DIR}/figs/jupedsim.png", use_column_width=True)
+    set_state_variables()    
     gh = "https://badgen.net/badge/icon/GitHub?icon=github&label"
     repo = "https://github.com/PedestrianDynamics/dashboard"
     repo_name = f"[![Repo]({gh})]({repo})"
-    c1, c2 = st.sidebar.columns((1, 1))
-    c1.markdown(repo_name, unsafe_allow_html=True)
-    c2.write(
-        "[![Star](https://img.shields.io/github/stars/PedestrianDynamics/dashboard.svg?logo=github&style=social)](https://gitHub.com/PedestrianDynamics/dashboard)"
-    )
+    st.sidebar.image(f"{ROOT_DIR}/figs/dashboard_logo.png", use_column_width=True)
+    c1, c2, c3 = st.sidebar.columns((1.2, 0.4, 0.4))
+    c2.markdown(repo_name, unsafe_allow_html=True)
+    c1.write("[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7697604.svg)](https://doi.org/10.5281/zenodo.7697604)")
+    # c1.write( "[![Star](https://img.shields.io/github/stars/PedestrianDynamics/dashboard.svg?logo=github&style=social)](https://gitHub.com/PedestrianDynamics/dashboard)"
+    # )
 
     from_examples = st.sidebar.selectbox(
         "📂 Select example",
