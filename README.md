@@ -1,5 +1,6 @@
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/pedestriandynamics/dashboard/main/app.py)
-[![Heroku](http://heroku-shields.herokuapp.com/jupedsim-dashboard)](https://jupedsim-dashboard.herokuapp.com/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7697604.svg)](https://doi.org/10.5281/zenodo.7697604)
+
 
 
 # JuPedSim-Dashboard
@@ -41,11 +42,11 @@ It is possible to draw:
 Lines and rectangle can be rotated and scaled.
 
 To try out:
-https://share.streamlit.io/pedestriandynamics/dashboard/main/draw_geometry.py
+https://go.fzj.de/geometry
 
-See a Demo:
-
-https://youtu.be/4xTqSbllCwg
+# Ressources
+Demo: https://youtu.be/4xTqSbllCwg
+Talk in the [deRSE23](https://de-rse23.sciencesconf.org/) from some scientific motivation of this project is available [here](https://zenodo.org/record/7697604).
 
 
 **NOTE**: The script tries to exctract the unit of the data from the trajectory file. A good idea might be to convert the trajetories before using with this [script](https://github.com/JuPedSim/jpscore/blob/master/scripts/petrack2jpsvis.py)
