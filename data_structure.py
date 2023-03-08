@@ -131,7 +131,6 @@ class data_files:
             Utilities.touch_default_geometry_file(
                 self._data, st.session_state.unit, self.default_geometry_file
             )
-
-        self.init_header()
-        self._df = pd.DataFrame(self._data, columns=self._header)
+            self.init_header()
+            self._df = pd.DataFrame(self._data, columns=self._header)
         self.read_geo_data()
