@@ -57,11 +57,8 @@ class TrajClass(HydraHeadApp):
             value=False,
             key="SpecialAgent",
         )
-        self.choose_trajectories = c2.checkbox(
-            "Trajectories", help="Show trajectories", value=False, key="Traj"
-        )
         self.choose_visualisation = c1.checkbox(
-            "Animation", help="Show visualisation", value=True, key="Vis"
+            "Animation", help="Show visualisation", value=False, key="Vis"
         )
 
         sample_trajectories = st.sidebar.number_input(
@@ -121,22 +118,23 @@ class TrajClass(HydraHeadApp):
             )
             st.plotly_chart(fig, use_container_width=True)
 
-        with Utilities.profile("vis_trajectories"):
-            fig = plots.moving_trajectories(
-                self.data,
-                self.data_df,
-                self.plot_ped,
-                speed_agent,
-                self.geometry_wall,
-                self.transitions,
-                self.geominX,
-                self.geomaxX,
-                self.geominY,
-                self.geomaxY,
-                self.choose_transitions,
-                sample_trajectories,
-            )
-            st.plotly_chart(fig, use_container_width=True)
+        if self.choose_visualisation:
+            with Utilities.profile("vis_trajectories"):
+                fig = plots.moving_trajectories(
+                    self.data,
+                    self.data_df,
+                    self.plot_ped,
+                    speed_agent,
+                    self.geometry_wall,
+                    self.transitions,
+                    self.geominX,
+                    self.geomaxX,
+                    self.geominY,
+                    self.geomaxY,
+                    self.choose_transitions,
+                    sample_trajectories,
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
         c1, c2, c3 = st.columns((1, 1, 1))
         if self.show_special_agent_stats:
