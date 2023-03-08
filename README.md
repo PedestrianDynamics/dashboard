@@ -45,8 +45,9 @@ To try out:
 https://go.fzj.de/geometry
 
 # Ressources
-Demo: https://youtu.be/4xTqSbllCwg
-Talk in the [deRSE23](https://de-rse23.sciencesconf.org/) from some scientific motivation of this project is available [here](https://zenodo.org/record/7697604).
+
+- Demo: https://youtu.be/4xTqSbllCwg
+- Talk in the [deRSE23](https://de-rse23.sciencesconf.org/) from some scientific motivation of this project is available [here](https://zenodo.org/record/7697604).
 
 
 **NOTE**: The script tries to exctract the unit of the data from the trajectory file. A good idea might be to convert the trajetories before using with this [script](https://github.com/JuPedSim/jpscore/blob/master/scripts/petrack2jpsvis.py)
