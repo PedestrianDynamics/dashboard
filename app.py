@@ -308,7 +308,9 @@ def main():
         if unit == "cm":
             data[:, 2:4] /= 100
             data[:, st.session_state.speed_index] /= 100
-
+            files._df["X"] /= 100
+            files._df["Y"] /= 100
+            files._df["Z"] /= 100
             geominX /= 100
             geomaxX /= 100
             geominY /= 100

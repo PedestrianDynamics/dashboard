@@ -637,8 +637,7 @@ def vis_trajectories(
     return fig
 
 
-@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_trajectories(
+def moving_trajectories(
     data,
     data_df,
     special_ped,
@@ -651,38 +650,28 @@ def plot_trajectories(
     max_y,
     choose_transitions,
     sample_trajectories,
-    show_trajectories,
-    show_visualisation,
 ):
-    logging.info("plot trajectories")
-    fig = make_subplots(rows=1, cols=1, subplot_titles=["<b>Trajectories</b>"])
+
+    logging.info("visualisation trajectories")
+    if "SPEED" in data_df.columns:
+        color = "SPEED"
+        range_color = [0, max(data_df["SPEED"])]
+    else:
+        color = "COLOR"
+        range_color = [0, 255]
+
     data_df["A"] /= 2
-    if show_visualisation:
-        fig = px.scatter(
-            data_df,
-            x="X",
-            y="Y",
-            animation_frame="FR",
-            animation_group="ID",
-            color="COLOR",
-            size="A",
-            # colorbar="COLOR",
-            range_color=[0, 255],
-            color_continuous_scale=px.colors.diverging.RdBu_r[::-1],
-        )
-    peds = np.unique(data[:, 0])
-    if show_trajectories:
-        for ped in peds:
-            d = data[data[:, 0] == ped]
-            trace_traj = go.Scatter(
-                x=d[::sample_trajectories, 2],
-                y=d[::sample_trajectories, 3],
-                mode="lines",
-                showlegend=False,
-                name=f"Agent: {ped:0.0f}",
-                line=dict(color="gray", width=0.3),
-            )
-            fig.append_trace(trace_traj, row=1, col=1)
+    fig = px.scatter(
+        data_df,
+        x="X",
+        y="Y",
+        animation_frame="FR",
+        animation_group="ID",
+        color=color,
+        size="A",
+        range_color=range_color,
+        color_continuous_scale=px.colors.diverging.RdBu_r[::-1],
+    )
 
     if special_ped > 0:
         s = data[data[:, 0] == special_ped]
@@ -766,11 +755,131 @@ def plot_trajectories(
         scaleanchor="x",
         scaleratio=1,
     )
-    if show_visualisation:
-        fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = 30
-        fig.layout.updatemenus[0].buttons[0].args[1]["transition"]["duration"] = 5
-        fig.update_geos(projection_type="equirectangular", visible=True, resolution=110)
 
+    fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = 30
+    fig.layout.updatemenus[0].buttons[0].args[1]["transition"]["duration"] = 5
+    fig.update_geos(projection_type="equirectangular", visible=True, resolution=110)
+
+    fig.update_traces(marker=dict(line=dict(width=0.5, color="Gray")))
+    return fig
+
+
+@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
+def plot_trajectories(
+    data,
+    data_df,
+    special_ped,
+    speed,
+    geo_walls,
+    transitions,
+    min_x,
+    max_x,
+    min_y,
+    max_y,
+    choose_transitions,
+    sample_trajectories,
+):
+    logging.info("plot trajectories")
+    fig = make_subplots(
+        rows=1,
+        cols=1,
+    )
+    data_df["A"] /= 2
+    peds = np.unique(data[:, 0])
+    for ped in peds:
+        d = data[data[:, 0] == ped]
+        trace_traj = go.Scatter(
+            x=d[::sample_trajectories, 2],
+            y=d[::sample_trajectories, 3],
+            mode="lines",
+            showlegend=False,
+            name=f"Agent: {ped:0.0f}",
+            line=dict(color="gray", width=0.3),
+        )
+        fig.append_trace(trace_traj, row=1, col=1)
+
+    if special_ped > 0:
+        s = data[data[:, 0] == special_ped]
+        sc = speed / np.max(speed)
+
+        trace_agent = go.Scatter(
+            x=s[1::sample_trajectories, 2],
+            y=s[1::sample_trajectories, 3],
+            mode="markers",
+            showlegend=False,
+            name=f"Agent: {special_ped:0.0f}",
+            marker=dict(
+                size=5,
+                cmax=1,
+                cmin=0,
+                colorbar=dict(title="Speed / m/s"),
+                color=sc,
+                colorscale="Jet",
+            ),
+        )
+        trace_agent_start = go.Scatter(
+            x=[s[0, 2]],
+            y=[s[0, 3]],
+            mode="markers",
+            showlegend=False,
+            name=f"Start: {special_ped:0.0f}",
+            marker=dict(
+                size=10,
+                color="black",
+            ),
+        )
+        fig.append_trace(trace_agent, row=1, col=1)
+        fig.append_trace(trace_agent_start, row=1, col=1)
+    for gw in geo_walls.keys():
+        trace_walls = go.Scatter(
+            x=geo_walls[gw][:, 0],
+            y=geo_walls[gw][:, 1],
+            showlegend=False,
+            mode="lines",
+            line=dict(color="black", width=2),
+        )
+        fig.append_trace(trace_walls, row=1, col=1)
+
+    if choose_transitions:
+        for i, t in transitions.items():
+            xm = np.sum(t[:, 0]) / 2
+            ym = np.sum(t[:, 1]) / 2
+            length = np.sqrt(np.diff(t[:, 0]) ** 2 + np.diff(t[:, 1]) ** 2)
+            offset = 0.1 * length[0]
+            logging.info(f"offset transition {offset}")
+            trace_transitions = go.Scatter(
+                x=t[:, 0],
+                y=t[:, 1],
+                showlegend=False,
+                name=f"Transition: {i}",
+                mode="lines+markers",
+                line=dict(color="red", width=3),
+                marker=dict(color="black", size=5),
+            )
+            trace_text = go.Scatter(
+                x=[xm + offset],
+                y=[ym + offset],
+                text=f"{i}",
+                textposition="middle center",
+                showlegend=False,
+                mode="markers+text",
+                marker=dict(color="red", size=0.1),
+                textfont=dict(color="red", size=18),
+            )
+            fig.append_trace(trace_transitions, row=1, col=1)
+            fig.append_trace(trace_text, row=1, col=1)
+
+    eps = 1
+    fig.update_yaxes(
+        range=[min_y - eps, max_y + eps],
+    )
+    fig.update_xaxes(
+        range=[min_x - eps, max_x + eps],
+    )
+    fig.update_yaxes(
+        scaleanchor="x",
+        scaleratio=1,
+    )
     fig.update_traces(marker=dict(line=dict(width=0.5, color="Gray")))
     return fig
 

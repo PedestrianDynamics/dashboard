@@ -71,8 +71,11 @@ class data_files:
             self._data = read_csv(
                 self.got_traj_data, sep=r"\s+", dtype=np.float64, comment="#"
             ).values
-            names = ["ID", "FR", "X", "Y", "Z", "A", "B", "ANGLE", "COLOR"]
-            self._df = pd.DataFrame(self._data, columns=names)
+            num_cols = self._data.shape[1]
+            names = ["ID", "FR", "X", "Y", "Z", "A", "B", "ANGLE", "COLOR", "SPEED"]
+            st.info(num_cols)
+            st.info(names[0:num_cols])
+            self._df = pd.DataFrame(self._data, columns=names[0:num_cols])
 
     def read_geo_data(self) -> Document:
         """Return xml object from geoemtry file"""
