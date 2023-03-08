@@ -73,8 +73,6 @@ class data_files:
             ).values
             num_cols = self._data.shape[1]
             names = ["ID", "FR", "X", "Y", "Z", "A", "B", "ANGLE", "COLOR", "SPEED"]
-            st.info(num_cols)
-            st.info(names[0:num_cols])
             self._df = pd.DataFrame(self._data, columns=names[0:num_cols])
 
     def read_geo_data(self) -> Document:
