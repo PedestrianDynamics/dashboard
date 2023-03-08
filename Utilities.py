@@ -24,7 +24,7 @@ from sklearn.neighbors import KDTree
 examples = {
     # , free choice of destination
     "Bidirectional corridor (exp)": [
-        "Multi-Rooms",
+        "Bi-direct",
         "https://fz-juelich.sciebo.de/s/o4D8Va2MtbSeG2v/download",
         "https://fz-juelich.sciebo.de/s/FNuSYwOre85km3U/download",
     ],
@@ -64,7 +64,7 @@ examples = {
         "https://fz-juelich.sciebo.de/s/kgXUEyu95FTQlFC/download",
     ],
     "Multi-Rooms (sim)": [
-        "Multi-Rooms",
+        "multi-rooms",
         "https://fz-juelich.sciebo.de/s/7kwrnAzcv5m7ii2/download",
         "https://fz-juelich.sciebo.de/s/VSPgE6Kcfp8qDIa/download",
     ],
@@ -101,7 +101,7 @@ def selected_traj_geo(text):
         return examples[text]
     else:
         logging.warning(f"Could not find {text}")
-        logging.info(f"Available examples are {examples}")
+        # logging.info(f"Available examples are {examples}")
         return []
 
 
