@@ -23,14 +23,16 @@ class StatClass(HydraHeadApp):
         peds = np.unique(self.data[:, 0]).astype(int)
         nagents = len(peds)
         msg = f"""
-        Trajectory column names: {self.header_traj}\n
+        Header: {self.header_traj}\n
         Unit: {self.unit}\n
         Frames per second: {self.fps}\n
-        Frames: {len(frames)} | First: {frames[0]:.0f} | Last: {frames[-1]:.0f}\n
-        Agents: {nagents}\n
-        Evac-time: {np.max(frames)/self.fps} [s]
         """
+        c1, c2, c3 = st.columns((1, 1, 1))
+        c1.metric(label="Agents: ", value=nagents)
+        c2.metric("Time: ", f"{np.max(frames) / self.fps:.2f} [s]")
+        c3.metric(label="Frames: ", value=len(frames), delta=int(frames[-1]))
         st.info(msg)
+
         st.markdown("### :chart_with_upwards_trend: Trajectories")
         with Utilities.profile("show_table"):
             logging.info(f"show table with {self.data.shape}")
