@@ -30,7 +30,7 @@ class data_files:
     got_traj_data: Any = field(init=False, default=False)
     _data: npt.NDArray[np.float32] = field(init=False, default=np.array([]))
     _df: pd.DataFrame = field(init=False)
-    _header: list[str] = field(init=False)
+    _header: List[str] = field(init=False)
     default_geometry_file: str = (
         "geometry.xml"  # in case trajectories have no geometry files
     )
