@@ -1,13 +1,14 @@
 import sys
 
 sys.path.append("../")
-# add an import to Hydralit
-import Utilities
-import plots
-import doc
 import numpy as np
 import streamlit as st
 from hydralit import HydraHeadApp
+
+import doc
+import plots
+# add an import to Hydralit
+import Utilities
 
 
 class NeighborsClass(HydraHeadApp):

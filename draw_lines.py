@@ -1,12 +1,13 @@
 import io
-
 import xml.etree.ElementTree as ET
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
+
 from Utilities import get_unit, read_trajectory
 
 st.set_page_config(

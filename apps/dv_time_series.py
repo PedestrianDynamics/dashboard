@@ -1,19 +1,22 @@
 import sys
 
 sys.path.append('../')
-#add an import to Hydralit
-import Utilities
-import plots
-import draw_geometry as dg
-import doc
-import matplotlib.pyplot as plt
-import numpy as np
-import streamlit as st
-from streamlit_drawable_canvas import st_canvas
-from hydralit import HydraHeadApp
-import pandas as pd
 import collections
 import logging
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import streamlit as st
+from hydralit import HydraHeadApp
+from streamlit_drawable_canvas import st_canvas
+
+import doc
+import draw_geometry as dg
+import plots
+#add an import to Hydralit
+import Utilities
+
 
 class dvTimeSeriesClass(HydraHeadApp):
 

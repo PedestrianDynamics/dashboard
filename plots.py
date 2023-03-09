@@ -8,9 +8,9 @@ import plotly.graph_objs as go
 import streamlit as st
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
-from shapely.geometry import LineString, Point
 from scipy import stats
 from scipy.spatial import ConvexHull
+from shapely.geometry import LineString, Point
 
 from Utilities import survival
 

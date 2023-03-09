@@ -1,19 +1,17 @@
-import sys
-
-sys.path.append(".")
 import logging
+
 from dataclasses import dataclass, field
-from io import BytesIO, StringIO
+from io import StringIO
 from typing import Any, List
-from xml.dom.minidom import parse, parseString, Document
-import pandas as pd
+from xml.dom.minidom import Document, parse, parseString
+
 import numpy as np
 import numpy.typing as npt
+import pandas as pd
 import streamlit as st
 from pandas import read_csv
-
+from streamlit.uploaded_file_manager import UploadedFile
 import Utilities
-
 
 @dataclass
 class data_files:
@@ -21,8 +19,8 @@ class data_files:
     Class handling trajectory and geometry files
     """
 
-    uploaded_traj_file: BytesIO
-    uploaded_geo_file: BytesIO
+    uploaded_traj_file: UploadedFile
+    uploaded_geo_file: UploadedFile
     from_examples: str
     traj_name: str = field(init=False, default="")
     selected_traj_file: str = field(init=False, default="")
@@ -35,6 +33,13 @@ class data_files:
         "geometry.xml"  # in case trajectories have no geometry files
     )
 
+    def get_data(self):
+        return self._data
+
+    def get_data_df(self):
+        return self._df
+
+    
     def process_traj_file(self) -> str:
         """return StringIO data from trajectory file"""
         if self.uploaded_traj_file:
@@ -124,7 +129,7 @@ class data_files:
         if self.uploaded_traj_file:
             self.traj_name = self.uploaded_traj_file.name.split(".txt")[0]
         if self.selected_traj_file:
-            self.traj_name = self.selected_traj_file.split(".txt")[0]
+            self.traj_name = self.selected_traj_file.split(".txt", maxsplit=1)[0]
 
         self.read_traj_data()
         if self.got_traj_data:

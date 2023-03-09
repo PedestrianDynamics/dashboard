@@ -13,7 +13,6 @@ import streamlit as st
 from pandas import read_csv
 from scipy import stats
 from shapely.geometry import LineString, Point, Polygon
-
 # shapely.geometry.polygon.orient
 from sklearn.neighbors import KDTree
 

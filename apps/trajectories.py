@@ -1,11 +1,12 @@
 import sys
 
 sys.path.append("../")
-import Utilities
-import plots
 import numpy as np
 import streamlit as st
 from hydralit import HydraHeadApp
+
+import plots
+import Utilities
 
 
 class TrajClass(HydraHeadApp):

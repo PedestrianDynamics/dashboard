@@ -4,10 +4,11 @@ sys.path.append("../")
 import logging
 
 import numpy as np
-import plots
 import streamlit as st
-import Utilities
 from hydralit import HydraHeadApp
+
+import plots
+import Utilities
 
 
 class StatClass(HydraHeadApp):
