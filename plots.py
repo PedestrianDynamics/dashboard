@@ -602,41 +602,6 @@ def plot_agent_speed(pid, frames, speed_agent, max_speed, fps):
     return fig
 
 
-@st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def vis_trajectories(
-    data,
-    data_df,
-    special_ped,
-    speed,
-    geo_walls,
-    transitions,
-    min_x,
-    max_x,
-    min_y,
-    max_y,
-    choose_transitions,
-    sample_trajectories,
-):
-    fig = px.scatter(
-        data_df,
-        x="X",
-        y="Y",
-        animation_frame="FR",
-        animation_group="ID",
-        color="COLOR",
-        size="A",
-        # colorbar="COLOR",
-        range_color=[0, 255],
-        color_continuous_scale=px.colors.diverging.RdBu_r[::-1],
-    )
-    fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = 30
-    fig.layout.updatemenus[0].buttons[0].args[1]["transition"]["duration"] = 5
-    fig.update_geos(projection_type="equirectangular", visible=True, resolution=110)
-    fig.update_traces(marker=dict(line=dict(width=0.5, color="Gray")))
-    fig.update_layout(title_text="Trajectory Visualizer")
-    return fig
-
-
 def moving_trajectories(
     data,
     data_df,
@@ -656,11 +621,19 @@ def moving_trajectories(
     if "SPEED" in data_df.columns:
         color = "SPEED"
         range_color = [0, max(data_df["SPEED"])]
-    else:
+    elif "COLOR" in data_df.columns:
         color = "COLOR"
         range_color = [0, 255]
+    else:
+        data_df["COLOR"] = 125
+        color = "COLOR"
+        range_color = [0, 125]
 
-    data_df["A"] /= 2
+    if "A" in data_df:
+        data_df["A"] /= 2
+    else:
+        data_df["A"] = 0.2
+
     fig = px.scatter(
         data_df,
         x="X",
@@ -767,7 +740,6 @@ def moving_trajectories(
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_trajectories(
     data,
-    data_df,
     special_ped,
     speed,
     geo_walls,
@@ -784,7 +756,6 @@ def plot_trajectories(
         rows=1,
         cols=1,
     )
-    data_df["A"] /= 2
     peds = np.unique(data[:, 0])
     for ped in peds:
         d = data[data[:, 0] == ped]

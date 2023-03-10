@@ -3,16 +3,19 @@ import os
 import time
 import xml.etree.ElementTree as ET
 from collections import defaultdict
-
+from typing import Tuple
 import lovely_logger as logging
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import requests
-import shapely
+
 import streamlit as st
 from pandas import read_csv
 from scipy import stats
 from shapely.geometry import LineString, Point, Polygon
+
+
 # shapely.geometry.polygon.orient
 from sklearn.neighbors import KDTree
 
@@ -96,18 +99,16 @@ def get_time(t):
 
 def selected_traj_geo(text):
     """Returns a list of trajectory and geometry files"""
-    if text in examples.keys():
+    if text in examples:
         return examples[text]
-    else:
-        logging.warning(f"Could not find {text}")
-        # logging.info(f"Available examples are {examples}")
-        return []
+
+    return []
 
 
 def download(url: str, filename: str):
 
     try:
-        r = requests.get(url, stream=True)
+        r = requests.get(url, stream=True, timeout=10)
         logging.info(f"saving to {filename}")
         with open(filename, "wb") as f:
             for chunk in r.iter_content(chunk_size=1024 * 8):
@@ -144,7 +145,7 @@ def inv_weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
     v[v > v0] = v0
     s = 1 - v / v0
     # np.log(s, where=np.logical_not(zero_mask))
-    x = -1 / gamma * np.log(s, out=np.zeros_like(s), where=(s != 0)) + 1 / rho_max
+    x = -1 / gamma * np.log(s, out=np.zeros_like(s), where=s != 0) + 1 / rho_max
     return 1 / x
 
 
@@ -355,7 +356,9 @@ def on_different_sides(L1, L2, P1, P2) -> bool:
     return np.sign(sign1) != np.sign(sign2)
 
 
-def passing_frame(ped_data: np.array, line: LineString, fps: float) -> int:
+def passing_frame(
+    ped_data: npt.NDArray[np.float64], line: LineString, fps: float
+) -> Tuple[int, int]:
     """First frame at which the pedestrian is within a buffer around line
 
     fps is used to determin the width of the buffer and is not needed
@@ -372,8 +375,8 @@ def passing_frame(ped_data: np.array, line: LineString, fps: float) -> int:
 
     """
     XY = ped_data[:, 2:4]
-    L1 = np.array(line.coords[0])
-    L2 = np.array(line.coords[1])
+    L1: np.ndarray[int, np.dtype[np.float64]] = np.array(line.coords[0])
+    L2: np.ndarray[int, np.dtype[np.float64]] = np.array(line.coords[1])
     P1 = XY[0]
     P2 = XY[-1]
     i1 = 0  # index of first element
@@ -425,6 +428,7 @@ def read_obstacle(xml_doc, unit):
     return_dict = {}
     # read in obstacles and combine
     # them into an array for polygon representation
+    points = np.zeros((0, 2))
     for o_num, o_elem in enumerate(xml_doc.getElementsByTagName("obstacle")):
         N_polygon = len(o_elem.getElementsByTagName("polygon"))
         if N_polygon == 1:
@@ -432,8 +436,8 @@ def read_obstacle(xml_doc, unit):
         else:
             points = np.zeros((0, 2))
 
-        for p_num, p_elem in enumerate(o_elem.getElementsByTagName("polygon")):
-            for v_num, v_elem in enumerate(p_elem.getElementsByTagName("vertex")):
+        for _, p_elem in enumerate(o_elem.getElementsByTagName("polygon")):
+            for _, v_elem in enumerate(p_elem.getElementsByTagName("vertex")):
                 vertex_x = float(
                     # p_elem.getElementsByTagName("vertex")[v_num].attributes["px"].value
                     v_elem.attributes["px"].value
@@ -451,9 +455,7 @@ def read_obstacle(xml_doc, unit):
         center_point = [np.sum(x) / n, np.sum(y) / n]
         angles = np.arctan2(x - center_point[0], y - center_point[1])
         # sorting the points:
-        sort_tups = sorted(
-            [(i, j, k) for i, j, k in zip(x, y, angles)], key=lambda t: t[2]
-        )
+        sort_tups = sorted(list(zip(x, y, angles)), key=lambda t: t[2])
         return_dict[o_num] = np.array(sort_tups)[:, 0:2]
 
     return return_dict
@@ -469,23 +471,19 @@ def read_subroom_walls(xml_doc, unit):
 
     for _, s_elem in enumerate(xml_doc.getElementsByTagName("subroom")):
         for _, p_elem in enumerate(s_elem.getElementsByTagName("polygon")):
-            if True or p_elem.getAttribute("caption") == "wall":
-                n_wall = n_wall + 1
-                n_vertex = len(p_elem.getElementsByTagName("vertex"))
-                vertex_array = np.zeros((n_vertex, 2))
-                for v_num, _ in enumerate(p_elem.getElementsByTagName("vertex")):
-                    vertex_array[v_num, 0] = (
-                        p_elem.getElementsByTagName("vertex")[v_num]
-                        .attributes["px"]
-                        .value
-                    )
-                    vertex_array[v_num, 1] = (
-                        p_elem.getElementsByTagName("vertex")[v_num]
-                        .attributes["py"]
-                        .value
-                    )
+            # if p_elem.getAttribute("caption") == "wall":
+            n_wall = n_wall + 1
+            n_vertex = len(p_elem.getElementsByTagName("vertex"))
+            vertex_array = np.zeros((n_vertex, 2))
+            for v_num, _ in enumerate(p_elem.getElementsByTagName("vertex")):
+                vertex_array[v_num, 0] = (
+                    p_elem.getElementsByTagName("vertex")[v_num].attributes["px"].value
+                )
+                vertex_array[v_num, 1] = (
+                    p_elem.getElementsByTagName("vertex")[v_num].attributes["py"].value
+                )
 
-                dict_polynom_wall[n_wall] = vertex_array / cm2m
+            dict_polynom_wall[n_wall] = vertex_array / cm2m
 
     return dict_polynom_wall
 
@@ -680,8 +678,7 @@ def compute_speed_and_angle(data, fps, df=10):
     """
     agents = np.unique(data[:, 0]).astype(int)
     once = 1
-    speeds = np.array([])
-
+    data2 = np.array([])
     for agent in agents:
         ped = data[data[:, 0] == agent]
         traj = ped[:, 2:4]
@@ -724,9 +721,7 @@ def compute_speed_and_angle(data, fps, df=10):
     return data2
 
 
-def calculate_speed_average(
-    geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y, speed
-):
+def calculate_speed_average(geominX, geomaxX, geominY, geomaxY, dx, dy, X, Y, speed):
     """Calculate speed average over time"""
     xbins = np.arange(geominX, geomaxX + dx, dx)
     ybins = np.arange(geominY, geomaxY + dy, dy)
@@ -741,7 +736,7 @@ def calculate_speed_average(
 
 
 def calculate_density_average_weidmann(
-    geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y, speed
+    geominX, geomaxX, geominY, geomaxY, dx, dy, X, Y, speed
 ):
     """Calculate density using Weidmann(speed)"""
     density = inv_weidmann(speed)
@@ -824,7 +819,7 @@ def check_shape_and_stop(shape, how_speed):
         st.stop()
 
 
-def widthOfGaußian(fwhm):
+def width_gaussian(fwhm):
     """np.sqrt(2) / (2 * np.sqrt(2 * np.log(2)))"""
 
     return fwhm * 0.6005612
@@ -857,9 +852,9 @@ def calculate_density_average_gauss(
     """
 
     xbins = np.arange(geominX, geomaxX + dx, dx)
-    ybins = np.arange(geominY, geomaxY + dx, dx)
+    ybins = np.arange(geominY, geomaxY + dy, dy)
     x_dens, y_dens = xdensYdens(X, Y, xbins, ybins)
-    a = widthOfGaußian(width)
+    a = width_gaussian(width)
     rho_matrix = densityField(x_dens, y_dens, a) / nframes
     return rho_matrix
 
@@ -874,7 +869,7 @@ def jam_frames(data, jam_speed):
     return np.unique(jam_data[:, 1])
 
 
-def consecutive_chunks(data1d, fps, frame_margin):
+def consecutive_chunks(data1d, frame_margin):
     # input array([ 1,  2,  3,  4, 10, 11, 12, 15])
     # output array([3, 2])
     # diff err by 5 frames
@@ -915,8 +910,12 @@ def consecutive_chunks(data1d, fps, frame_margin):
 
 
 def jam_waiting_time(
-    data: np.array, jam_speed: float, jam_min_duration: int, fps: int, precision
-):
+    data: npt.NDArray[np.float64],
+    jam_speed: float,
+    jam_min_duration: int,
+    fps: int,
+    precision,
+) -> npt.NDArray[np.float64]:
     """Return a list of pid and its max_time in jam
 
     return a 2D array [ped, waiting_time]
@@ -926,7 +925,7 @@ def jam_waiting_time(
     for ped in peds:
         data_ped = data[data[:, 0] == ped]
         frames_in_jam = jam_frames(data_ped, jam_speed)
-        jam_times, _ = consecutive_chunks(frames_in_jam, fps, precision)
+        jam_times, _ = consecutive_chunks(frames_in_jam, precision)
 
         if not jam_times.size:
             continue
@@ -939,7 +938,11 @@ def jam_waiting_time(
 
 
 def jam_lifetime(
-    data: np.array, jam_frames, jam_min_agents: int, fps: int, precision: int
+    data: npt.NDArray[np.float64],
+    jam_frames,
+    jam_min_agents: int,
+    fps: int,
+    precision: int,
 ):
     """Lifespane of a Jam and how many pedestrian in chunck"""
 
@@ -960,7 +963,7 @@ def jam_lifetime(
     if not lifetime.size:
         return np.array([]), np.array([]), 0, np.array([])
 
-    chuncks, ret = consecutive_chunks(np.array(lifetime)[:, 0], fps, precision)
+    chuncks, ret = consecutive_chunks(np.array(lifetime)[:, 0], precision)
     # print("clifetime ", clifetime)
     if not chuncks.size:  # one big chunk
         chuncks = lifetime[:, 0]
@@ -1105,8 +1108,8 @@ def get_neighbors_at_frame(frame, data, k):
     if k < len(points):
         nearest_dist, nearest_ind = tree.query(points, k)
         return nearest_dist, nearest_ind
-    else:
-        return np.array([]), np.array([])
+
+    return np.array([]), np.array([])
 
 
 def get_neighbors_special_agent_data(agent, frame, data, nearest_dist, nearest_ind):

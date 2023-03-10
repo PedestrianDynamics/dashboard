@@ -105,7 +105,6 @@ class TrajClass(HydraHeadApp):
         with Utilities.profile("plot_trajectories"):
             fig = plots.plot_trajectories(
                 self.data,
-                self.data_df,
                 self.plot_ped,
                 speed_agent,
                 self.geometry_wall,
@@ -120,7 +119,7 @@ class TrajClass(HydraHeadApp):
             st.plotly_chart(fig, use_container_width=True)
 
         if self.choose_visualisation:
-            with Utilities.profile("vis_trajectories"):
+            with Utilities.profile("moving_trajectories"):
                 fig = plots.moving_trajectories(
                     self.data,
                     self.data_df,
