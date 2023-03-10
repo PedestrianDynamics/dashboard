@@ -3,21 +3,20 @@ import os
 import time
 import xml.etree.ElementTree as ET
 from collections import defaultdict
-from typing import Tuple
-import lovely_logger as logging
+from typing import Tuple, List, DefaultDict
+import lovely_logger as logging  # type: ignore
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
-import requests
-
+import pandas as pd  # type: ignore
+import requests  # type: ignore
 import streamlit as st
 from pandas import read_csv
-from scipy import stats
-from shapely.geometry import LineString, Point, Polygon
-
+from scipy import stats  # type: ignore
+from shapely.geometry import LineString, Point, Polygon  # type: ignore
+from xml.dom.minidom import Document
 
 # shapely.geometry.polygon.orient
-from sklearn.neighbors import KDTree
+from sklearn.neighbors import KDTree  # type: ignore
 
 # name
 # trajectory
@@ -338,7 +337,12 @@ def get_measurement_lines(xml_doc, unit):
 #     # print("Crossed?", crossed_line)
 
 
-def on_different_sides(L1, L2, P1, P2) -> bool:
+def on_different_sides(
+    L1: npt.NDArray[np.float64],
+    L2: npt.NDArray[np.float64],
+    P1: npt.NDArray[np.float64],
+    P2: npt.NDArray[np.float64],
+) -> bool:
     """True is P1 and P2 are on different sides from [L1, L2]
 
                         L1
@@ -353,7 +357,7 @@ def on_different_sides(L1, L2, P1, P2) -> bool:
 
     sign1 = np.cross(L1 - L2, L1 - P1)
     sign2 = np.cross(L1 - L2, L1 - P2)
-    return np.sign(sign1) != np.sign(sign2)
+    return bool(np.sign(sign1) != np.sign(sign2))
 
 
 def passing_frame(
@@ -365,27 +369,20 @@ def passing_frame(
     in the calculations.
     Assume a desired speed of 1.3 m/s
 
-    :param ped_data: trajectories
-    :type ped_data: np.array
-    :param line: measurement line
-    :type line: LineString
-    :param fps: frames per second.
-    :type fps: float
-    :returns:
 
     """
-    XY = ped_data[:, 2:4]
-    L1: np.ndarray[int, np.dtype[np.float64]] = np.array(line.coords[0])
-    L2: np.ndarray[int, np.dtype[np.float64]] = np.array(line.coords[1])
-    P1 = XY[0]
-    P2 = XY[-1]
+    XY: npt.NDArray[np.float64] = ped_data[:, 2:4]
+    L1: npt.NDArray[np.float64] = np.array(line.coords[0])
+    L2: npt.NDArray[np.float64] = np.array(line.coords[1])
+    P1: npt.NDArray[np.float64] = XY[0]
+    P2: npt.NDArray[np.float64] = XY[-1]
     i1 = 0  # index of first element
     i2 = len(XY) - 1  # index of last element
     im = int(len(XY) / 2)  # index of the element in the middle
     M = XY[im]
     i = 0
-    passed_line_at_frame = -1
-    sign = -1
+    passed_line_at_frame: int = -1
+    sign: int = -1
     if not on_different_sides(L1, L2, P1, P2):
         return passed_line_at_frame, sign
 
@@ -405,10 +402,10 @@ def passing_frame(
     line_buffer = line.buffer(1.3 / fps, cap_style=2)
     if Point(XY[i1]).within(line_buffer):
         passed_line_at_frame = ped_data[i1, 1]
-        sign = np.sign(np.cross(L1 - L2, XY[i1] - XY[i2]))
+        sign = int(np.sign(np.cross(L1 - L2, XY[i1] - XY[i2])))
     elif Point(XY[i2]).within(line_buffer):
         passed_line_at_frame = ped_data[i2, 1]
-        sign = np.sign(np.cross(L1 - L2, XY[i1] - XY[i2]))
+        sign = int(np.sign(np.cross(L1 - L2, XY[i1] - XY[i2])))
 
     return passed_line_at_frame, sign
 
@@ -461,7 +458,7 @@ def read_obstacle(xml_doc, unit):
     return return_dict
 
 
-def read_subroom_walls(xml_doc, unit):
+def read_subroom_walls(xml_doc: Document, unit: str) -> dict:
     dict_polynom_wall = {}
     n_wall = 0
     if unit == "cm":
@@ -943,7 +940,9 @@ def jam_lifetime(
     jam_min_agents: int,
     fps: int,
     precision: int,
-):
+) -> Tuple[
+    npt.NDArray[np.float64], npt.NDArray[np.float64], float, npt.NDArray[np.float64]
+]:
     """Lifespane of a Jam and how many pedestrian in chunck"""
 
     lifetime = []
@@ -958,21 +957,20 @@ def jam_lifetime(
             if num_ped_in_jam >= jam_min_agents:
                 lifetime.append([frame, num_ped_in_jam])
 
-    lifetime = np.array(lifetime)
+    lifetime_arr = np.array(lifetime)
 
-    if not lifetime.size:
+    if not lifetime_arr.size:
         return np.array([]), np.array([]), 0, np.array([])
 
     chuncks, ret = consecutive_chunks(np.array(lifetime)[:, 0], precision)
     # print("clifetime ", clifetime)
     if not chuncks.size:  # one big chunk
-        chuncks = lifetime[:, 0]
+        chuncks = lifetime_arr[:, 0]
         mx_lt = (np.max(chuncks) - np.min(chuncks)) / fps
     else:
         mx_lt = np.max(chuncks) / fps
 
-    # print("F lifetime", lifetime[:10, :], lifetime.shape)
-    return lifetime, chuncks, mx_lt, ret
+    return lifetime_arr, chuncks, mx_lt, ret
 
 
 def calculate_NT_data(transitions, selected_transitions, data, fps):

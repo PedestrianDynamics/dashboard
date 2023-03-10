@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append('../')
+sys.path.append("../")
 import collections
 import logging
 
@@ -14,13 +14,25 @@ from streamlit_drawable_canvas import st_canvas
 import doc
 import draw_geometry as dg
 import plots
-#add an import to Hydralit
+
+# add an import to Hydralit
 import Utilities
 
 
 class dvTimeSeriesClass(HydraHeadApp):
-
-    def __init__(self, title, data, how_speed, geometry_wall, geominX, geomaxX, geominY, geomaxY, fps, newdata):
+    def __init__(
+        self,
+        title,
+        data,
+        how_speed,
+        geometry_wall,
+        geominX,
+        geomaxX,
+        geominY,
+        geomaxY,
+        fps,
+        newdata,
+    ):
         self.title = title
         self.how_speed = how_speed
         self.fps = fps
@@ -42,8 +54,8 @@ class dvTimeSeriesClass(HydraHeadApp):
             How to calculate average of density over time and space""",
         )
         st.sidebar.write(
-             "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
-             unsafe_allow_html=True,
+            "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
+            unsafe_allow_html=True,
         )
         sample = st.sidebar.slider(
             "Sample rate",
@@ -53,7 +65,8 @@ class dvTimeSeriesClass(HydraHeadApp):
             step=5,
             help="Sample rate of ploting trajectories and time series \
                 (the lower the slower)",
-            key="sample_traj",)
+            key="sample_traj",
+        )
 
         if choose_d_method == "Gaussian":
             gauss_width = st.sidebar.slider(
@@ -63,8 +76,10 @@ class dvTimeSeriesClass(HydraHeadApp):
             gauss_width = 0.6
 
         drawing_mode = st.sidebar.radio(
-        #    "Drawing tool:", ("Area", "Line", "polygon", "Transform"))
-            "Measurement:", ("Area", "Transform"))
+            #    "Drawing tool:", ("Area", "Line", "polygon", "Transform"))
+            "Measurement:",
+            ("Area", "Transform"),
+        )
 
         if drawing_mode in ["wall", "Line"]:
             drawing_mode = "line"
@@ -77,8 +92,7 @@ class dvTimeSeriesClass(HydraHeadApp):
 
         stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 3)
 
-
-        #-------
+        # -------
         if st.session_state.bg_img is None:
             logging.info("START new canvas")
             bg_img, img_width, img_height, dpi, scale = dvTimeSeriesClass.bg_img(self)
@@ -94,9 +108,9 @@ class dvTimeSeriesClass(HydraHeadApp):
             img_height = st.session_state.img_height
             img_width = st.session_state.img_width
 
-        if 'canvas' in globals():
+        if "canvas" in globals():
             del canvas
-            
+
         canvas = st_canvas(
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=stroke_width,
@@ -111,14 +125,13 @@ class dvTimeSeriesClass(HydraHeadApp):
         )
         return sample, choose_d_method, gauss_width, canvas, dpi, scale, img_height
 
-
     def draw_rects(self, canvas, img_height, dpi, scale):
         rect_points_xml = collections.defaultdict(dict)
         if canvas.json_data is not None:
             objects = pd.json_normalize(canvas.json_data["objects"])
             for col in objects.select_dtypes(include=["object"]).columns:
                 objects[col] = objects[col].astype("str")
-            
+
             if not objects.empty:
                 rects = objects[objects["type"].values == "rect"]
                 if not rects.empty:
@@ -134,14 +147,14 @@ class dvTimeSeriesClass(HydraHeadApp):
                     ) = dg.process_rects(rects, img_height)
                     i = 0
                     for x1, x2, x3, x4, y1, y2, y3, y4 in zip(
-                            rfirst_x,
-                            rsecond_x,
-                            rthird_x,
-                            rfirth_x,
-                            rfirst_y,
-                            rsecond_y,
-                            rthird_y,
-                            rfirth_y,
+                        rfirst_x,
+                        rsecond_x,
+                        rthird_x,
+                        rfirth_x,
+                        rfirst_y,
+                        rsecond_y,
+                        rthird_y,
+                        rfirth_y,
                     ):
                         rect_points_xml[i]["x"] = [
                             x1 / scale / dpi + self.geominX,
@@ -159,10 +172,11 @@ class dvTimeSeriesClass(HydraHeadApp):
 
         return rect_points_xml
 
-
     def bg_img(self):
         logging.info("enter bg_img")
-        width, height, scale = dg.get_scaled_dimensions(self.geominX, self.geomaxX, self.geominY, self.geomaxY)
+        width, height, scale = dg.get_scaled_dimensions(
+            self.geominX, self.geomaxX, self.geominY, self.geomaxY
+        )
         fig, ax = plt.subplots(figsize=(width, height))
         fig.set_dpi(100)
         ax.set_xlim((0, width))
@@ -187,36 +201,44 @@ class dvTimeSeriesClass(HydraHeadApp):
         ax.grid()
         bg_img = dg.fig2img(fig)
         bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-        img_width, img_height = bbox.width * fig.dpi, bbox.height * fig.dpi        
-        #inv = ax.transData.inverted()
+        img_width, img_height = bbox.width * fig.dpi, bbox.height * fig.dpi
+        # inv = ax.transData.inverted()
         return bg_img, img_width, img_height, fig.dpi, scale
-
 
     def run(self):
         info_timeseries = st.expander(
             "Documentation: Density/Speed Time Series (click to expand)"
         )
-        st.info("Draw a measurement area with **Area** and move it if necessary with **Transform**")
-        sample, choose_d_method, gauss_width, canvas, dpi, scale, img_height = dvTimeSeriesClass.init_sidebar(self)
-        #canvas
-        
+        st.info(
+            "Draw a measurement area with **Area** and move it if necessary with **Transform**"
+        )
+        (
+            sample,
+            choose_d_method,
+            gauss_width,
+            canvas,
+            dpi,
+            scale,
+            img_height,
+        ) = dvTimeSeriesClass.init_sidebar(self)
+        # canvas
+
         with info_timeseries:
             doc.doc_timeseries()
 
-        
         frames = np.unique(self.data[:, 1])
         rects = dvTimeSeriesClass.draw_rects(self, canvas, img_height, dpi, scale)
         for ir in range(len(rects)):
             pl = st.empty()
             c1, c2, c3 = st.columns((1, 1, 1))
-            _, _, c31= st.columns((1, 1, 1))
+            _, _, c31 = st.columns((1, 1, 1))
             pl_l = c31.empty()
             # st.write((rects[ir]['x'][0], rects[ir]['x'][1], rects[ir]['x'][2], rects[ir]['x'][3]))
             # st.write((rects[ir]['y'][0], rects[ir]['y'][1], rects[ir]['y'][2], rects[ir]['y'][3]))
-            from_x = rects[ir]['x'][0]
-            to_x = rects[ir]['x'][1]
-            from_y = rects[ir]['y'][3]
-            to_y = rects[ir]['y'][0]
+            from_x = rects[ir]["x"][0]
+            to_x = rects[ir]["x"][1]
+            from_y = rects[ir]["y"][3]
+            to_y = rects[ir]["y"][0]
             dx = to_x - from_x
             dy = to_y - from_y
             pl.info(f"Measurement area {ir+1}, dx = {dx:.2f} / m, dy = {dy:.2f} / m")
@@ -268,9 +290,7 @@ class dvTimeSeriesClass(HydraHeadApp):
                         dframe = self.data[:, 1] == frame
                         x = self.data[dframe][:, 2]
                         y = self.data[dframe][:, 3]
-                        speed_agent = self.data[dframe][
-                            :, st.session_state.speed_index
-                        ]
+                        speed_agent = self.data[dframe][:, st.session_state.speed_index]
                         stime = Utilities.calculate_speed_average(
                             from_x,
                             to_x,
@@ -278,14 +298,13 @@ class dvTimeSeriesClass(HydraHeadApp):
                             to_y,
                             dx,
                             dy,
-                            1,
                             x,
                             y,
                             speed_agent,
                         )
                         speed_time.append(stime[0, 0])
 
-            # ---- plots            
+            # ---- plots
             # rho
             fig = plots.plot_timeserie(
                 frames,
@@ -294,7 +313,7 @@ class dvTimeSeriesClass(HydraHeadApp):
                 "Density / m / m",
                 np.min(density_time),
                 np.max(density_time) + 1,
-                np.max(density_time)
+                np.max(density_time),
             )
             c2.plotly_chart(fig, use_container_width=True)
             # v
@@ -304,21 +323,28 @@ class dvTimeSeriesClass(HydraHeadApp):
                 self.fps,
                 "Speed / m/s",
                 np.min(speed_time),
-                np.max(speed_time)+1,
+                np.max(speed_time) + 1,
                 np.max(speed_time),
             )
             c1.plotly_chart(fig, use_container_width=True)
-            # Js                        
-            l = pl_l.slider("length", float(np.min((dx, dy))), float(np.max((dx, dy))), 0.5, dx/10, help="flow = rho * v / length")
-            flow = np.array(density_time) * np.array(speed_time) /l
+            # Js
+            l = pl_l.slider(
+                "length",
+                float(np.min((dx, dy))),
+                float(np.max((dx, dy))),
+                0.5,
+                dx / 10,
+                help="flow = rho * v / length",
+            )
+            flow = np.array(density_time) * np.array(speed_time) / l
             fig = plots.plot_timeserie(
                 frames,
                 flow,
                 self.fps,
                 "Js / 1/s",
                 np.min(flow),
-                np.max(flow)+1,
+                np.max(flow) + 1,
                 np.max(flow),
             )
-            
+
             c3.plotly_chart(fig, use_container_width=True)
