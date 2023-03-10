@@ -10,7 +10,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
 from scipy import stats
 from scipy.spatial import ConvexHull
-from shapely.geometry import LineString, Point
+from shapely.geometry import Point
 
 from Utilities import survival
 
