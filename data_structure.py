@@ -7,11 +7,12 @@ from xml.dom.minidom import Document, parse, parseString
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
+import pandas as pd  # type: ignore
 import streamlit as st
 from pandas import read_csv
 from streamlit.uploaded_file_manager import UploadedFile
 import Utilities
+
 
 @dataclass
 class data_files:
@@ -39,7 +40,6 @@ class data_files:
     def get_data_df(self):
         return self._df
 
-    
     def process_traj_file(self) -> str:
         """return StringIO data from trajectory file"""
         if self.uploaded_traj_file:
@@ -112,7 +112,7 @@ class data_files:
         else:
             geo_xml = parse(self.default_geometry_file)
 
-        return geo_xml
+        return geo_xml  # type: ignore
 
     def __post_init__(self) -> None:
         selection = Utilities.selected_traj_geo(self.from_examples)
