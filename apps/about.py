@@ -1,13 +1,10 @@
 import sys
-
-sys.path.append('../')
 from hydralit import HydraHeadApp
-
-#add an import to Hydralit
 import doc
+
+sys.path.append("../")
 
 
 class AboutClass(HydraHeadApp):
-
     def run(self):
         doc.docs()

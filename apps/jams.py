@@ -1,25 +1,22 @@
+import logging
 import sys
+import numpy.typing as npt
+import doc
+import numpy as np
+import plots
+import streamlit as st
+import Utilities
+from hydralit import HydraHeadApp
 
 sys.path.append("../")
-import datetime as dt
-import logging
-
-import numpy as np
-import streamlit as st
-from hydralit import HydraHeadApp
-from shapely.geometry import LineString
-
-import doc
-import plots
-import Utilities
 
 
 class JamClass(HydraHeadApp):
     def __init__(self, data, fps):
-        self.data = data
-        self.frames = np.unique(self.data[:, 1])
-        self.peds = np.unique(data[:, 0]).astype(int)
-        self.fps = fps
+        self.data: npt.NDArray[np.float64] = data
+        self.frames: npt.NDArray[np.int16] = np.unique(self.data[:, 1])
+        self.peds: npt.NDArray[np.int16] = np.unique(data[:, 0]).astype(int)
+        self.fps: int = fps
 
     def init_sidebar(self):
         st.sidebar.header("🐌 Jam")

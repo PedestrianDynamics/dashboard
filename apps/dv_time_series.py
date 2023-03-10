@@ -1,22 +1,19 @@
-import sys
-
-sys.path.append("../")
 import collections
 import logging
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import streamlit as st
-from hydralit import HydraHeadApp
-from streamlit_drawable_canvas import st_canvas
+import sys
 
 import doc
 import draw_geometry as dg
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import plots
-
-# add an import to Hydralit
+import streamlit as st
 import Utilities
+from hydralit import HydraHeadApp
+from streamlit_drawable_canvas import st_canvas
+
+sys.path.append("../")
 
 
 class dvTimeSeriesClass(HydraHeadApp):
@@ -182,7 +179,7 @@ class dvTimeSeriesClass(HydraHeadApp):
         ax.set_xlim((0, width))
         ax.set_ylim((0, height))
         plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
-        inv = ax.transData.inverted()
+        # inv = ax.transData.inverted()
         dg.plot_traj(ax, self.data, scale, self.geominX, self.geominY)
         major_ticks_top_x = np.linspace(0, width, 5)
         major_ticks_top_y = np.linspace(0, height, 5)
@@ -228,7 +225,7 @@ class dvTimeSeriesClass(HydraHeadApp):
 
         frames = np.unique(self.data[:, 1])
         rects = dvTimeSeriesClass.draw_rects(self, canvas, img_height, dpi, scale)
-        for ir in range(len(rects)):
+        for ir, _ in enumerate(rects):
             pl = st.empty()
             c1, c2, c3 = st.columns((1, 1, 1))
             _, _, c31 = st.columns((1, 1, 1))
