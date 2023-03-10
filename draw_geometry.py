@@ -264,7 +264,7 @@ def write_geometry(
 
 def main(trajectory_file):
     geo_file = ""
-    m_lines = []
+
     stringio = io.StringIO(trajectory_file.getvalue().decode("utf-8"))
     string_data = stringio.read()
     if string_data != st.session_state.old_data:
@@ -288,10 +288,10 @@ def main(trajectory_file):
             "<style>div.row-widget.stRadio > div{flex-direction:row;}</style>",
             unsafe_allow_html=True,
         )
+
+    cm2m = 1
     if unit == "cm":
         cm2m = 100
-    elif unit == "m":
-        cm2m = 1
 
     global debug
     debug = st.sidebar.checkbox("Show", help="plot result with ticks and show xml")
@@ -352,8 +352,8 @@ def main(trajectory_file):
     stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 3)
     # stroke_colocr = c1.color_picker("Stroke color hex: ", "#E80606")
 
-    if drawing_mode == "m_line":
-        stroke_color = st.session_state.stroke_mline
+    # if drawing_mode == "m_line":
+    stroke_color = st.session_state.stroke_mline
 
     if drawing_mode in ["wall", "m_area", "transform"]:
         stroke_color = st.session_state.stroke_wall

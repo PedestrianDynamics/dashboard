@@ -300,7 +300,6 @@ def plot_jam_lifetime(frames, lifetime, fps, title, ret, min_agents_jam):
         _, idx, _ = np.intersect1d(xx[:, 0], lifetime[:, 0], return_indices=True)
         xx[idx, 1] = lifetime[:, 1]
 
-    times = xx[:, 0] / fps
     # the curve over all frames
     trace1 = go.Scatter(
         x=xx[0:, 0] / fps,
@@ -349,10 +348,10 @@ def plot_jam_lifetime(frames, lifetime, fps, title, ret, min_agents_jam):
     fig.append_trace(trace1, row=1, col=1)
     fig.append_trace(trace4, row=1, col=1)
 
-    miny = np.min(xx[:, 1])
-    maxy = np.max(xx[:, 1])
-    minx = np.min(times)
-    maxx = np.max(times)
+    # miny = np.min(xx[:, 1])
+    # maxy = np.max(xx[:, 1])
+    # minx = np.min(times)
+    # maxx = np.max(times)
 
     # fig.update_yaxes(
     #     range=[miny - 0.1, maxy + 0.1],
@@ -384,7 +383,7 @@ def plot_jam_waiting_hist(waiting_time, fps, nbins):
         labels={"waiting": "Waiting time"},
         text_auto=True,
         nbins=nbins,
-        title=f"<b>Maximal waiting time: {maxt:.2f} [s]</b>",
+        title=f"<b>Maximal waiting time: {maxt:.2f} [s] (fps={fps})</b>",
     )
     hist.update_layout(bargap=0.2)
     return hist
@@ -1116,7 +1115,7 @@ def plot_x_y(x, y, title, xlabel, ylabel, threshold=0):
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_areas(areas, frames, agent):
-    logging.info(f"plot areas")
+    logging.info("plot areas")
     fig = make_subplots(
         rows=1,
         cols=1,

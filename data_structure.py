@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any, List
 from xml.dom.minidom import Document, parse, parseString
-
+from pathlib import Path
 import numpy as np
 import numpy.typing as npt
 import pandas as pd  # type: ignore
@@ -103,6 +103,7 @@ class data_files:
     def read_geo_data(self) -> Document:
         """Return xml object from geoemtry file"""
         logging.info(f"geo: {self.uploaded_traj_file}")
+        geo_xml = None
         if self.uploaded_geo_file:
             geo_xml = parseString(self.uploaded_geo_file.getvalue())
 
@@ -110,7 +111,8 @@ class data_files:
             geo_xml = parse(self.selected_geo_file)
 
         else:
-            geo_xml = parse(self.default_geometry_file)
+            if Path(self.default_geometry_file).exists():
+                geo_xml = parse(self.default_geometry_file)
 
         return geo_xml  # type: ignore
 
@@ -138,4 +140,5 @@ class data_files:
             )
             self.init_header()
             self._df = pd.DataFrame(self._data, columns=self._header)
+
         self.read_geo_data()

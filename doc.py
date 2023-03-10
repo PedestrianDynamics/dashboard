@@ -47,7 +47,7 @@ def doc_plots():
     )
 
     st.write(
-        """
+        r"""
     #### Survival
     The time lapses $\delta$ between two consecutive agents passing a line are calculated.
     The value of $\delta$ reflects the sustained time of clogs interrupting the flow.
@@ -82,7 +82,7 @@ def doc_neighbors():
 
 def doc_jam():
     st.write(
-        """
+        r"""
     A pedestrian $i$ is defined as *congested* if its speed at time $t$
     is below a certain threshold $\hat v$: $v_i(t)<\hat v$.  
     Hence, the set of *congested* pedestrians is defined as
@@ -96,7 +96,7 @@ def doc_jam():
     """
     )
     st.info(
-        """
+        r"""
     Therefore, we define **jam** as a state, where at least
     $\hat n$ pedestrians are *congested* for a certain amount of time $\hat t$.
     """
@@ -121,9 +121,9 @@ def doc_jam():
     \end{equation}
     """
     )
-    st.write("""where $\hat t$ is the minimal jam duration.""")
+    st.write(r"""where $\hat t$ is the minimal jam duration.""")
     st.write(
-        """
+        r"""
     ####  Lifetime of jam
     Considering a minimal number of pedestrians in jam $\hat n$, and the set of congested pedestrians Eq. (1), the longest time period of a jam is
     """
@@ -154,7 +154,7 @@ def doc_jam():
     )
 
     st.write(
-        """
+        r"""
     #### Summary of jam parameters
     | Variable    | Notation |
     |--------------|-----------|
