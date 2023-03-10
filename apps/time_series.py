@@ -7,7 +7,7 @@ sys.path.append("../")
 
 
 import numpy as np
-import streamlit as st
+mimport streamlit as st
 from hydralit import HydraHeadApp
 
 import doc

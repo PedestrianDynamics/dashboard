@@ -8,11 +8,11 @@ from typing import Dict, List, Tuple, Union
 from xml.dom.minidom import Document
 
 import lovely_logger as logging  # type: ignore
-import numpy as np
-import numpy.typing as npt
+import numpy as np  # type: ignore
+import numpy.typing as npt  # type: ignore
 import pandas as pd  # type: ignore
 import requests  # type: ignore
-import streamlit as st
+import streamlit as st  # type: ignore
 from pandas import read_csv
 from scipy import stats  # type: ignore
 from shapely.geometry import LineString, Point, Polygon  # type: ignore

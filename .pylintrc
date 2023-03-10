@@ -1,0 +1,14 @@
+[MASTER]
+# Specify the extension package whitelist to allow dynamically loading scipy
+extension-pkg-whitelist=scipy
+
+# Specify the ignored modules if you want to exclude certain modules from linting
+ignored-modules=
+
+[MESSAGES CONTROL]
+# Customize the warning messages displayed by pylint
+# Example: disable the warning for too many instance attributes
+#R0914 Too many local variables
+#R0913: Too many arguments
+disable=R0902,C0103,R0914,R0913
+

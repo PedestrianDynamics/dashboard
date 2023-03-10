@@ -9,7 +9,7 @@ import streamlit as st
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
 from scipy import stats
-from scipy.spatial import ConvexHull
+from scipy import spatial
 from shapely.geometry import Point
 
 from Utilities import survival
@@ -1189,7 +1189,7 @@ def plot_agents(
         )
 
     if len(neighbors) > 2:
-        hull = ConvexHull(neighbors)
+        hull = spatial.ConvexHull(neighbors)
         X00 = neighbors[hull.vertices, 0]
         Y00 = neighbors[hull.vertices, 1]
     else:

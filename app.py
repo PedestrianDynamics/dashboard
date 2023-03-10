@@ -5,10 +5,10 @@ from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
 
-import lovely_logger as logging
-import numpy as np
-import streamlit as st
-from hydralit import HydraApp
+import lovely_logger as logging  # type: ignore
+import numpy as np  # type: ignore
+import streamlit as st  # type: ignore
+from hydralit import HydraApp  # type: ignore
 from apps import (
     about,
     dv_time_series,
@@ -29,6 +29,8 @@ import data_structure
 path = Path(__file__)
 ROOT_DIR = path.parent.absolute()
 home_path = str(Path.home())
+
+pl = st.empty()
 
 
 @st.cache
@@ -443,8 +445,7 @@ if __name__ == "__main__":
     )
 
     # st.header("Dashboard")
-    global pl
-    pl = st.empty()
+
     with pl:
         doc.docs()
 

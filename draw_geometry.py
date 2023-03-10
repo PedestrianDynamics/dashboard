@@ -14,6 +14,9 @@ from streamlit_drawable_canvas import st_canvas
 
 from Utilities import get_time, get_unit, read_trajectory
 
+download_pl = st.empty()
+debug = st.sidebar.checkbox("Show", help="plot result with ticks and show xml")
+
 
 def prettify(elem):
     """Return a pretty-printed XML string for the Element."""
@@ -256,7 +259,7 @@ def write_geometry(
     b_xml = ET.tostring(data, encoding="utf8", method="xml")
     b_xml = prettify(b_xml)
 
-    with open(geo_file, "w") as f:
+    with open(geo_file, "w", encoding="utf-8") as f:
         f.write(b_xml)
 
     return b_xml
@@ -293,8 +296,6 @@ def main(trajectory_file):
     if unit == "cm":
         cm2m = 100
 
-    global debug
-    debug = st.sidebar.checkbox("Show", help="plot result with ticks and show xml")
     st.sidebar.write("----")
     if new_data:
         data = read_trajectory(trajectory_file) / cm2m
@@ -376,8 +377,7 @@ def main(trajectory_file):
         drawing_mode=drawing_mode,
         key="canvas",
     )
-    global download_pl
-    download_pl = st.empty()
+
     if debug:
         st.info(
             f"""
