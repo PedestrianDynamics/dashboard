@@ -30,8 +30,6 @@ path = Path(__file__)
 ROOT_DIR = path.parent.absolute()
 home_path = str(Path.home())
 
-pl = st.empty()
-
 
 @st.cache
 def init_logger():
@@ -445,7 +443,8 @@ if __name__ == "__main__":
     )
 
     # st.header("Dashboard")
-
+    global pl
+    pl = st.empty()
     with pl:
         doc.docs()
 

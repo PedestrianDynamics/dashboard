@@ -1,20 +1,15 @@
 import datetime as dt
 import sys
 
+import doc
+import numpy as np  # typing: ignore
+import plots
+import streamlit as st  # typing: ignore
+import Utilities
+from hydralit import HydraHeadApp  # typing: ignore
 from shapely.geometry import LineString
 
 sys.path.append("../")
-
-
-import numpy as np
-mimport streamlit as st
-from hydralit import HydraHeadApp
-
-import doc
-import plots
-
-# add an import to Hydralit
-import Utilities
 
 
 class TimeSeriesClass(HydraHeadApp):
