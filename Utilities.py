@@ -870,7 +870,7 @@ def calculate_RSET(
     dy: float,
     X: npt.NDArray[np.float64],
     Y: npt.NDArray[np.float64],
-    time: float,
+    time: npt.NDArray[np.float64],
     func: str,
 ) -> npt.NDArray[np.float64]:
     """Calculate RSET according to 5.5.1 RSET Maps in Schroder2017a"""

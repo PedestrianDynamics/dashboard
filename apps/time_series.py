@@ -4,7 +4,7 @@ import sys
 from shapely.geometry import LineString
 
 sys.path.append("../")
-import logging
+
 
 import numpy as np
 import streamlit as st
@@ -12,12 +12,15 @@ from hydralit import HydraHeadApp
 
 import doc
 import plots
+
 # add an import to Hydralit
 import Utilities
 
 
 class TimeSeriesClass(HydraHeadApp):
-    def __init__(self, data, disable_NT_flow, transitions, default, fps, name, group_index):
+    def __init__(
+        self, data, disable_NT_flow, transitions, default, fps, name, group_index
+    ):
         self.data = data
         self.disable_NT_flow = disable_NT_flow
         self.frames = np.unique(self.data[:, 1])
@@ -182,7 +185,7 @@ class TimeSeriesClass(HydraHeadApp):
                             self.fps,
                             num_peds_TD,
                             sample_TD,
-                            self.group_index
+                            self.group_index,
                         )
                         st.plotly_chart(fig, use_container_width=True)
 
