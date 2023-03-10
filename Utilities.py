@@ -3,7 +3,10 @@ import os
 import time
 import xml.etree.ElementTree as ET
 from collections import defaultdict
-from typing import Tuple, List, DefaultDict
+
+from typing import Dict, List, Tuple, Union
+from xml.dom.minidom import Document
+
 import lovely_logger as logging  # type: ignore
 import numpy as np
 import numpy.typing as npt
@@ -13,7 +16,6 @@ import streamlit as st
 from pandas import read_csv
 from scipy import stats  # type: ignore
 from shapely.geometry import LineString, Point, Polygon  # type: ignore
-from xml.dom.minidom import Document
 
 # shapely.geometry.polygon.orient
 from sklearn.neighbors import KDTree  # type: ignore
@@ -82,7 +84,7 @@ examples = {
 }
 
 
-def get_time(t):
+def get_time(t: float) -> str:
     """Time in min sec
 
     :param t: Run time
@@ -96,7 +98,7 @@ def get_time(t):
     return f"""{minutes:.0f} min:{seconds:.0f} sec"""
 
 
-def selected_traj_geo(text):
+def selected_traj_geo(text: str) -> List[str]:
     """Returns a list of trajectory and geometry files"""
     if text in examples:
         return examples[text]
@@ -124,31 +126,46 @@ def download(url: str, filename: str):
 
 
 @contextlib.contextmanager
-def profile(name):
+def profile(name: str):
     start_time = time.time()
     yield  # <-- your code will execute here
     total_time = time.time() - start_time
     logging.info(f"{name}: {total_time * 1000.0:.4f} ms")
 
 
-def weidmann(rho, v0=1.34, rho_max=5.4, gamma=1.913):
+def weidmann(
+    rho: npt.NDArray[np.float64],
+    v0: float = 1.34,
+    rho_max: float = 5.4,
+    gamma: float = 1.913,
+) -> npt.NDArray[np.float64]:
+    """Weidmann density-velocity function. Eq.6"""
+
     inv_rho = np.empty_like(rho)
     mask = rho <= 0.01
     inv_rho[mask] = 1 / rho_max
     inv_rho[~mask] = 1 / rho[~mask]
-    return v0 * (1 - np.exp(-gamma * (inv_rho - 1 / rho_max)))  # Eq. 6
+    return np.array(v0 * (1 - np.exp(-gamma * (inv_rho - 1 / rho_max))))  # Eq. 6
 
 
-def inv_weidmann(v, v0=1.34, rho_max=5.4, gamma=1.913):
-    v0 = np.max(v)
+def inv_weidmann(
+    v: npt.NDArray[np.float64],
+    v0: float = 1.34,
+    rho_max: float = 5.4,
+    gamma: float = 1.913,
+) -> npt.NDArray[np.float64]:
+    """Weidmann velocity function"""
+
     v[v > v0] = v0
     s = 1 - v / v0
     # np.log(s, where=np.logical_not(zero_mask))
     x = -1 / gamma * np.log(s, out=np.zeros_like(s), where=s != 0) + 1 / rho_max
-    return 1 / x
+    return np.array(1 / x)
 
 
-def get_speed_index(traj_file):
+def get_speed_index(traj_file: str) -> int:
+    """index of the speed column (-1 if not existing)"""
+
     lines = traj_file[:500].split("\n")
     for line in lines:
         if line.startswith("#ID"):
@@ -158,7 +175,9 @@ def get_speed_index(traj_file):
     return -1
 
 
-def get_header(traj_file):
+def get_header(traj_file: str) -> str:
+    """Return line containing FR information"""
+
     lines = traj_file[:500].split("\n")
     for line in lines:
         if line.startswith("#ID"):
@@ -169,23 +188,29 @@ def get_header(traj_file):
 
 
 # todo: update with more rules for more files
-def get_fps(traj_file):
+def get_fps(traj_file: str) -> Union[int | str]:
+    """return fps from trajectory (assumes existing framerate:)"""
+
     fps = traj_file.split("framerate:")[-1].split("\n")[0]
     try:
-        fps = int(float(fps))
+        fps_int = int(float(fps))
     except ValueError:
         st.error(f"{fps} in header can not be converted to int")
         logging.error(f"{fps} in header can not be converted to int")
         st.stop()
 
-    return fps
+    return fps_int
 
 
-def detect_jpscore(traj_file):
+def detect_jpscore(traj_file: str) -> bool:
+    """return true if trajectory is from jpscore"""
+
     return "#description: jpscore" in traj_file
 
 
-def get_index_group(traj_file):
+def get_index_group(traj_file: str) -> int:
+    """Return index of group (-1 if not)"""
+
     index = -1
     lines = traj_file.split("\n")
     for line in lines:
@@ -199,7 +224,8 @@ def get_index_group(traj_file):
     return index
 
 
-def get_unit(traj_file):
+def get_unit(traj_file: str) -> str:
+    """Return NOTHING or from trajectory detected unit"""
     unit = "NOTHING"
     if "#description: jpscore" in traj_file:
         unit = "m"
@@ -221,7 +247,7 @@ def get_unit(traj_file):
     return unit
 
 
-def get_transitions(xml_doc, unit):
+def get_transitions(xml_doc: Document, unit: str) -> Dict[int, npt.NDArray[np.float64]]:
     if unit == "cm":
         cm2m = 100
     else:
@@ -245,7 +271,9 @@ def get_transitions(xml_doc, unit):
     return transitions
 
 
-def get_measurement_lines(xml_doc, unit):
+def get_measurement_lines(
+    xml_doc: Document, unit: str
+) -> Dict[int, npt.NDArray[np.float64]]:
     """add area_L
 
     https://www.jupedsim.org/jpsreport_inifile#measurement-area
@@ -410,12 +438,12 @@ def passing_frame(
     return passed_line_at_frame, sign
 
 
-def read_trajectory(input_file):
+def read_trajectory(input_file: str) -> npt.NDArray[np.float64]:
     data = read_csv(input_file, sep=r"\s+", dtype=np.float64, comment="#").values
-    return data
+    return np.array(data)
 
 
-def read_obstacle(xml_doc, unit):
+def read_obstacle(xml_doc: Document, unit: str) -> Dict[int, npt.NDArray[np.float64]]:
     if unit == "cm":
         cm2m = 100
     else:
@@ -452,13 +480,15 @@ def read_obstacle(xml_doc, unit):
         center_point = [np.sum(x) / n, np.sum(y) / n]
         angles = np.arctan2(x - center_point[0], y - center_point[1])
         # sorting the points:
-        sort_tups = sorted(list(zip(x, y, angles)), key=lambda t: t[2])
+        sort_tups = sorted(list(zip(x, y, angles)), key=lambda t: t[2])  # type: ignore
         return_dict[o_num] = np.array(sort_tups)[:, 0:2]
 
     return return_dict
 
 
-def read_subroom_walls(xml_doc: Document, unit: str) -> dict:
+def read_subroom_walls(
+    xml_doc: Document, unit: str
+) -> Dict[int, npt.NDArray[np.float64]]:
     dict_polynom_wall = {}
     n_wall = 0
     if unit == "cm":
@@ -485,7 +515,9 @@ def read_subroom_walls(xml_doc: Document, unit: str) -> dict:
     return dict_polynom_wall
 
 
-def geo_limits(geo_xml, unit):
+def geo_limits(geo_xml: Document, unit: str) -> Tuple[float, float, float, float]:
+    """Return bounding box coordinates"""
+
     geometry_wall = read_subroom_walls(geo_xml, unit)
     geominX = 1000
     geomaxX = -1000
@@ -508,11 +540,13 @@ def geo_limits(geo_xml, unit):
     return geominX, geomaxX, geominY, geomaxY
 
 
-def get_geometry_file(traj_file):
+def get_geometry_file(traj_file: str) -> str:
     return traj_file.split("geometry:")[-1].split("\n")[0].strip()
 
 
-def touch_default_geometry_file(data, _unit, geo_file):
+def touch_default_geometry_file(
+    ped_data: npt.NDArray[np.float64], _unit: str, geo_file: str
+):
     """Creates a bounding box around the trajectories
 
     :param data: 2D-array
@@ -524,10 +558,10 @@ def touch_default_geometry_file(data, _unit, geo_file):
     # ----------
     delta = 100 if _unit == "cm" else 1
     # 1 m around to better contain the trajectories
-    xmin = np.min(data[:, 2]) - delta
-    xmax = np.max(data[:, 2]) + delta
-    ymin = np.min(data[:, 3]) - delta
-    ymax = np.max(data[:, 3]) + delta
+    xmin = np.min(ped_data[:, 2]) - delta
+    xmax = np.max(ped_data[:, 2]) + delta
+    ymin = np.min(ped_data[:, 3]) - delta
+    ymax = np.max(ped_data[:, 3]) + delta
     # --------
     # create_geo_header
     data = ET.Element("geometry")
@@ -586,7 +620,9 @@ def touch_default_geometry_file(data, _unit, geo_file):
         f.write(b_xml)
 
 
-def compute_speed(data, fps, df=10):
+def compute_speed(
+    data: npt.NDArray[np.float64], fps: int, df: int = 10
+) -> npt.NDArray[np.float64]:
     """Calculates the speed and the angle from the trajectory points.
 
     Using the forward formula
@@ -647,7 +683,7 @@ def compute_speed(data, fps, df=10):
     return speeds
 
 
-def compute_speed_and_angle(data, fps, df=10):
+def compute_speed_and_angle(data: npt.NDArray[np.float64], fps: int, df: int = 10):
     """Calculates the speed and the angle from the trajectory points.
 
     Using the forward formula
@@ -718,7 +754,17 @@ def compute_speed_and_angle(data, fps, df=10):
     return data2
 
 
-def calculate_speed_average(geominX, geomaxX, geominY, geomaxY, dx, dy, X, Y, speed):
+def calculate_speed_average(
+    geominX: float,
+    geomaxX: float,
+    geominY: float,
+    geomaxY: float,
+    dx: float,
+    dy: float,
+    X: npt.NDArray[np.float64],
+    Y: npt.NDArray[np.float64],
+    speed: npt.NDArray[np.float64],
+) -> npt.NDArray[np.float64]:
     """Calculate speed average over time"""
     xbins = np.arange(geominX, geomaxX + dx, dx)
     ybins = np.arange(geominY, geomaxY + dy, dy)
@@ -729,12 +775,21 @@ def calculate_speed_average(geominX, geomaxX, geominY, geomaxY, dx, dy, X, Y, sp
         "mean",
         bins=[xbins, ybins],
     )
-    return np.nan_to_num(ret.statistic.T)
+
+    return np.array(np.nan_to_num(ret.statistic.T))
 
 
 def calculate_density_average_weidmann(
-    geominX, geomaxX, geominY, geomaxY, dx, dy, X, Y, speed
-):
+    geominX: float,
+    geomaxX: float,
+    geominY: float,
+    geomaxY: float,
+    dx: float,
+    dy: float,
+    X: npt.NDArray[np.float64],
+    Y: npt.NDArray[np.float64],
+    speed: npt.NDArray[np.float64],
+) -> npt.NDArray[np.float64]:
     """Calculate density using Weidmann(speed)"""
     density = inv_weidmann(speed)
     xbins = np.arange(geominX, geomaxX + dx, dx)
@@ -746,12 +801,20 @@ def calculate_density_average_weidmann(
         "mean",
         bins=[xbins, ybins],
     )
-    return np.nan_to_num(ret.statistic.T)  # / nframes
+    return np.array(np.nan_to_num(ret.statistic.T))  # / nframes
 
 
 def calculate_density_average_classic(
-    geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, X, Y
-):
+    geominX: float,
+    geomaxX: float,
+    geominY: float,
+    geomaxY: float,
+    dx: float,
+    dy: float,
+    nframes: int,
+    X: npt.NDArray[np.float64],
+    Y: npt.NDArray[np.float64],
+) -> npt.NDArray[np.float64]:
     """Calculate classical method
 
     Density = mean_time(N/A_i)
@@ -767,10 +830,19 @@ def calculate_density_average_classic(
         "count",
         bins=[xbins, ybins],
     )
-    return np.nan_to_num(ret.statistic.T) / nframes / area
+    return np.array(np.nan_to_num(ret.statistic.T)) / nframes / area
 
 
-def calculate_density_frame_classic(geominX, geomaxX, geominY, geomaxY, dx, dy, X, Y):
+def calculate_density_frame_classic(
+    geominX: float,
+    geomaxX: float,
+    geominY: float,
+    geomaxY: float,
+    dx: float,
+    dy: float,
+    X: npt.NDArray[np.float64],
+    Y: npt.NDArray[np.float64],
+) -> npt.NDArray[np.float64]:
     """Calculate classical method
 
     Density = mean_time(N/A_i)
@@ -786,10 +858,21 @@ def calculate_density_frame_classic(geominX, geomaxX, geominY, geomaxY, dx, dy, 
         "count",
         bins=[xbins, ybins],
     )
-    return np.nan_to_num(ret.statistic.T) / area
+    return np.array(np.nan_to_num(ret.statistic.T)) / area
 
 
-def calculate_RSET(geominX, geomaxX, geominY, geomaxY, dx, dy, X, Y, time, func):
+def calculate_RSET(
+    geominX: float,
+    geomaxX: float,
+    geominY: float,
+    geomaxY: float,
+    dx: float,
+    dy: float,
+    X: npt.NDArray[np.float64],
+    Y: npt.NDArray[np.float64],
+    time: float,
+    func: str,
+) -> npt.NDArray[np.float64]:
     """Calculate RSET according to 5.5.1 RSET Maps in Schroder2017a"""
     xbins = np.arange(geominX, geomaxX + dx, dx)
     ybins = np.arange(geominY, geomaxY + dy, dy)
@@ -800,10 +883,10 @@ def calculate_RSET(geominX, geomaxX, geominY, geomaxY, dx, dy, X, Y, time, func)
         func,
         bins=[xbins, ybins],
     )
-    return np.nan_to_num(ret.statistic.T)
+    return np.array(np.nan_to_num(ret.statistic.T))
 
 
-def check_shape_and_stop(shape, how_speed):
+def check_shape_and_stop(shape: int, how_speed: str):
     """Write an error message if shape < 10 and stop"""
     if shape < 10 and how_speed == "from simulation":
         st.error(
@@ -816,33 +899,50 @@ def check_shape_and_stop(shape, how_speed):
         st.stop()
 
 
-def width_gaussian(fwhm):
+def width_gaussian(fwhm: float) -> float:
     """np.sqrt(2) / (2 * np.sqrt(2 * np.log(2)))"""
 
     return fwhm * 0.6005612
 
 
-def Gauss(x, a):
+def Gauss(x: npt.NDArray[np.float64], a: float) -> npt.NDArray[np.float64]:
     """1 / (np.sqrt(np.pi) * a) * np.e ** (-x ** 2 / a ** 2)"""
 
     return 1 / (1.7724538 * a) * np.e ** (-(x ** 2) / a ** 2)
 
 
-def densityField(x_dens, y_dens, a):
+def density_field(
+    x_dens: npt.NDArray[np.float64], y_dens: npt.NDArray[np.float64], a: float
+) -> npt.NDArray[np.float64]:
+    """return matrix with Gauss values in the grid"""
     rho_matrix_x = Gauss(x_dens, a)
     rho_matrix_y = Gauss(y_dens, a)
     rho_matrix = np.matmul(rho_matrix_x, np.transpose(rho_matrix_y))
-    return rho_matrix.T
+    return np.array(rho_matrix.T)
 
 
-def xdensYdens(lattice_x, lattice_y, x_array, y_array):
+def xdens_ydens(
+    lattice_x: npt.NDArray[np.float64],
+    lattice_y: npt.NDArray[np.float64],
+    x_array: npt.NDArray[np.float64],
+    y_array: npt.NDArray[np.float64],
+) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     x_dens = np.add.outer(-x_array, lattice_x)
     y_dens = np.add.outer(-y_array, lattice_y)
     return x_dens, y_dens
 
 
 def calculate_density_average_gauss(
-    geominX, geomaxX, geominY, geomaxY, dx, dy, nframes, width, X, Y
+    geominX: float,
+    geomaxX: float,
+    geominY: float,
+    geomaxY: float,
+    dx: float,
+    dy: float,
+    nframes: int,
+    width: float,
+    X: npt.NDArray[np.float64],
+    Y: npt.NDArray[np.float64],
 ):
     """
     Calculate density using Gauss method
@@ -850,13 +950,13 @@ def calculate_density_average_gauss(
 
     xbins = np.arange(geominX, geomaxX + dx, dx)
     ybins = np.arange(geominY, geomaxY + dy, dy)
-    x_dens, y_dens = xdensYdens(X, Y, xbins, ybins)
+    x_dens, y_dens = xdens_ydens(X, Y, xbins, ybins)
     a = width_gaussian(width)
-    rho_matrix = densityField(x_dens, y_dens, a) / nframes
+    rho_matrix = density_field(x_dens, y_dens, a) / nframes
     return rho_matrix
 
 
-def jam_frames(data, jam_speed):
+def jam_frames(data: npt.NDArray[np.float64], jam_speed: float):
     """Definition of jam
 
     return data in jam
@@ -866,7 +966,9 @@ def jam_frames(data, jam_speed):
     return np.unique(jam_data[:, 1])
 
 
-def consecutive_chunks(data1d, frame_margin):
+def consecutive_chunks(
+    data1d: npt.NDArray[np.float64], frame_margin: float
+) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     # input array([ 1,  2,  3,  4, 10, 11, 12, 15])
     # output array([3, 2])
     # diff err by 5 frames
@@ -885,7 +987,7 @@ def consecutive_chunks(data1d, frame_margin):
         condition = np.concatenate([[False], condition])
 
     idx = np.where(~condition)[0]
-    chunks = np.ediff1d(idx) - 1
+    chunks = np.array(np.ediff1d(idx) - 1)
 
     # print(data1d[idx])
     # --
@@ -973,7 +1075,12 @@ def jam_lifetime(
     return lifetime_arr, chuncks, mx_lt, ret
 
 
-def calculate_NT_data(transitions, selected_transitions, data, fps):
+def calculate_NT_data(
+    transitions: dict,
+    selected_transitions: dict,
+    data: npt.NDArray[np.float64],
+    fps: int,
+) -> Tuple[dict, dict, dict, dict, dict, int, str]:
     """Frame and cumulative number of pedestrian passing transitions.
 
     return:
@@ -983,7 +1090,7 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
     max_len (len of longest vector)
     Needed to stack arrays and save them in file
     """
-    tstats = defaultdict(list)
+    tstats: dict = defaultdict(list)
     # bidirectional flow
     cum_num_negativ = {}
     cum_num_positiv = {}
@@ -1056,12 +1163,18 @@ def calculate_NT_data(transitions, selected_transitions, data, fps):
     return tstats, cum_num, cum_num_positiv, cum_num_negativ, trans_used, max_len, msg
 
 
-#  empirical CDF P(x<=X)
-def CDF(x, times):
+#
+def CDF(x: float, times: npt.NDArray[np.float64]) -> float:
+    """empirical CDF P(x<=X)"""
+
     return float(len(times[times <= x])) / len(times)
 
 
-def survival(times):
+def survival(
+    times: npt.NDArray[np.float64],
+) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """survival function"""
+
     diff = np.diff(times)
     diff = np.sort(diff)
     vF = np.vectorize(CDF, excluded=["times"])
@@ -1069,7 +1182,11 @@ def survival(times):
     return y_diff, diff
 
 
-def rolling_flow(times, fps, windows=200):
+def rolling_flow(
+    times: npt.NDArray[np.float64], fps: int, windows: int = 200
+) -> Tuple[float, float]:
+    """Rolling flow"""
+
     times = np.sort(times)
     serie = pd.Series(times)
     minp = 100
@@ -1089,7 +1206,9 @@ def rolling_flow(times, fps, windows=200):
     return np.mean(wmean), np.mean(wstd)
 
 
-def peds_inside(data):
+def peds_inside(data: npt.NDArray[np.float64]) -> List:
+    """TODO describe function"""
+
     p_inside = []
     frames = np.unique(data[:, 1])
     for frame in frames:
@@ -1099,7 +1218,10 @@ def peds_inside(data):
     return p_inside
 
 
-def get_neighbors_at_frame(frame, data, k):
+def get_neighbors_at_frame(
+    frame: int, data: npt.NDArray[np.float64], k: int
+) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """TODO describe function"""
     at_frame = data[data[:, 1] == frame]
     points = at_frame[:, 2:4]
     tree = KDTree(points)
@@ -1110,7 +1232,19 @@ def get_neighbors_at_frame(frame, data, k):
     return np.array([]), np.array([])
 
 
-def get_neighbors_special_agent_data(agent, frame, data, nearest_dist, nearest_ind):
+def get_neighbors_special_agent_data(
+    agent: int,
+    frame: int,
+    data: npt.NDArray[np.float64],
+    nearest_dist: npt.NDArray[np.float64],
+    nearest_ind: npt.NDArray[np.float64],
+) -> Tuple[
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    float,
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+]:
 
     at_frame = data[data[:, 1] == frame]
     points = at_frame[:, 2:4]
@@ -1138,10 +1272,10 @@ def get_neighbors_special_agent_data(agent, frame, data, nearest_dist, nearest_i
     return neighbors, neighbors_ids, area, neighbors_dist, neighbors_speeds
 
 
-def get_neighbors_pdf(nearest_dist):
+def get_neighbors_pdf(nearest_dist: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     distances = np.unique(nearest_dist)
     loc = distances.mean()
     scale = distances.std()
     distances = np.hstack(([0, 0], distances))
     pdf = stats.norm.pdf(distances, loc=loc, scale=scale)
-    return pdf
+    return np.array(pdf)
