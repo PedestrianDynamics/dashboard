@@ -188,7 +188,7 @@ def get_header(traj_file: str) -> str:
 
 
 # todo: update with more rules for more files
-def get_fps(traj_file: str) -> Union[int | str]:
+def get_fps(traj_file: str):  # -> Union[int | str]
     """return fps from trajectory (assumes existing framerate:)"""
 
     fps = traj_file.split("framerate:")[-1].split("\n")[0]
