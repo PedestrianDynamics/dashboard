@@ -7,6 +7,5 @@ numpy
 scipy
 plotly
 shapely
-sklearn
 scikit-learn
 git+https://github.com/chraibi/hydralit.git
