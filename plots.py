@@ -1,22 +1,31 @@
+from typing import List
+
 import lovely_logger as logging
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 import streamlit as st
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from plotly.subplots import make_subplots
-from scipy import stats
-from scipy import spatial
+from scipy import spatial, stats
 from shapely.geometry import Point
 
 from Utilities import survival
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def show_trajectories_table(data):
+def show_trajectories_table(data: npt.NDArray[np.float64]) -> go.Figure:
+    """Return an except from data as a table
+
+    :param data:
+    :type data: npt.NDArray[np.float64]
+    :returns:
+
+    """
     headerColor = "grey"
     fig = go.Figure(
         data=[
@@ -40,14 +49,35 @@ def show_trajectories_table(data):
     allow_output_mutation=True,
     hash_funcs={go.Figure: lambda _: None},
 )
-def plot_NT(Frames, Nums, Nums_positiv, Nums_negativ, fps):
+def plot_NT(
+    Frames: dict,
+    Nums: List[int],
+    Nums_positiv: List[int],
+    Nums_negativ: List[int],
+    fps: int,
+) -> go.Figure:
+    """Return figure of N-T plot
+
+    :param Frames:
+    :type Frames: dict
+    :param Nums:
+    :type Nums: list
+    :param Nums_positiv:
+    :type Nums_positiv: list
+    :param Nums_negativ:
+    :type Nums_negativ: list
+    :param fps:
+    :type fps: int
+    :returns:
+
+    """
     logging.info("plot NT-curve")
     fig = make_subplots(
         rows=1,
         cols=1,
         subplot_titles=["<b>N-T</b>"],
-        x_title="Time / s",
-        y_title="Number at line",
+        y_title="Time / s",
+        x_title="Number at line",
     )
     maxx = -1
     traces = []
@@ -69,8 +99,8 @@ def plot_NT(Frames, Nums, Nums_positiv, Nums_negativ, fps):
                 maxx = np.max(frames)
 
         trace = go.Scatter(
-            x=np.array(frames) / fps,
-            y=nums,
+            y=np.array(frames) / fps,
+            x=nums,
             mode="lines",
             showlegend=True,
             name=f"ID: {i}",
@@ -78,8 +108,8 @@ def plot_NT(Frames, Nums, Nums_positiv, Nums_negativ, fps):
         )
         if nums_positiv.any() and nums_negativ.any():
             trace_positiv = go.Scatter(
-                x=np.array(frames) / fps,
-                y=nums_positiv,
+                y=np.array(frames) / fps,
+                x=nums_positiv,
                 mode="lines",
                 showlegend=True,
                 name=f"ID: {i}+",
@@ -87,8 +117,8 @@ def plot_NT(Frames, Nums, Nums_positiv, Nums_negativ, fps):
             )
             traces.append(trace_positiv)
             trace_negativ = go.Scatter(
-                x=np.array(frames) / fps,
-                y=nums_negativ,
+                y=np.array(frames) / fps,
+                x=nums_negativ,
                 mode="lines",
                 showlegend=True,
                 name=f"ID: {i}-",
@@ -106,7 +136,28 @@ def plot_NT(Frames, Nums, Nums_positiv, Nums_negativ, fps):
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_flow(Frames, Nums, Nums_positiv, Nums_negativ, fps):
+def plot_flow(
+    Frames: dict,
+    Nums: List[int],
+    Nums_positiv: List[int],
+    Nums_negativ: List[int],
+    fps: int,
+):
+    """return figure object for flow-time plot
+
+    :param Frames:
+    :type Frames: dict
+    :param Nums:
+    :type Nums: List[int]
+    :param Nums_positiv:
+    :type Nums_positiv: List[int]
+    :param Nums_negativ:
+    :type Nums_negativ: List[int]
+    :param fps:
+    :type fps: int
+    :returns:
+
+    """
     logging.info("plot flow-curve")
     fig = make_subplots(
         rows=1,
@@ -172,7 +223,37 @@ def plot_flow(Frames, Nums, Nums_positiv, Nums_negativ, fps):
 
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
-def plot_time_distance(_frames, data, line, i, fps, num_peds, sample, group_index):
+def plot_time_distance(
+    _frames: npt.NDArray[np.int64],
+    data: npt.NDArray[np.float64],
+    line: List[float],
+    trans_num: int,
+    fps: int,
+    num_peds: int,
+    sample: float,
+    group_index: int,
+) -> go.Figure:
+    """Return figure object for time-distance plot
+
+    :param _frames:
+    :type _frames: npt.NDArray[np.int64]
+    :param data:
+    :type data: npt.NDArray[np.float64]
+    :param line:
+    :type line: List[float]
+    :param trans_num:
+    :type trans_num: int
+    :param fps:
+    :type fps: int
+    :param num_peds:
+    :type num_peds: int
+    :param sample:
+    :type sample: float
+    :param group_index:
+    :type group_index: int
+    :returns:
+
+    """
     frames_initial_speed_mean = 4 * fps  # Adrian2020a 4 s
     logging.info("plot time_distance curve")
     peds = _frames[:, 0].astype(int)
@@ -184,7 +265,7 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample, group_inde
         rows=1,
         cols=1,
         subplot_titles=[
-            f"<b>Distance-Time for Transition {i} with {num_peds} pedestrians</b>"
+            f"<b>Distance-Time for Transition {trans_num} with {num_peds} pedestrians</b>"
         ],
         x_title="Distance to entrance / m",
         y_title="Time to entrance / s",
@@ -192,6 +273,7 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample, group_inde
     xstart = []
     ystart = []
     colors = []
+    ped_group = group_index
     for p, toframe in zip(peds, frames):
         ff = data[np.logical_and(data[:, 1] <= toframe, data[:, 0] == p)]
         ped_group = data[data[:, 0] == p][0, group_index]
@@ -249,7 +331,9 @@ def plot_time_distance(_frames, data, line, i, fps, num_peds, sample, group_inde
     return fig
 
 
-def plot_peds_inside(frames, peds_inside, fps):
+def plot_peds_inside(
+    frames: npt.NDArray[np.int32], peds_inside: npt.NDArray[np.int32], fps: int
+) -> go.Figure:
     logging.info("plot peds inside")
     fig = make_subplots(
         rows=1,
