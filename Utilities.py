@@ -3,7 +3,7 @@ import os
 import time
 import xml.etree.ElementTree as ET
 from collections import defaultdict
-
+import re
 from typing import Dict, List, Tuple, Union
 from xml.dom.minidom import Document
 
@@ -107,7 +107,6 @@ def selected_traj_geo(text: str) -> List[str]:
 
 
 def download(url: str, filename: str):
-
     try:
         r = requests.get(url, stream=True, timeout=10)
         logging.info(f"saving to {filename}")
@@ -188,10 +187,12 @@ def get_header(traj_file: str) -> str:
 
 
 # todo: update with more rules for more files
-def get_fps(traj_file: str):  # -> Union[int | str]
+def get_fps(line: str):
     """return fps from trajectory (assumes existing framerate:)"""
 
-    fps = traj_file.split("framerate:")[-1].split("\n")[0]
+    pattern = r"#\s*framerate:\s*(\d+)(?:\s*fps)?"
+    match = re.search(pattern, line)
+    fps = match.group(1)
     try:
         fps_int = int(float(fps))
     except ValueError:
@@ -908,7 +909,7 @@ def width_gaussian(fwhm: float) -> float:
 def Gauss(x: npt.NDArray[np.float64], a: float) -> npt.NDArray[np.float64]:
     """1 / (np.sqrt(np.pi) * a) * np.e ** (-x ** 2 / a ** 2)"""
 
-    return 1 / (1.7724538 * a) * np.e ** (-(x ** 2) / a ** 2)
+    return 1 / (1.7724538 * a) * np.e ** (-(x**2) / a**2)
 
 
 def density_field(
@@ -1245,7 +1246,6 @@ def get_neighbors_special_agent_data(
     npt.NDArray[np.float64],
     npt.NDArray[np.float64],
 ]:
-
     at_frame = data[data[:, 1] == frame]
     points = at_frame[:, 2:4]
     _speeds = at_frame[:, st.session_state.speed_index]
