@@ -331,7 +331,7 @@ def docs():
           - Discharge function: The change of the number of pedestrians inside a room w.r.t to time.
         - **Profiles**: Density and speed heatmaps [[Zhang2012](https://arxiv.org/abs/1112.5299)]. Different methods for density and speed calculation. See documentation inside the tab.
         - **Time-series**:  Density, speed and flow time series. Here, you can draw measurement areas and calculate these quantities inside.
-        - **RSET** heatmaps [[Schroeder2017](http://elpub.bib.uni-wuppertal.de/servlets/DerivateServlet/Derivate-7013/dd1611.pdf)]
+        - **RSET** heatmaps [[Schroeder2017](https://doi.org/10.1016/j.firesaf.2020.103154)]
         """,
         unsafe_allow_html=True,
     )
