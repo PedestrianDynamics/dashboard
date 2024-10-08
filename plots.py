@@ -290,7 +290,7 @@ def plot_time_distance(
         sc = speed
         xx = []
         yy = []
-        for (frame, x, y) in ff[::sample, 1:4]:
+        for frame, x, y in ff[::sample, 1:4]:
             pos = Point(x, y)
             dx = pos.distance(line)
             dt = (toframe - frame) / fps
@@ -498,7 +498,6 @@ def plot_jam_lifetime_hist(chuncks, fps, nbins):
 
 @st.cache(suppress_st_warning=True, hash_funcs={go.Figure: lambda _: None})
 def plot_RSET_hist(rset, nbins):
-
     rset = rset.flatten()
     df = pd.DataFrame(
         rset,
@@ -699,7 +698,6 @@ def moving_trajectories(
     choose_transitions,
     sample_trajectories,
 ):
-
     logging.info("visualisation trajectories")
     if "SPEED" in data_df.columns:
         color = "SPEED"
@@ -946,7 +944,7 @@ def plot_geometry(ax, _geometry_wall):
 @st.cache(
     suppress_st_warning=True, hash_funcs={matplotlib.figure.Figure: lambda _: None}
 )
-def plot_profile_and_geometry2(
+def plot_profile_and_geometgry2(
     xbins,
     ybins,
     geometry_wall,

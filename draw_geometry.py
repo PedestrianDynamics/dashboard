@@ -116,6 +116,7 @@ def process_rects(rects, h_dpi):
     height = np.array(rects["height"]) * scale_y
     width = np.array(rects["width"]) * scale_x
     angle = -np.array(rects["angle"]) * np.pi / 180
+    #angle = -np.radians(rects["angle"]) 
     # center_x = left + width / 2
     # center_y = top - height / 2
     # first

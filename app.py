@@ -192,6 +192,7 @@ def main():
             if new_data:
                 with Utilities.profile("Load trajectories"):
                     data = files.get_data()
+                    
                     st.session_state.orig_data = np.copy(data)
                     fps = Utilities.get_fps(string_data)
                     speed_index = Utilities.get_speed_index(string_data)
@@ -305,6 +306,7 @@ def main():
         if unit == "cm":
             data[:, 2:4] /= 100
             data[:, st.session_state.speed_index] /= 100
+            # files.get_data_df()[str(Header.X)] /= 100
             files.get_data_df()["X"] /= 100
             files.get_data_df()["Y"] /= 100
             files.get_data_df()["Z"] /= 100

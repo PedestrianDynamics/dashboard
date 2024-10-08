@@ -11,11 +11,11 @@ import pandas as pd  # type: ignore
 import streamlit as st
 from pandas import read_csv
 from streamlit.uploaded_file_manager import UploadedFile
-import Utilities
+import Utilities  # type:ignore
 
 
 @dataclass
-class data_files:
+class data_files:  # todo: split data in TrajData vs GeoData
     """
     Class handling trajectory and geometry files
     """
@@ -115,6 +115,8 @@ class data_files:
                 geo_xml = parse(self.default_geometry_file)
 
         return geo_xml  # type: ignore
+
+    # todo: return shapely
 
     def __post_init__(self) -> None:
         selection = Utilities.selected_traj_geo(self.from_examples)

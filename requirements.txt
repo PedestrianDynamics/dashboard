@@ -8,4 +8,4 @@ scipy
 plotly
 shapely
 scikit-learn
-git+https://github.com/chraibi/hydralit.git
+hydralit

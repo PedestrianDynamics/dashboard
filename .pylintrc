@@ -10,5 +10,7 @@ ignored-modules=
 # Example: disable the warning for too many instance attributes
 #R0914 Too many local variables
 #R0913: Too many arguments
-disable=R0902,C0103,R0914,R0913
+#C0302: Too many lines in module
+#C0301: Line too long
+disable=R0902,C0103,R0914,R0913,C0302,C0301
 

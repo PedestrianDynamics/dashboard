@@ -767,6 +767,7 @@ def calculate_speed_average(
     speed: npt.NDArray[np.float64],
 ) -> npt.NDArray[np.float64]:
     """Calculate speed average over time"""
+
     xbins = np.arange(geominX, geomaxX + dx, dx)
     ybins = np.arange(geominY, geomaxY + dy, dy)
     ret = stats.binned_statistic_2d(
